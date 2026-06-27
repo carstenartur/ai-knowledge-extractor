@@ -18,8 +18,8 @@ class AiKnowledgeRunnerTest {
         Files.createDirectories(project.resolve("src/test/java/example"));
         Files.createDirectories(project.resolve("docs"));
         Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
-        Files.writeString(project.resolve("src/main/java/example/App.java"), "package example; public class App { public void run() {} }\n");
-        Files.writeString(project.resolve("src/test/java/example/AppTest.java"), "package example; class AppTest { @org.junit.jupiter.api.Test void run() {} }\n");
+        Files.writeString(project.resolve("src/main/java/example/App.java"), "package example;\n\npublic class App {\n    public void run() {}\n}\n");
+        Files.writeString(project.resolve("src/test/java/example/AppTest.java"), "package example;\n\nclass AppTest {\n    @org.junit.jupiter.api.Test\n    void run() {}\n}\n");
         Files.writeString(project.resolve("docs/design.md"), "# Design\n");
 
         Path output = project.resolve("build/ai-knowledge");

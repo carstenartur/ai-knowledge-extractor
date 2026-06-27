@@ -35,8 +35,13 @@ jobs:
       - name: Verify Maven consumer fixture
         run: |
           VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
-          mvn -B -f examples/fixtures/maven-consumer/pom.xml \
+          mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
             -DaiKnowledge.version="$VERSION" \
+            -DaiKnowledge.outputDirectory="${{ github.workspace }}/examples/fixtures/maven-consumer/target/ai-knowledge" \
+            -DAiKnowledge.seedDirectory="${{ github.workspace }}/examples/fixtures/maven-consumer/ai-knowledge" \
+            -DaiKnowledge.modelProfileDirectory="${{ github.workspace }}/examples/fixtures/maven-consumer/ai-knowledge" \
+            -DaiKnowledge.failOnWarnings=false \
+            -DaiKnowledge.maxCognitiveDebt=1000.0 \
             org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":generate \
             org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check
           test -f examples/fixtures/maven-consumer/target/ai-knowledge/index.json

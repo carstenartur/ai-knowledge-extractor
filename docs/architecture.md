@@ -16,7 +16,7 @@ Main operations:
 
 ## Gradle plugin
 
-The `gradle-plugin` module exposes the plugin id `io.github.carstenartur.ai-knowledge` and registers root-project tasks for the core operations. This is the preferred integration path for Regelsuche because Regelsuche is a Gradle multi-project build.
+The `gradle-plugin` module exposes the plugin id `org.aiknowledge.extractor` and registers root-project tasks for the core operations.
 
 ## Maven plugin
 
@@ -25,7 +25,7 @@ The `maven` module packages a Maven plugin artifact named `ai-knowledge-maven-pl
 ## Design constraints
 
 - deterministic output ordering
-- no mandatory LLM calls
+- no mandatory model calls
 - no SaaS dependency
 - stable output directory
 - usable from repository-local builds and CI

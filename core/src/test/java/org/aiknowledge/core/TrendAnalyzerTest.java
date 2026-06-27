@@ -25,6 +25,7 @@ class TrendAnalyzerTest {
         assertTrue(Files.isRegularFile(output.resolve("trend.html")));
         String trend = Files.readString(output.resolve("trend.json"));
         assertTrue(trend.contains("baselinePresent"));
+        assertTrue(trend.contains("\"baselinePath\":\"ai-knowledge/complexity-baseline.json\""));
         assertTrue(trend.contains("No complexity baseline found"));
     }
 

@@ -8,7 +8,16 @@
    - `gradle.properties`: `projectVersion=0.1.0-SNAPSHOT`
    - `CITATION.cff`: `version: "0.1.0-SNAPSHOT"`
    - `.zenodo.json`: `"version": "0.1.0-SNAPSHOT"`
-4. Run the `Release` workflow from `main`.
+4. Review the user-facing docs:
+   - README badges and quick start are current.
+   - [`gradle-plugin.md`](gradle-plugin.md) and [`maven-plugin.md`](maven-plugin.md) still match the released plugin behavior.
+5. Confirm consumer coverage before publishing:
+   - Gradle consumer fixture runs `generateAiKnowledgeIndex`, `analyzeAiComplexity`, `optimizeAiKnowledge`, `benchmarkAiKnowledge`, `checkAiKnowledgeIndex`, and `publishAiKnowledgeIndex`.
+   - Maven consumer fixture runs `generate`, `analyze`, `optimize`, `benchmark`, `check`, and `help`.
+   - At least one released-version consumer path resolves artifacts from GitHub Packages, not only via a local composite build.
+6. Prepare release notes.
+7. Run the `Release` workflow once with `dry_run=true` from `main`.
+8. Run the real `Release` workflow from `main`.
 
 ## Workflow inputs
 

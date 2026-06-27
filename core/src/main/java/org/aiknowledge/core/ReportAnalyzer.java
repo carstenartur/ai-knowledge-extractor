@@ -180,7 +180,7 @@ final class ReportAnalyzer {
         Map thresholds = new LinkedHashMap();
         thresholds.put("maxCognitiveDebt", options.maxCognitiveDebt());
         thresholds.put("failOnWarnings", options.failOnWarnings());
-        thresholds.put("modelProfileDirectory", options.modelProfileDirectory().toString());
+        thresholds.put("modelProfileDirectory", options.reportPath(options.modelProfileDirectory()));
         return thresholds;
     }
 

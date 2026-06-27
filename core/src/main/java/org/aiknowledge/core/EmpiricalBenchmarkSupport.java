@@ -17,7 +17,7 @@ final class EmpiricalBenchmarkSupport {
         Map<String, Object> empirical = new LinkedHashMap<>();
         empirical.put("enabled", options.empiricalBenchmarkEnabled());
         Path fixtureFile = options.empiricalBenchmarkFixtureFile();
-        empirical.put("fixtureFile", fixtureFile.toString());
+        empirical.put("fixtureFile", options.reportPath(fixtureFile));
         if (!options.empiricalBenchmarkEnabled()) {
             empirical.put("fixtureCount", 0);
             empirical.put("results", new ArrayList<>());

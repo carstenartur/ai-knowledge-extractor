@@ -32,7 +32,7 @@ final class TrendAnalyzer {
         Map report = new LinkedHashMap();
         report.put("schemaVersion", 1);
         report.put("baselinePresent", baseline != null);
-        report.put("baselinePath", baselinePath(options.seedDirectory()).toString());
+        report.put("baselinePath", options.reportPath(baselinePath(options.seedDirectory())));
         report.put("current", current);
         report.put("thresholds", thresholds(options));
         List warnings = new ArrayList();

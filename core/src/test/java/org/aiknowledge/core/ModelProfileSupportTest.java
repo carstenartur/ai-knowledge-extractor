@@ -45,6 +45,7 @@ class ModelProfileSupportTest {
         assertTrue(complexity.contains("Configured target compression ratio is above 1"));
         assertTrue(complexity.contains("\"practicalContextBudget\":1"));
         assertTrue(complexity.contains("\"targetCompressionRatio\":1.0"));
+        assertTrue(complexity.contains("\"modelProfileDirectory\":\"ai-knowledge\""));
     }
 
     @Test
@@ -71,6 +72,7 @@ class ModelProfileSupportTest {
         assertTrue(benchmark.contains("\"missingContextRisk\""));
         assertTrue(benchmark.contains("\"recommendedProfile\":\"review\""));
         assertTrue(benchmark.contains("\"empirical\":{\"enabled\":false"));
+        assertTrue(benchmark.contains("\"fixtureFile\":\"ai-knowledge/benchmark-fixtures.yaml\""));
     }
 
     @Test
@@ -136,6 +138,7 @@ class ModelProfileSupportTest {
         assertTrue(firstReport.contains("\"empirical\":{\"enabled\":true"));
         assertTrue(firstReport.contains("\"fixtureCount\":2"));
         assertTrue(firstReport.contains("\"duplicateSuggestions\":1"));
+        assertTrue(firstReport.contains("\"fixtureFile\":\"ai-knowledge/benchmark-fixtures.yaml\""));
         assertTrue(firstReport.contains("\"missedExistingFeatures\":[\"search\"]"));
         assertTrue(firstReport.contains("\"totalMissedExistingFeatures\":1"));
         assertTrue(firstReport.contains("\"taskSuccessRate\":0.5"));

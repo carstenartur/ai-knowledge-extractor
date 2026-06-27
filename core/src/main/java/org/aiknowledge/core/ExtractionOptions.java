@@ -1,5 +1,6 @@
 package org.aiknowledge.core;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.Objects;
 
@@ -56,6 +57,14 @@ public record ExtractionOptions(
     public static ExtractionOptions defaults(Path repositoryRoot, Path outputDirectory) {
         Path root = repositoryRoot.toAbsolutePath().normalize();
         return new ExtractionOptions(root, outputDirectory, root.resolve("ai-knowledge"), root.resolve("ai-knowledge"), false, 100.0d);
+    }
+
+    public String reportPath(Path path) {
+        Path normalized = Objects.requireNonNull(path, "path").toAbsolutePath().normalize();
+        if (normalized.startsWith(repositoryRoot)) {
+            return repositoryRoot.relativize(normalized).toString().replace(File.separatorChar, '/');
+        }
+        return normalized.toString().replace(File.separatorChar, '/');
     }
 
     private static double normalizeThreshold(double value) {

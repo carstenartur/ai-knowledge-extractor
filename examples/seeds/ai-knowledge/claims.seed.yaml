@@ -1,8 +1,8 @@
-- id: macro-rule-learning
+- id: caching-layer
   status: implemented
-  implementedBy: [de.regelsuche.learning.MacroLearningPipeline]
-  verifiedBy: [LearnedMacroRuleReuseTest]
-  documentedBy: [docs/macro-rules.md]
-- id: proof-bridge
+  implementedBy: [com.example.cache.CacheService]
+  verifiedBy: [CacheServiceTest]
+  documentedBy: [docs/cache.md]
+- id: validation-pipeline
   status: partial
-  documentedBy: [docs/discovery-engine.md]
+  documentedBy: [docs/validation.md]

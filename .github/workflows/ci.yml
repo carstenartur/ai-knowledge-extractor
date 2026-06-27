@@ -21,6 +21,6 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v6.1.0
         with:
-          gradle-version: '9.6.1'
-      - name: Build and test
+          gradle-version: '9.5.1'
+      - name: Build
         run: gradle build

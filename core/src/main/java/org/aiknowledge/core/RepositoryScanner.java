@@ -198,12 +198,25 @@ final class RepositoryScanner {
         boolean inJobs = false;
         int count = 0;
         for (String line : text.split("\\R")) {
-            if (line.trim().equals("jobs:")) { inJobs = true; continue; }
+            String trimmed = line.trim();
+            if (isYamlKey(trimmed, "jobs")) { inJobs = true; continue; }
             if (!inJobs) continue;
-            if (!line.startsWith("  ") && !line.isBlank()) break;
-            if (line.startsWith("  ") && !line.startsWith("    ") && line.trim().endsWith(":")) count++;
+            if (!line.startsWith("  ") && !trimmed.isEmpty()) break;
+            if (line.startsWith("  ") && !line.startsWith("    ")) {
+                int colon = trimmed.indexOf(':');
+                if (colon > 0) {
+                    String afterColon = trimmed.substring(colon + 1).trim();
+                    if (afterColon.isEmpty() || afterColon.startsWith("#")) count++;
+                }
+            }
         }
         return count;
+    }
+
+    private static boolean isYamlKey(String trimmed, String key) {
+        if (!trimmed.startsWith(key + ":")) return false;
+        String after = trimmed.substring(key.length() + 1).trim();
+        return after.isEmpty() || after.startsWith("#");
     }
 
     private static boolean ignored(String path) { return path.startsWith(".git/") || path.startsWith(".gradle/") || path.contains("/build/") || path.contains("/target/") || path.startsWith("build/") || path.startsWith("target/"); }

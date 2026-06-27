@@ -169,7 +169,38 @@ final class SeedSupport {
 
     private static String stripQuotes(String value) {
         String trimmed = value.trim();
-        if (trimmed.length() >= 2 && ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'")))) return trimmed.substring(1, trimmed.length() - 1);
+        if (trimmed.length() >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\"")) return unescapeJson(trimmed.substring(1, trimmed.length() - 1));
+        if (trimmed.length() >= 2 && trimmed.startsWith("'") && trimmed.endsWith("'")) return trimmed.substring(1, trimmed.length() - 1);
         return trimmed;
+    }
+
+    private static String unescapeJson(String s) {
+        if (s.indexOf('\\') < 0) return s;
+        StringBuilder sb = new StringBuilder(s.length());
+        int i = 0;
+        while (i < s.length()) {
+            char c = s.charAt(i);
+            if (c != '\\' || i + 1 >= s.length()) { sb.append(c); i++; continue; }
+            char next = s.charAt(i + 1);
+            switch (next) {
+                case '"': sb.append('"'); i += 2; break;
+                case '\\': sb.append('\\'); i += 2; break;
+                case '/': sb.append('/'); i += 2; break;
+                case 'n': sb.append('\n'); i += 2; break;
+                case 'r': sb.append('\r'); i += 2; break;
+                case 't': sb.append('\t'); i += 2; break;
+                case 'b': sb.append('\b'); i += 2; break;
+                case 'f': sb.append('\f'); i += 2; break;
+                case 'u':
+                    if (i + 5 < s.length()) {
+                        String hex = s.substring(i + 2, i + 6);
+                        try { sb.append((char) Integer.parseInt(hex, 16)); i += 6; break; } catch (NumberFormatException ignored) {}
+                    }
+                    sb.append(c); i++;
+                    break;
+                default: sb.append(c); i++; break;
+            }
+        }
+        return sb.toString();
     }
 }

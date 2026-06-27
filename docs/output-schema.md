@@ -90,6 +90,9 @@ Seed files are optional. Seed entries are merged by `id`. List values are merged
 |---|---|
 | `complexity.json` | Estimated context tokens, concept radius, dependency radius, knowledge density, profile-specific model budget metrics and AI cognitive debt. |
 | `complexity.html` | Human-readable complexity report. |
+| `metrics-snapshot.json` | Compact current metrics snapshot intended for future trend baselines. |
+| `trend.json` | Machine-readable comparison of current metrics with `ai-knowledge/complexity-baseline.json`. |
+| `trend.html` | Human-readable trend report. |
 | `optimization.json` | Knowledge smells and ranked improvement suggestions. |
 | `optimization.html` | Human-readable optimization report. |
 | `benchmark.json` | Deterministic extraction-profile comparison for model context budgets. |
@@ -130,6 +133,37 @@ Each `modelProfiles` entry contains:
 - `warnings`
 - `warningCount`
 
+## trend.json
+
+Current top-level fields:
+
+- `schemaVersion`
+- `baselinePresent`
+- `baselinePath`
+- `current`
+- `baseline`
+- `deltas`
+- `thresholds`
+- `warnings`
+- `violations`
+- `violationCount`
+- `passed`
+
+Trend deltas include `baseline`, `current`, `absolute` and `percent` for each compared metric.
+
+## check.json
+
+The quality gate output includes:
+
+- `passed`
+- `aiCognitiveDebt`
+- `maxCognitiveDebt`
+- `warningCount`
+- `failOnWarnings`
+- `trendViolationCount`
+- `trendPassed`
+- `trendThresholds`
+
 ## benchmark.json
 
 Each benchmark `results` entry contains profile-specific budget flags:
@@ -144,4 +178,4 @@ Each benchmark `results` entry contains profile-specific budget flags:
 - `compressedFitsHardLimit`
 - `risk`
 
-See `docs/model-profiles.md` for profile configuration.
+See `docs/model-profiles.md` for profile configuration and `docs/trend-gates.md` for trend-gate configuration.

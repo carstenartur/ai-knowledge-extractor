@@ -70,7 +70,7 @@ final class RepositoryScanner {
         List methods = new ArrayList();
         for (String line : source.split("\\R")) {
             String t = line.trim();
-            if (t.startsWith("package ")) pkg = t.substring(8).replace(";", "").trim();
+            if (t.startsWith("package ")) pkg = parsePackage(t);
             if ((t.startsWith("public ") || t.startsWith("protected ")) && t.contains("(")) methods.add(t.substring(0, t.indexOf('(')).trim());
         }
         boolean test = path.contains("/src/test/") || simple.endsWith("Test") || source.contains("@Test");
@@ -80,6 +80,12 @@ final class RepositoryScanner {
         data.put("package", pkg);
         if (test) { data.put("testMethods", methods); snapshot.tests.add(data); }
         else { data.put("publicApiMethods", methods); snapshot.classes.add(data); }
+    }
+
+    private static String parsePackage(String line) {
+        String value = line.substring("package ".length()).trim();
+        int semicolon = value.indexOf(';');
+        return semicolon >= 0 ? value.substring(0, semicolon).trim() : value.trim();
     }
 
     private static void addDoc(Path root, Path file, RepositorySnapshot snapshot) throws IOException {

@@ -1,3 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin>
+  <name>AI Knowledge Maven Plugin</name>
+  <description>Generates deterministic repository knowledge indexes and reports.</description>
+  <groupId>io.github.carstenartur</groupId>
+  <artifactId>ai-knowledge-maven-plugin</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <goalPrefix>ai-knowledge</goalPrefix>
+  <mojos>
+    <mojo>
+      <goal>generate</goal>
+      <implementation>io.github.carstenartur.aiknowledge.maven.GenerateGoal</implementation>
+      <language>java</language>
+      <requiresProject>true</requiresProject>
+      <threadSafe>true</threadSafe>
+    </mojo>
+    <mojo>
+      <goal>analyze</goal>
+      <implementation>io.github.carstenartur.aiknowledge.maven.ComplexityGoal</implementation>
+      <language>java</language>
+      <requiresProject>true</requiresProject>
+      <threadSafe>true</threadSafe>
+    </mojo>
+  </mojos>
 </plugin>

@@ -27,7 +27,7 @@ final class RepositoryScanner {
                 if (name.equals("build.gradle") || name.equals("build.gradle.kts") || name.equals("pom.xml")) addModule(root, file, snapshot);
                 if (path.endsWith(".java")) addJava(root, file, snapshot);
                 if (path.endsWith(".md")) addDoc(root, file, snapshot);
-                if (path.contains("/docs/generated/discovery/") && path.endsWith("/evidence.json")) addDiscoveryEvidence(root, file, snapshot);
+                if (path.startsWith("docs/generated/discovery/") && path.endsWith("/evidence.json")) addDiscoveryEvidence(root, file, snapshot);
                 if (path.contains("/src/jmh/java/") && path.endsWith(".java")) addBenchmarkSourceEvidence(path, snapshot);
                 if (path.startsWith(".github/workflows/") && (path.endsWith(".yml") || path.endsWith(".yaml"))) addWorkflowEvidence(root, file, snapshot);
             }

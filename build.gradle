@@ -29,12 +29,19 @@ subprojects {
         testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     }
 
+    def publishedArtifactId = [
+        'core': 'ai-knowledge-core',
+        'gradle-plugin': 'ai-knowledge-gradle-plugin',
+        'maven': 'ai-knowledge-maven-plugin'
+    ].get(project.name, project.name)
+
     publishing {
         publications {
             mavenJava(MavenPublication) {
                 from components.java
+                artifactId = publishedArtifactId
                 pom {
-                    name = project.name
+                    name = publishedArtifactId
                     description = 'Deterministic build-integrated knowledge extraction for AI-assisted code understanding.'
                     url = 'https://github.com/carstenartur/ai-knowledge-extractor'
                     licenses {

@@ -32,13 +32,23 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
                 seedDirectory.toPath(),
                 modelProfileDirectory.toPath(),
                 failOnWarnings,
-                maxCognitiveDebt,
-                maxCognitiveDebtIncrease,
-                maxConceptRadiusIncrease,
-                maxContextTokenIncrease);
+                systemDouble("aiKnowledge.maxCognitiveDebt", maxCognitiveDebt),
+                systemDouble("aiKnowledge.maxCognitiveDebtIncrease", maxCognitiveDebtIncrease),
+                systemDouble("aiKnowledge.maxConceptRadiusIncrease", maxConceptRadiusIncrease),
+                systemDouble("aiKnowledge.maxContextTokenIncrease", maxContextTokenIncrease));
     }
 
     protected final AiKnowledgeRunner runner() {
         return new AiKnowledgeRunner();
+    }
+
+    private static double systemDouble(String key, double fallback) {
+        String value = System.getProperty(key);
+        if (value == null || value.isBlank()) return fallback;
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
     }
 }

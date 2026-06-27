@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component-set>
+  <components>
+    <component>
+      <role>org.apache.maven.plugin.Mojo</role>
+      <role-hint>org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:generate</role-hint>
+      <implementation>org.aiknowledge.maven.GenerateGoal</implementation>
+      <instantiation-strategy>per-lookup</instantiation-strategy>
+    </component>
+    <component>
+      <role>org.apache.maven.plugin.Mojo</role>
+      <role-hint>org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:analyze</role-hint>
+      <implementation>org.aiknowledge.maven.AnalyzeGoal</implementation>
+      <instantiation-strategy>per-lookup</instantiation-strategy>
+    </component>
+    <component>
+      <role>org.apache.maven.plugin.Mojo</role>
+      <role-hint>org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:optimize</role-hint>
+      <implementation>org.aiknowledge.maven.OptimizeGoal</implementation>
+      <instantiation-strategy>per-lookup</instantiation-strategy>
+    </component>
+    <component>
+      <role>org.apache.maven.plugin.Mojo</role>
+      <role-hint>org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:benchmark</role-hint>
+      <implementation>org.aiknowledge.maven.BenchmarkGoal</implementation>
+      <instantiation-strategy>per-lookup</instantiation-strategy>
+    </component>
+    <component>
+      <role>org.apache.maven.plugin.Mojo</role>
+      <role-hint>org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:check</role-hint>
+      <implementation>org.aiknowledge.maven.CheckGoal</implementation>
+      <instantiation-strategy>per-lookup</instantiation-strategy>
+    </component>
+  </components>
+</component-set>

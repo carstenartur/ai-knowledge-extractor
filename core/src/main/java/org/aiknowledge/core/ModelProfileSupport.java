@@ -46,17 +46,23 @@ final class ModelProfileSupport {
     }
 
     private static Map metric(Map profile, int estimatedTokens) {
-        int practicalBudget = intValue(profile.get("practicalContextBudget"), 128000);
-        int hardLimit = intValue(profile.get("hardContextLimit"), practicalBudget);
-        double targetCompressionRatio = doubleValue(profile.get("targetCompressionRatio"), practicalBudget <= 0 ? 1.0d : Math.min(1.0d, practicalBudget / Math.max(1.0d, estimatedTokens)));
-        int compressedTokens = (int) Math.round(estimatedTokens * targetCompressionRatio);
+        String id = String.valueOf(profile.get("id"));
         List warnings = new ArrayList();
+        int practicalBudget = positiveBudget(profile.get("practicalContextBudget"), 128000, "practical context budget", warnings);
+        int hardLimit = positiveBudget(profile.get("hardContextLimit"), practicalBudget, "hard context limit", warnings);
+        if (hardLimit < practicalBudget) {
+            warnings.add("Configured hard context limit is below the practical budget; using the practical budget.");
+            hardLimit = practicalBudget;
+        }
+        double fallbackRatio = practicalBudget <= 0 ? 1.0d : Math.min(1.0d, practicalBudget / Math.max(1.0d, estimatedTokens));
+        double targetCompressionRatio = clampedRatio(profile.get("targetCompressionRatio"), fallbackRatio, warnings);
+        int compressedTokens = Math.max(0, (int) Math.round(estimatedTokens * targetCompressionRatio));
         if (estimatedTokens > practicalBudget) warnings.add("Estimated raw context exceeds the practical budget.");
         if (estimatedTokens > hardLimit) warnings.add("Estimated raw context exceeds the hard context limit.");
         if (compressedTokens > practicalBudget) warnings.add("Target compression still exceeds the practical budget.");
         if (compressedTokens > hardLimit) warnings.add("Target compression still exceeds the hard context limit.");
         Map metric = new LinkedHashMap();
-        metric.put("id", String.valueOf(profile.get("id")));
+        metric.put("id", id);
         metric.put("practicalContextBudget", practicalBudget);
         metric.put("hardContextLimit", hardLimit);
         metric.put("targetCompressionRatio", targetCompressionRatio);
@@ -126,6 +132,27 @@ final class ModelProfileSupport {
     private static String stripQuotes(String value) {
         if (value.length() >= 2 && ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")))) return value.substring(1, value.length() - 1);
         return value;
+    }
+
+    private static int positiveBudget(Object value, int fallback, String label, List warnings) {
+        int parsed = intValue(value, fallback);
+        if (parsed > 0) return parsed;
+        int normalizedFallback = Math.max(1, fallback);
+        warnings.add("Configured " + label + " must be positive; using " + normalizedFallback + ".");
+        return normalizedFallback;
+    }
+
+    private static double clampedRatio(Object value, double fallback, List warnings) {
+        double parsed = doubleValue(value, fallback);
+        if (parsed < 0.0d) {
+            warnings.add("Configured target compression ratio is below 0; using 0.");
+            return 0.0d;
+        }
+        if (parsed > 1.0d) {
+            warnings.add("Configured target compression ratio is above 1; using 1.");
+            return 1.0d;
+        }
+        return parsed;
     }
 
     private static int intValue(Object value, int fallback) {

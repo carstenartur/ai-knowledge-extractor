@@ -5,7 +5,7 @@ import org.aiknowledge.core.AiKnowledgeRunner;
 import org.aiknowledge.core.ExtractionOptions;
 import org.apache.maven.plugins.annotations.Parameter;
 
-abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.AbstractMojo {
+public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.AbstractMojo {
     @Parameter(defaultValue = "${project.basedir}", readonly = true)
     protected File basedir;
     @Parameter(defaultValue = "${project.build.directory}/ai-knowledge")

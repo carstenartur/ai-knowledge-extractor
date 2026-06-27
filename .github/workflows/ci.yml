@@ -37,12 +37,19 @@ jobs:
           VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
           mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
             -DaiKnowledge.version="$VERSION" \
-            -DaiKnowledge.outputDirectory="${{ github.workspace }}/examples/fixtures/maven-consumer/target/ai-knowledge" \
-            -DAiKnowledge.seedDirectory="${{ github.workspace }}/examples/fixtures/maven-consumer/ai-knowledge" \
-            -DaiKnowledge.modelProfileDirectory="${{ github.workspace }}/examples/fixtures/maven-consumer/ai-knowledge" \
+            -DaiKnowledge.outputDirectory="target/ai-knowledge" \
+            -DaiKnowledge.seedDirectory="ai-knowledge" \
+            -DaiKnowledge.modelProfileDirectory="ai-knowledge" \
             -DaiKnowledge.failOnWarnings=false \
             -DaiKnowledge.maxCognitiveDebt=1000.0 \
             org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":generate \
-            org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check
+            org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check 2>&1 | tee maven-consumer-fixture.log
           test -f examples/fixtures/maven-consumer/target/ai-knowledge/index.json
           test -f examples/fixtures/maven-consumer/target/ai-knowledge/check.json
+      - name: Upload Maven fixture log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-consumer-fixture-log
+          path: maven-consumer-fixture.log
+          if-no-files-found: ignore

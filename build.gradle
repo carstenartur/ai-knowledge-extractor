@@ -16,6 +16,21 @@ subprojects {
         withJavadocJar()
     }
 
+    sourceSets {
+        main {
+            java {
+                setSrcDirs(['src/main/java'])
+                include 'org/**'
+            }
+        }
+        test {
+            java {
+                setSrcDirs(['src/test/java'])
+                include 'org/**'
+            }
+        }
+    }
+
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
         options.release = 17

@@ -20,7 +20,6 @@
         <artifactId>ai-knowledge-maven-plugin</artifactId>
         <version>${aiKnowledge.version}</version>
         <configuration>
-          <basedir>${project.basedir}</basedir>
           <outputDirectory>${project.build.directory}/ai-knowledge</outputDirectory>
           <seedDirectory>${project.basedir}/ai-knowledge</seedDirectory>
           <modelProfileDirectory>${project.basedir}/ai-knowledge</modelProfileDirectory>

@@ -24,13 +24,18 @@ final class BuildMetadata {
             addSourceSets(moduleRoot, module);
             for (Object classObject : snapshot.classes) {
                 Map classMap = (Map) classObject;
-                addMainPackage(module, classMap.get("package"));
+                if (belongsToModule(modulePath, String.valueOf(classMap.get("sourceFile")))) addMainPackage(module, classMap.get("package"));
             }
             for (Object dependencyObject : snapshot.dependencies) {
                 Map dependency = (Map) dependencyObject;
                 if (String.valueOf(dependency.get("source")).equals(String.valueOf(module.get("buildFile")))) addDependency(dependency, module);
             }
         }
+    }
+
+    private static boolean belongsToModule(String modulePath, String sourceFile) {
+        if (modulePath == null || modulePath.isBlank()) return true;
+        return sourceFile != null && sourceFile.startsWith(modulePath + "/");
     }
 
     static void addDependency(Map dep, Map module) {
@@ -50,7 +55,9 @@ final class BuildMetadata {
 
     static void addMainPackage(Map module, Object packageName) {
         if (packageName == null) return;
-        addUnique((List) module.get("mainPackages"), packageName);
+        String value = String.valueOf(packageName);
+        if (value.isBlank()) return;
+        addUnique((List) module.get("mainPackages"), value);
     }
 
     private static void addUnique(List list, Object value) {

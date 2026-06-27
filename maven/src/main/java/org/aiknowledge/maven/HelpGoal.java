@@ -50,7 +50,7 @@ public final class HelpGoal extends AbstractMojo {
         getLog().info("Use -Dgoal=<goal> -Ddetail=true to show one goal with parameters.");
     }
 
-    private static String firstNonBlank(String first, String second) {
+    static String firstNonBlank(String first, String second) {
         if (first != null && !first.isBlank()) return first.trim();
         if (second != null && !second.isBlank()) return second.trim();
         return null;

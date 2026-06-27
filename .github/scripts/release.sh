@@ -130,7 +130,7 @@ if ! [[ "$NEXT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
 fi
 
 verify_metadata "$CURRENT_VERSION" false
-gradle validate
+gradle help
 
 git fetch origin --tags --force
 TAG_EXISTS=false

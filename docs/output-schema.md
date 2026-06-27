@@ -14,6 +14,7 @@ The extractor writes deterministic JSON and HTML artifacts below the configured 
 | `dependencies.json` | `dependencies` | Static dependency notations found in build files. |
 | `capabilities.json` | `capabilities` | Capability status inferred from code, tests, docs and optional seeds. |
 | `claims.json` | `claims` | Machine-readable claims linked to capability evidence. |
+| `evidence.json` | `evidence` | Project evidence artifacts such as discovery evidence files, benchmark source fixtures and GitHub workflow metadata. |
 
 All list artifacts are wrapped in an object with the primary key shown above. Producers must keep file names and primary keys stable. New fields may be added, but existing fields should not be removed without increasing `schemaVersion`.
 
@@ -24,7 +25,7 @@ Current fields:
 - `schemaVersion`: integer schema version.
 - `repository`: repository root directory name.
 - `generationMode`: currently `deterministic-static`.
-- `counts`: object with counts for modules, classes, tests, docs, dependencies, capabilities and claims.
+- `counts`: object with counts for modules, classes, tests, docs, dependencies, capabilities, claims and evidence artifacts.
 
 ## modules.json
 
@@ -47,6 +48,8 @@ Current production Java type fields:
 - `sourceFile`
 - `package`
 - `publicApiMethods`
+- `lineCount`
+- `methodCount`
 - `kind`
 - `imports`
 - `superclass`
@@ -61,6 +64,8 @@ Current test type fields:
 - `sourceFile`
 - `package`
 - `testMethods`
+- `lineCount`
+- `methodCount`
 - `kind`
 - `imports`
 - `testedClass`
@@ -80,9 +85,27 @@ Current Markdown document fields:
 Capabilities and claims are evidence-based. The generator combines static evidence with optional seed files:
 
 - `ai-knowledge/capabilities.seed.yaml`
+- `ai-knowledge/capabilities.seed.yml`
+- `ai-knowledge/capabilities.yaml`
+- `ai-knowledge/capabilities.yml`
+- `ai-knowledge/capabilities.json`
 - `ai-knowledge/claims.seed.yaml`
+- `ai-knowledge/claims.seed.yml`
+- `ai-knowledge/claims.yaml`
+- `ai-knowledge/claims.yml`
+- `ai-knowledge/claims.json`
 
 Seed files are optional. Seed entries are merged by `id`. List values are merged additively so generated evidence is not lost when a seed adds curated context.
+
+## evidence.json
+
+Current evidence item types:
+
+- `discovery-evidence`: generated discovery evidence under `docs/generated/discovery/**/evidence.json`, including scenario id, expressions, oracle status, success flags, graph sizes and macro/bridge counts when present.
+- `benchmark-source`: benchmark source files under `src/jmh/java`.
+- `github-workflow`: GitHub Actions workflow files, including workflow name, dispatch support and a lightweight job count.
+
+The evidence artifact is intended to expose project-specific generated proof, benchmark and CI context that is useful for AI-assisted review but is not captured by Java class scanning alone.
 
 ## Analysis reports
 

@@ -1,6 +1,7 @@
 package org.aiknowledge.core;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -62,7 +63,7 @@ final class TrendAnalyzer {
     private static Map loadBaseline(Path seedDirectory) throws IOException {
         Path baseline = baselinePath(seedDirectory);
         if (!Files.isRegularFile(baseline)) return null;
-        String json = Files.readString(baseline);
+        String json = Files.readString(baseline, StandardCharsets.UTF_8);
         Map map = new LinkedHashMap();
         putIfPresent(map, json, "estimatedContextTokens");
         putIfPresent(map, json, "conceptRadius");
@@ -80,6 +81,7 @@ final class TrendAnalyzer {
         int index = json.indexOf(needle);
         if (index < 0) return;
         int start = index + needle.length();
+        while (start < json.length() && Character.isWhitespace(json.charAt(start))) start++;
         int end = start;
         while (end < json.length()) {
             char ch = json.charAt(end);

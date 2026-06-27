@@ -68,21 +68,23 @@ Or bind goals in your `pom.xml`:
 
 ## Shared Parameters
 
-All operational goals (`generate`, `analyze`, `optimize`, `benchmark`, `check`) share the same parameters:
+All operational goals (`generate`, `analyze`, `optimize`, `benchmark`, `check`) share the same parameters.
+
+The defaults below are written with angle-bracket placeholders to keep the generated site environment-independent; in the Maven plugin descriptor the corresponding defaults use Maven project expressions.
 
 | Parameter | Type | Default | Required |
 |-----------|------|---------|----------|
-| `basedir` | `File` | `${project.basedir}` | yes (read-only) |
-| `outputDirectory` | `File` | `${project.build.directory}/ai-knowledge` | no |
-| `seedDirectory` | `File` | `${project.basedir}/ai-knowledge` | no |
-| `modelProfileDirectory` | `File` | `${project.basedir}/ai-knowledge` | no |
+| `basedir` | `File` | `<project.basedir>` | yes (read-only) |
+| `outputDirectory` | `File` | `<project.build.directory>/ai-knowledge` | no |
+| `seedDirectory` | `File` | `<project.basedir>/ai-knowledge` | no |
+| `modelProfileDirectory` | `File` | `<project.basedir>/ai-knowledge` | no |
 | `failOnWarnings` | `boolean` | `false` | no |
 | `maxCognitiveDebt` | `double` | `100.0` | no |
 | `maxCognitiveDebtIncrease` | `double` | `Double.MAX_VALUE` | no |
 | `maxConceptRadiusIncrease` | `double` | `Double.MAX_VALUE` | no |
 | `maxContextTokenIncrease` | `double` | `Double.MAX_VALUE` | no |
 | `empiricalBenchmarkEnabled` | `boolean` | `false` | no |
-| `empiricalBenchmarkFixtureFile` | `File` | `${project.basedir}/ai-knowledge/benchmark-fixtures.yaml` | no |
+| `empiricalBenchmarkFixtureFile` | `File` | `<project.basedir>/ai-knowledge/benchmark-fixtures.yaml` | no |
 
 ## Further Reading
 

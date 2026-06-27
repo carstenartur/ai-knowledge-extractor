@@ -13,4 +13,5 @@ public final class RepositorySnapshot {
     public final ArrayList dependencies = new ArrayList();
     public final ArrayList capabilities = new ArrayList();
     public final ArrayList claims = new ArrayList();
+    public final ArrayList evidence = new ArrayList();
 }

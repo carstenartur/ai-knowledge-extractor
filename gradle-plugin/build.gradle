@@ -11,10 +11,10 @@ dependencies {
 gradlePlugin {
     plugins {
         aiKnowledge {
-            id = 'io.github.carstenartur.ai-knowledge'
+            id = 'org.aiknowledge.extractor'
             displayName = 'AI Knowledge Extractor'
             description = 'Generates deterministic machine-readable repository knowledge indexes and AI-oriented complexity reports.'
-            implementationClass = 'io.github.carstenartur.aiknowledge.gradle.AiKnowledgePlugin'
+            implementationClass = 'org.aiknowledge.gradle.AiKnowledgePlugin'
         }
     }
 }

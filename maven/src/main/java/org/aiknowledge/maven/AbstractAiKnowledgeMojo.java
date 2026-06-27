@@ -41,7 +41,7 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
                 systemDouble("aiKnowledge.maxConceptRadiusIncrease", maxConceptRadiusIncrease),
                 systemDouble("aiKnowledge.maxContextTokenIncrease", maxContextTokenIncrease),
                 empiricalBenchmarkEnabled,
-                empiricalBenchmarkFixtureFile.toPath());
+                empiricalBenchmarkFixtureFile != null ? empiricalBenchmarkFixtureFile.toPath() : null);
     }
 
     protected final AiKnowledgeRunner runner() {

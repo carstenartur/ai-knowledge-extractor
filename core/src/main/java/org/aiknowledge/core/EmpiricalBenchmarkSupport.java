@@ -25,6 +25,9 @@ final class EmpiricalBenchmarkSupport {
             return empirical;
         }
 
+        if (!Files.isRegularFile(fixtureFile)) {
+            throw new IOException("Empirical benchmark fixture file not found: " + fixtureFile);
+        }
         List<Map<String, Object>> fixtures = parse(fixtureFile);
         List<Map<String, Object>> results = new ArrayList<>();
         int tokens = 0;
@@ -112,7 +115,6 @@ final class EmpiricalBenchmarkSupport {
 
     private static List<Map<String, Object>> parse(Path file) throws IOException {
         List<Map<String, Object>> result = new ArrayList<>();
-        if (!Files.isRegularFile(file)) return result;
         Map<String, Object> current = null;
         for (String raw : Files.readAllLines(file)) {
             String line = raw.trim();

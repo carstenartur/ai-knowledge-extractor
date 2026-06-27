@@ -1,0 +1,10 @@
+- id: macro-rule-learning
+  name: Macro rule learning
+  keywords: [macro, learning, learned rule]
+  limitations: [Heuristic static extraction in the first version]
+- id: proof-bridge
+  name: Proof bridge
+  keywords: [proof, bridge, prover]
+- id: equality-saturation
+  name: Equality saturation
+  keywords: [equality saturation, e-graph]

@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -230,6 +232,71 @@ class AiKnowledgeRunnerTest {
         assertTrue(claims.contains("seeded-claim"));
         assertEquals(1, occurrences(claims, "example.App"));
         assertTrue(claims.contains("example.Other"));
+    }
+
+    @Test
+    void optimizeDetectsMultipleSmellTypesAndRanksRecommendations() throws Exception {
+        Path project = temp.resolve("smell-fixture");
+        Files.createDirectories(project.resolve("src/main/java/alpha"));
+        Files.createDirectories(project.resolve("src/main/java/beta"));
+        Files.createDirectories(project.resolve("src/main/java/gamma"));
+        Files.createDirectories(project.resolve("docs"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+
+        // Concept Cycle: alpha imports beta and beta imports alpha
+        Files.writeString(project.resolve("src/main/java/alpha/AlphaClass.java"),
+                "package alpha;\nimport beta.BetaClass;\npublic class AlphaClass {}\n");
+        Files.writeString(project.resolve("src/main/java/beta/BetaClass.java"),
+                "package beta;\nimport alpha.AlphaClass;\npublic class BetaClass {}\n");
+
+        // Scattered Capability + Weak Evidence: equality-saturation classes across three packages but no test
+        Files.writeString(project.resolve("src/main/java/alpha/EqualitySaturation.java"),
+                "package alpha;\npublic class EqualitySaturation {}\n");
+        Files.writeString(project.resolve("src/main/java/beta/EqualitySaturationHelper.java"),
+                "package beta;\npublic class EqualitySaturationHelper {}\n");
+        Files.writeString(project.resolve("src/main/java/gamma/EqualitySaturationUtil.java"),
+                "package gamma;\npublic class EqualitySaturationUtil {}\n");
+
+        // Duplicate Knowledge: two docs with identical normalised title
+        Files.writeString(project.resolve("docs/design.md"), "# Design Guide\n");
+        Files.writeString(project.resolve("docs/design-2.md"), "# Design Guide\n");
+
+        Path output = project.resolve("build/ai-knowledge");
+        Map report = new AiKnowledgeRunner().optimize(ExtractionOptions.defaults(project, output));
+
+        assertTrue(Files.isRegularFile(output.resolve("optimization.json")));
+        assertTrue(Files.isRegularFile(output.resolve("optimization.html")));
+
+        String json = Files.readString(output.resolve("optimization.json"));
+        assertTrue(json.contains("\"before\""), "should contain before estimate");
+        assertTrue(json.contains("\"afterEstimate\""), "should contain afterEstimate");
+        assertTrue(json.contains("Hidden Concept"), "should detect Hidden Concept");
+        assertTrue(json.contains("Concept Cycle"), "should detect Concept Cycle");
+        assertTrue(json.contains("Duplicate Knowledge"), "should detect Duplicate Knowledge");
+        assertTrue(json.contains("Scattered Capability"), "should detect Scattered Capability");
+        assertTrue(json.contains("Weak Evidence"), "should detect Weak Evidence");
+
+        // Verify at least five distinct smell types are present
+        List smells = (List) report.get("smells");
+        long distinctTypes = smells.stream()
+                .map(s -> String.valueOf(((Map) s).get("type")))
+                .distinct()
+                .count();
+        assertTrue(distinctTypes >= 5, "at least five distinct smell types must be detected, found: " + distinctTypes);
+
+        // Verify recommendations are sorted by estimated token savings descending
+        List recommendations = (List) report.get("recommendations");
+        for (int i = 1; i < recommendations.size(); i++) {
+            int prev = ((Number) ((Map) recommendations.get(i - 1)).get("estimatedTokenSavings")).intValue();
+            int curr = ((Number) ((Map) recommendations.get(i)).get("estimatedTokenSavings")).intValue();
+            assertTrue(prev >= curr, "recommendations must be sorted by savings descending at index " + i);
+        }
+
+        // Verify before/after token estimates are present and afterEstimate reflects savings
+        Map before = (Map) report.get("before");
+        Map after = (Map) report.get("afterEstimate");
+        assertTrue(((Number) before.get("estimatedContextTokens")).intValue() > 0);
+        assertTrue(((Number) after.get("estimatedTokenSavings")).intValue() > 0);
     }
 
     private static String objectContaining(String json, String marker) {

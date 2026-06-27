@@ -1,12 +1,13 @@
 package org.aiknowledge.core;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 final class ReportAnalyzer {
-    Map complexity(ExtractionOptions options, RepositorySnapshot snapshot) {
+    Map complexity(ExtractionOptions options, RepositorySnapshot snapshot) throws IOException {
         int classes = snapshot.classes.size();
         int tests = snapshot.tests.size();
         int docs = snapshot.docs.size();
@@ -14,8 +15,13 @@ final class ReportAnalyzer {
         int capabilities = snapshot.capabilities.size();
         int estimatedTokens = classes * 260 + tests * 140 + docs * 180 + dependencies * 35 + capabilities * 80;
         double density = capabilities == 0 ? 0.0d : (classes + tests + docs) / (double) capabilities;
+        List profileMetrics = ModelProfileSupport.profileMetrics(options, estimatedTokens);
         List warnings = new ArrayList();
-        if (estimatedTokens > 32000) warnings.add("Estimated context size exceeds a practical single-pass review budget.");
+        for (Object item : profileMetrics) {
+            Map profile = (Map) item;
+            Object profileWarnings = profile.get("warnings");
+            if (profileWarnings instanceof List list && !list.isEmpty()) warnings.add("Profile " + profile.get("id") + ": " + list.get(0));
+        }
         if (density > 20.0d) warnings.add("Knowledge density is low: many files are needed per capability.");
         if (tests < Math.max(1, classes / 4)) warnings.add("Test evidence appears weak compared with production classes.");
         Map report = new LinkedHashMap();
@@ -30,7 +36,8 @@ final class ReportAnalyzer {
         report.put("aiCognitiveDebt", Math.max(0.0d, estimatedTokens / 1000.0d + density - tests / 10.0d));
         report.put("warningCount", warnings.size());
         report.put("warnings", warnings);
-        report.put("modelProfiles", modelProfiles());
+        report.put("modelProfiles", profileMetrics);
+        report.put("thresholds", thresholds(options));
         return report;
     }
 
@@ -61,32 +68,55 @@ final class ReportAnalyzer {
         return report;
     }
 
-    Map benchmark(ExtractionOptions options, RepositorySnapshot snapshot, Map complexity) {
-        String[] profiles = {"raw", "compact", "review", "architecture", "deep-research"};
-        double[] factors = {1.0d, 0.35d, 0.55d, 0.45d, 0.8d};
+    Map benchmark(ExtractionOptions options, RepositorySnapshot snapshot, Map complexity) throws IOException {
         int base = ((Number) complexity.get("estimatedContextTokens")).intValue();
         List results = new ArrayList();
-        for (int i = 0; i < profiles.length; i++) {
-            Map item = new LinkedHashMap();
-            int tokens = (int) Math.round(base * factors[i]);
-            item.put("profile", profiles[i]);
-            item.put("estimatedTokens", tokens);
-            item.put("fitsDefaultBudget", tokens <= 128000);
-            item.put("risk", tokens > 128000 ? "high" : tokens > 32000 ? "medium" : "low");
-            results.add(item);
+        for (Object item : ModelProfileSupport.profileMetrics(options, base)) {
+            Map profile = (Map) item;
+            Map result = new LinkedHashMap();
+            result.put("profile", profile.get("id"));
+            result.put("estimatedTokens", profile.get("estimatedCompressedTokens"));
+            result.put("rawTokens", profile.get("estimatedRawTokens"));
+            result.put("compressionRatio", profile.get("targetCompressionRatio"));
+            result.put("rawFitsPracticalBudget", profile.get("fitsPracticalBudget"));
+            result.put("rawFitsHardLimit", profile.get("fitsHardLimit"));
+            result.put("compressedFitsPracticalBudget", profile.get("compressedFitsPracticalBudget"));
+            result.put("compressedFitsHardLimit", profile.get("compressedFitsHardLimit"));
+            result.put("risk", risk(profile));
+            results.add(result);
         }
         Map report = new LinkedHashMap();
         report.put("schemaVersion", 1);
         report.put("method", "deterministic-preflight");
         report.put("results", results);
-        report.put("recommendedProfile", "review");
+        report.put("recommendedProfile", recommended(results));
         return report;
+    }
+
+    private static Map thresholds(ExtractionOptions options) {
+        Map thresholds = new LinkedHashMap();
+        thresholds.put("maxCognitiveDebt", options.maxCognitiveDebt());
+        thresholds.put("failOnWarnings", options.failOnWarnings());
+        thresholds.put("modelProfileDirectory", options.modelProfileDirectory().toString());
+        return thresholds;
+    }
+
+    private static String risk(Map profile) {
+        if (Boolean.FALSE.equals(profile.get("compressedFitsHardLimit"))) return "high";
+        if (Boolean.FALSE.equals(profile.get("compressedFitsPracticalBudget"))) return "medium";
+        return "low";
+    }
+
+    private static Object recommended(List results) {
+        for (Object item : results) {
+            Map result = (Map) item;
+            if ("low".equals(result.get("risk"))) return result.get("profile");
+        }
+        return results.isEmpty() ? "none" : ((Map) results.get(0)).get("profile");
     }
 
     private static Map smell(String type, Object subject, int savings) { Map s = new LinkedHashMap(); s.put("type", type); s.put("subject", subject); s.put("estimatedTokenSavings", savings); return s; }
     private static Map after(Map before, List smells) { int savings = 0; for (Object item : smells) savings += ((Number) ((Map) item).get("estimatedTokenSavings")).intValue(); Map after = new LinkedHashMap(); int tokens = ((Number) before.get("estimatedContextTokens")).intValue(); after.put("estimatedContextTokens", Math.max(0, tokens - savings)); after.put("estimatedTokenSavings", savings); return after; }
-    private static List modelProfiles() { List p = new ArrayList(); p.add(profile("gpt", 128000, 400000)); p.add(profile("claude", 128000, 200000)); p.add(profile("gemini", 128000, 1000000)); p.add(profile("local-small", 16000, 32000)); return p; }
-    private static Map profile(String id, int practical, int hard) { Map p = new LinkedHashMap(); p.put("id", id); p.put("practicalContextBudget", practical); p.put("hardContextLimit", hard); return p; }
     static String html(String title, Map report) { return "<!doctype html><html><head><meta charset=\"utf-8\"><title>" + title + "</title></head><body><h1>" + title + "</h1><pre>" + escape(JsonSupport.toJson(report)) + "</pre></body></html>\n"; }
     private static String escape(String value) { return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"); }
 }

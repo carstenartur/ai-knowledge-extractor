@@ -26,6 +26,11 @@ Implemented as deterministic static analysis without external model calls:
 - AI cognitive complexity estimate
 - knowledge-smell recommendations
 - deterministic extraction-profile benchmark scaffold
+- configurable model-profile budget metrics
+
+## Model profiles
+
+Default model profiles and project-specific `ai-knowledge/model-profiles.yaml` configuration are documented in [`docs/model-profiles.md`](docs/model-profiles.md).
 
 ## Publishing and consumption
 

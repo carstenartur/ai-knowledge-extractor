@@ -88,10 +88,60 @@ Seed files are optional. Seed entries are merged by `id`. List values are merged
 
 | File | Purpose |
 |---|---|
-| `complexity.json` | Estimated context tokens, concept radius, dependency radius, knowledge density and AI cognitive debt. |
+| `complexity.json` | Estimated context tokens, concept radius, dependency radius, knowledge density, profile-specific model budget metrics and AI cognitive debt. |
 | `complexity.html` | Human-readable complexity report. |
 | `optimization.json` | Knowledge smells and ranked improvement suggestions. |
 | `optimization.html` | Human-readable optimization report. |
 | `benchmark.json` | Deterministic extraction-profile comparison for model context budgets. |
 | `benchmark.html` | Human-readable benchmark report. |
 | `check.json` | Quality-gate result for CI. |
+
+## complexity.json
+
+Current top-level fields:
+
+- `schemaVersion`
+- `estimatedContextTokens`
+- `conceptRadius`
+- `dependencyRadius`
+- `knowledgeDensity`
+- `contextLocality`
+- `compressionRatio`
+- `aiCognitiveComplexity`
+- `aiCognitiveDebt`
+- `warningCount`
+- `warnings`
+- `modelProfiles`
+- `thresholds`
+
+Each `modelProfiles` entry contains:
+
+- `id`
+- `practicalContextBudget`
+- `hardContextLimit`
+- `targetCompressionRatio`
+- `compressionPreference`
+- `estimatedRawTokens`
+- `estimatedCompressedTokens`
+- `fitsPracticalBudget`
+- `fitsHardLimit`
+- `compressedFitsPracticalBudget`
+- `compressedFitsHardLimit`
+- `warnings`
+- `warningCount`
+
+## benchmark.json
+
+Each benchmark `results` entry contains profile-specific budget flags:
+
+- `profile`
+- `estimatedTokens`
+- `rawTokens`
+- `compressionRatio`
+- `rawFitsPracticalBudget`
+- `rawFitsHardLimit`
+- `compressedFitsPracticalBudget`
+- `compressedFitsHardLimit`
+- `risk`
+
+See `docs/model-profiles.md` for profile configuration.

@@ -1,4 +1,4 @@
-group = 'io.github.carstenartur'
+group = 'org.aiknowledge'
 version = providers.gradleProperty('releaseVersion').orElse('0.1.0-SNAPSHOT').get()
 
 subprojects {

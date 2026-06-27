@@ -8,10 +8,11 @@ The extractor includes these default profiles:
 
 | ID | Practical budget | Hard limit | Target compression ratio | Intended use |
 | --- | ---: | ---: | ---: | --- |
-| `general-128k` | 128,000 | 128,000 | 0.55 | Balanced review context. |
-| `large-200k` | 128,000 | 200,000 | 0.65 | Larger architecture context. |
-| `very-large-1m` | 256,000 | 1,000,000 | 0.80 | Broad repository exploration. |
-| `local-32k` | 16,000 | 32,000 | 0.35 | Local or small-context model. |
+| `raw` | 128,000 | 256,000 | 1.00 | Minimal compaction for maximal context retention. |
+| `compact` | 32,000 | 64,000 | 0.35 | Aggressive compaction for constrained model budgets. |
+| `review` | 128,000 | 256,000 | 0.60 | Balanced context for code review tasks (default recommendation). |
+| `architecture` | 192,000 | 384,000 | 0.75 | Broader architecture-level context. |
+| `deep-research` | 256,000 | 1,000,000 | 0.85 | Maximum breadth for deep repository exploration. |
 
 ## Custom profiles
 
@@ -74,5 +75,8 @@ For each profile, `complexity.json` contains:
 - `rawFitsHardLimit`
 - `compressedFitsPracticalBudget`
 - `compressedFitsHardLimit`
+- `budgetRisk`
+- `missingContextRisk`
+- `risk` (combined indicator)
 
 Top-level warnings include the first warning per profile so CI can fail on budget pressure when `failOnWarnings` is enabled.

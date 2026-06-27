@@ -28,10 +28,11 @@ final class ModelProfileSupport {
 
     private static List<Map> defaults() {
         List<Map> result = new ArrayList<>();
-        result.add(profile("general-128k", 128000, 128000, 0.55d, "balanced review context"));
-        result.add(profile("large-200k", 128000, 200000, 0.65d, "larger architecture context"));
-        result.add(profile("very-large-1m", 256000, 1000000, 0.8d, "broad repository exploration"));
-        result.add(profile("local-32k", 16000, 32000, 0.35d, "local or small-context model"));
+        result.add(profile("raw", 128000, 256000, 1.0d, "minimal compaction for maximal context retention"));
+        result.add(profile("compact", 32000, 64000, 0.35d, "aggressive compaction for constrained model budgets"));
+        result.add(profile("review", 128000, 256000, 0.6d, "balanced context for code review tasks"));
+        result.add(profile("architecture", 192000, 384000, 0.75d, "broader architecture-level context"));
+        result.add(profile("deep-research", 256000, 1000000, 0.85d, "maximum breadth for deep repository exploration"));
         return result;
     }
 

@@ -176,6 +176,8 @@ Each benchmark `results` entry contains profile-specific budget flags:
 - `rawFitsHardLimit`
 - `compressedFitsPracticalBudget`
 - `compressedFitsHardLimit`
+- `budgetRisk`
+- `missingContextRisk`
 - `risk`
 
 See `docs/model-profiles.md` for profile configuration and `docs/trend-gates.md` for trend-gate configuration.

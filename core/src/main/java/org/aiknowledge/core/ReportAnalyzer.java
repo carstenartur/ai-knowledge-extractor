@@ -160,7 +160,11 @@ final class ReportAnalyzer {
             result.put("rawFitsHardLimit", profile.get("fitsHardLimit"));
             result.put("compressedFitsPracticalBudget", profile.get("compressedFitsPracticalBudget"));
             result.put("compressedFitsHardLimit", profile.get("compressedFitsHardLimit"));
-            result.put("risk", risk(profile));
+            String budgetRisk = budgetRisk(profile);
+            String missingContextRisk = missingContextRisk(profile);
+            result.put("budgetRisk", budgetRisk);
+            result.put("missingContextRisk", missingContextRisk);
+            result.put("risk", maxRisk(budgetRisk, missingContextRisk));
             results.add(result);
         }
         Map report = new LinkedHashMap();
@@ -179,13 +183,36 @@ final class ReportAnalyzer {
         return thresholds;
     }
 
-    private static String risk(Map profile) {
+    private static String budgetRisk(Map profile) {
         if (Boolean.FALSE.equals(profile.get("compressedFitsHardLimit"))) return "high";
         if (Boolean.FALSE.equals(profile.get("compressedFitsPracticalBudget"))) return "medium";
         return "low";
     }
 
+    private static String missingContextRisk(Map profile) {
+        double ratio = ((Number) profile.getOrDefault("targetCompressionRatio", 1.0d)).doubleValue();
+        if (ratio <= 0.4d) return "high";
+        if (ratio <= 0.7d) return "medium";
+        return "low";
+    }
+
+    private static String maxRisk(String left, String right) {
+        return rank(left) >= rank(right) ? left : right;
+    }
+
+    private static int rank(String risk) {
+        return switch (risk) {
+            case "high" -> 3;
+            case "medium" -> 2;
+            default -> 1;
+        };
+    }
+
     private static Object recommended(List results) {
+        for (Object item : results) {
+            Map result = (Map) item;
+            if ("review".equals(result.get("profile"))) return "review";
+        }
         for (Object item : results) {
             Map result = (Map) item;
             if ("low".equals(result.get("risk"))) return result.get("profile");

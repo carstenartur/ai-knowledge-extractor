@@ -61,5 +61,13 @@ class ModelProfileSupportTest {
         assertTrue(benchmark.contains("compressedFitsHardLimit"));
         assertTrue(benchmark.contains("rawFitsPracticalBudget"));
         assertTrue(benchmark.contains("rawFitsHardLimit"));
+        assertTrue(benchmark.contains("\"profile\":\"raw\""));
+        assertTrue(benchmark.contains("\"profile\":\"compact\""));
+        assertTrue(benchmark.contains("\"profile\":\"review\""));
+        assertTrue(benchmark.contains("\"profile\":\"architecture\""));
+        assertTrue(benchmark.contains("\"profile\":\"deep-research\""));
+        assertTrue(benchmark.contains("\"budgetRisk\""));
+        assertTrue(benchmark.contains("\"missingContextRisk\""));
+        assertTrue(benchmark.contains("\"recommendedProfile\":\"review\""));
     }
 }

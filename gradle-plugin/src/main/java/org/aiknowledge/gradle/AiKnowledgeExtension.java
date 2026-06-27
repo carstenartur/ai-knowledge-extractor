@@ -3,6 +3,7 @@ package org.aiknowledge.gradle;
 import javax.inject.Inject;
 import org.gradle.api.Project;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 
@@ -16,6 +17,8 @@ public abstract class AiKnowledgeExtension {
     private final Property<Double> maxCognitiveDebtIncrease;
     private final Property<Double> maxConceptRadiusIncrease;
     private final Property<Double> maxContextTokenIncrease;
+    private final Property<Boolean> empiricalBenchmarkEnabled;
+    private final RegularFileProperty empiricalBenchmarkFixtureFile;
 
     @Inject
     public AiKnowledgeExtension(Project project) {
@@ -29,6 +32,8 @@ public abstract class AiKnowledgeExtension {
         this.maxCognitiveDebtIncrease = objects.property(Double.class).convention(Double.MAX_VALUE);
         this.maxConceptRadiusIncrease = objects.property(Double.class).convention(Double.MAX_VALUE);
         this.maxContextTokenIncrease = objects.property(Double.class).convention(Double.MAX_VALUE);
+        this.empiricalBenchmarkEnabled = objects.property(Boolean.class).convention(false);
+        this.empiricalBenchmarkFixtureFile = objects.fileProperty().convention(project.getLayout().getProjectDirectory().file("ai-knowledge/benchmark-fixtures.yaml"));
     }
 
     public DirectoryProperty getOutputDirectory() { return outputDirectory; }
@@ -40,4 +45,6 @@ public abstract class AiKnowledgeExtension {
     public Property<Double> getMaxCognitiveDebtIncrease() { return maxCognitiveDebtIncrease; }
     public Property<Double> getMaxConceptRadiusIncrease() { return maxConceptRadiusIncrease; }
     public Property<Double> getMaxContextTokenIncrease() { return maxContextTokenIncrease; }
+    public Property<Boolean> getEmpiricalBenchmarkEnabled() { return empiricalBenchmarkEnabled; }
+    public RegularFileProperty getEmpiricalBenchmarkFixtureFile() { return empiricalBenchmarkFixtureFile; }
 }

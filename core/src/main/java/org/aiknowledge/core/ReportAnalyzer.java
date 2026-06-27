@@ -172,6 +172,7 @@ final class ReportAnalyzer {
         report.put("method", "deterministic-preflight");
         report.put("results", results);
         report.put("recommendedProfile", recommended(results));
+        report.put("empirical", EmpiricalBenchmarkSupport.report(options));
         return report;
     }
 

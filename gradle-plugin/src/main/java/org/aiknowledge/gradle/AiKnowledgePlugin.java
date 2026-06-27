@@ -57,7 +57,9 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                     extension.getMaxCognitiveDebt().get(),
                     extension.getMaxCognitiveDebtIncrease().get(),
                     extension.getMaxConceptRadiusIncrease().get(),
-                    extension.getMaxContextTokenIncrease().get());
+                    extension.getMaxContextTokenIncrease().get(),
+                    extension.getEmpiricalBenchmarkEnabled().get(),
+                    extension.getEmpiricalBenchmarkFixtureFile().get().getAsFile().toPath());
             switch (mode) {
                 case "generate" -> runner.generate(options);
                 case "analyze" -> runner.analyze(options);

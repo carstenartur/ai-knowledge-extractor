@@ -172,6 +172,7 @@ Top-level fields:
 - `method`: extraction method used; currently `deterministic-preflight`.
 - `results`: array of per-profile budget entries (see below).
 - `recommendedProfile`: the profile name recommended for the current codebase size; resolves to `review` for most codebases.
+- `empirical`: optional fixture-based empirical layer. Default runs set `"enabled": false` and keep the benchmark fully offline.
 
 Each `results` entry contains profile-specific budget flags:
 
@@ -188,3 +189,11 @@ Each `results` entry contains profile-specific budget flags:
 - `risk`
 
 See `docs/model-profiles.md` for profile configuration and `docs/trend-gates.md` for trend-gate configuration.
+
+When empirical benchmark mode is enabled, `empirical` contains:
+
+- `enabled`
+- `fixtureFile`
+- `fixtureCount`
+- `results` (per fixture: `id`, `profile`, `tokenUsage`, `latencyMs`, `reviewQuality`, `duplicateSuggestions`, `missedExistingFeatures`, `taskSuccess`)
+- `summary` (`averageTokenUsage`, `averageLatencyMs`, `averageReviewQuality`, `totalDuplicateSuggestions`, `totalMissedExistingFeatures`, `taskSuccessRate`)

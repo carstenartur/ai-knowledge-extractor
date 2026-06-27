@@ -11,7 +11,7 @@ Main operations:
 - `generate` scans the repository and writes the knowledge index.
 - `analyze` computes AI cognitive complexity and context budget metrics.
 - `optimize` detects knowledge smells and ranks recommendations.
-- `benchmark` compares deterministic extraction profiles.
+- `benchmark` compares deterministic extraction profiles and can optionally add empirical fixture results.
 - `check` applies CI quality gates.
 
 ## Gradle plugin

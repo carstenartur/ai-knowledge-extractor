@@ -10,6 +10,11 @@ Plugin id: `org.aiknowledge.extractor`
 
 Tasks: `generateAiKnowledgeIndex`, `analyzeAiComplexity`, `optimizeAiKnowledge`, `benchmarkAiKnowledge`, `checkAiKnowledgeIndex`, `publishAiKnowledgeIndex`.
 
+Optional empirical benchmark layer (disabled by default):
+
+- `aiKnowledge.empiricalBenchmarkEnabled = true`
+- `aiKnowledge.empiricalBenchmarkFixtureFile = file("ai-knowledge/benchmark-fixtures.yaml")`
+
 For local plugin development, consumers may use a Gradle composite build with `includeBuild('../ai-knowledge-extractor')`.
 
 ## Maven
@@ -17,6 +22,11 @@ For local plugin development, consumers may use a Gradle composite build with `i
 Maven plugin coordinates: `org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT`.
 
 Goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`.
+
+Optional empirical benchmark layer parameters:
+
+- `empiricalBenchmarkEnabled` (default `false`)
+- `empiricalBenchmarkFixtureFile` (default `${project.basedir}/ai-knowledge/benchmark-fixtures.yaml`)
 
 ## Scope
 
@@ -26,7 +36,7 @@ Implemented as deterministic static analysis without external model calls:
 - AI cognitive complexity estimate
 - trend reports and CI quality gates
 - knowledge-smell recommendations
-- deterministic extraction-profile benchmark scaffold
+- deterministic extraction-profile benchmark scaffold with optional empirical fixture layer
 - configurable model-profile budget metrics
 
 ## Model profiles

@@ -4,6 +4,11 @@ on:
   release:
     types: [created]
   workflow_dispatch:
+    inputs:
+      releaseVersion:
+        description: Release version to publish
+        required: false
+        default: 0.1.0-SNAPSHOT
 
 permissions:
   contents: read
@@ -21,7 +26,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6.1.0
         with:
           gradle-version: '9.5.1'
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.event.inputs.releaseVersion }}" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish to GitHub Packages
-        run: gradle publish
+        run: gradle publish -PreleaseVersion=${{ steps.version.outputs.value }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

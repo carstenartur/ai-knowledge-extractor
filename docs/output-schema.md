@@ -130,4 +130,18 @@ Each `modelProfiles` entry contains:
 - `warnings`
 - `warningCount`
 
+## benchmark.json
+
+Each benchmark `results` entry contains profile-specific budget flags:
+
+- `profile`
+- `estimatedTokens`
+- `rawTokens`
+- `compressionRatio`
+- `rawFitsPracticalBudget`
+- `rawFitsHardLimit`
+- `compressedFitsPracticalBudget`
+- `compressedFitsHardLimit`
+- `risk`
+
 See `docs/model-profiles.md` for profile configuration.

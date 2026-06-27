@@ -6,6 +6,6 @@ jar {
 
 dependencies {
     implementation project(':core')
-    compileOnly 'org.apache.maven:maven-plugin-api:3.9.11'
+    implementation 'org.apache.maven:maven-plugin-api:3.9.11'
     compileOnly 'org.apache.maven.plugin-tools:maven-plugin-annotations:3.15.2'
 }

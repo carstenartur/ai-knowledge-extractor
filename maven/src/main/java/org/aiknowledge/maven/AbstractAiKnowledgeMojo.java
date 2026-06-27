@@ -18,12 +18,38 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     protected boolean failOnWarnings;
     @Parameter(defaultValue = "100.0")
     protected double maxCognitiveDebt;
+    @Parameter(defaultValue = "1.7976931348623157E308")
+    protected double maxCognitiveDebtIncrease;
+    @Parameter(defaultValue = "1.7976931348623157E308")
+    protected double maxConceptRadiusIncrease;
+    @Parameter(defaultValue = "1.7976931348623157E308")
+    protected double maxContextTokenIncrease;
 
     protected final ExtractionOptions options() {
-        return new ExtractionOptions(basedir.toPath(), outputDirectory.toPath(), seedDirectory.toPath(), modelProfileDirectory.toPath(), failOnWarnings, maxCognitiveDebt);
+        return new ExtractionOptions(
+                basedir.toPath(),
+                outputDirectory.toPath(),
+                seedDirectory.toPath(),
+                modelProfileDirectory.toPath(),
+                failOnWarnings,
+                systemDouble("aiKnowledge.maxCognitiveDebt", maxCognitiveDebt),
+                systemDouble("aiKnowledge.maxCognitiveDebtIncrease", maxCognitiveDebtIncrease),
+                systemDouble("aiKnowledge.maxConceptRadiusIncrease", maxConceptRadiusIncrease),
+                systemDouble("aiKnowledge.maxContextTokenIncrease", maxContextTokenIncrease));
     }
 
     protected final AiKnowledgeRunner runner() {
         return new AiKnowledgeRunner();
+    }
+
+    private double systemDouble(String key, double fallback) {
+        String value = System.getProperty(key);
+        if (value == null || value.isBlank()) return fallback;
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException ignored) {
+            getLog().warn("Ignoring invalid numeric value for -D" + key + ": " + value);
+            return fallback;
+        }
     }
 }

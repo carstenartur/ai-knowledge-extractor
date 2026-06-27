@@ -24,6 +24,7 @@ Implemented as deterministic static analysis without external model calls:
 
 - repository knowledge extraction
 - AI cognitive complexity estimate
+- trend reports and CI quality gates
 - knowledge-smell recommendations
 - deterministic extraction-profile benchmark scaffold
 - configurable model-profile budget metrics
@@ -31,6 +32,10 @@ Implemented as deterministic static analysis without external model calls:
 ## Model profiles
 
 Default model profiles and project-specific `ai-knowledge/model-profiles.yaml` configuration are documented in [`docs/model-profiles.md`](docs/model-profiles.md).
+
+## Trend gates
+
+Trend baselines, `metrics-snapshot.json`, `trend.json` and CI threshold configuration are documented in [`docs/trend-gates.md`](docs/trend-gates.md).
 
 ## Publishing and consumption
 

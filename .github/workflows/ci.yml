@@ -24,5 +24,20 @@ jobs:
           gradle-version: '9.5.1'
       - name: Build
         run: gradle build
-      - name: Verify consumer fixtures
-        run: bash .github/scripts/verify-consumer-fixtures.sh
+      - name: Publish artifacts to Maven local
+        run: gradle publishToMavenLocal
+      - name: Verify Gradle consumer fixture
+        run: |
+          gradle -p examples/fixtures/gradle-consumer generateAiKnowledgeIndex checkAiKnowledgeIndex publishAiKnowledgeIndex
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/index.json
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/check.json
+          test -f examples/fixtures/gradle-consumer/docs/ai-knowledge/index.json
+      - name: Verify Maven consumer fixture
+        run: |
+          VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
+          mvn -B -f examples/fixtures/maven-consumer/pom.xml \
+            -DaiKnowledge.version="$VERSION" \
+            org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":generate \
+            org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check
+          test -f examples/fixtures/maven-consumer/target/ai-knowledge/index.json
+          test -f examples/fixtures/maven-consumer/target/ai-knowledge/check.json

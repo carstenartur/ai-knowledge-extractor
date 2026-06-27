@@ -57,7 +57,10 @@ class TrendAnalyzerTest {
         assertTrue(check.contains("trendViolationCount"));
         assertTrue(check.contains("\"passed\":false"));
         String trend = Files.readString(output.resolve("trend.json"));
-        assertTrue(trend.contains("aiCognitiveDebt"));
+        assertTrue(trend.contains("\"baselinePresent\":true"));
+        assertTrue(trend.contains("\"baseline\":{\"estimatedContextTokens\":0"));
+        assertTrue(trend.contains("\"conceptRadius\":1"));
+        assertTrue(trend.contains("\"aiCognitiveDebt\":0.0"));
         assertTrue(trend.contains("AI cognitive debt increased"));
     }
 

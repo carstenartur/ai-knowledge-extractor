@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 final class ReportAnalyzer {
@@ -193,7 +194,7 @@ final class ReportAnalyzer {
     }
 
     private static String packageOf(String fqn) { int last = fqn.lastIndexOf('.'); return last < 0 ? "" : fqn.substring(0, last); }
-    private static String normalizeTitle(String title) { return title.toLowerCase().replaceAll("[^a-z0-9]", ""); }
+    private static String normalizeTitle(String title) { return title.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", ""); }
     private static String actionFor(String type) {
         return switch (type) {
             case "Large Concept" -> "Split the concept into smaller, more focused modules or packages.";

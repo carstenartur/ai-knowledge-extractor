@@ -42,12 +42,13 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
         return new AiKnowledgeRunner();
     }
 
-    private static double systemDouble(String key, double fallback) {
+    private double systemDouble(String key, double fallback) {
         String value = System.getProperty(key);
         if (value == null || value.isBlank()) return fallback;
         try {
             return Double.parseDouble(value.trim());
         } catch (NumberFormatException ignored) {
+            getLog().warn("Ignoring invalid numeric value for -D" + key + ": " + value);
             return fallback;
         }
     }

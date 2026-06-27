@@ -1,0 +1,67 @@
+plugins {
+    id 'java-library' apply false
+    id 'maven-publish' apply false
+    id 'java-gradle-plugin' apply false
+}
+
+group = 'io.github.carstenartur'
+version = providers.gradleProperty('releaseVersion').orElse('0.1.0-SNAPSHOT').get()
+
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
+
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+        withSourcesJar()
+        withJavadocJar()
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = 17
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
+    dependencies {
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                pom {
+                    name = project.name
+                    description = 'Deterministic build-integrated knowledge extraction for AI-assisted code understanding.'
+                    url = 'https://github.com/carstenartur/ai-knowledge-extractor'
+                    licenses {
+                        license {
+                            name = 'Apache License, Version 2.0'
+                            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'carstenartur'
+                            name = 'Carsten Artur'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git'
+                        developerConnection = 'scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git'
+                        url = 'https://github.com/carstenartur/ai-knowledge-extractor'
+                    }
+                }
+            }
+        }
+    }
+}

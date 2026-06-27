@@ -1,0 +1,8 @@
+- id: macro-rule-learning
+  status: implemented
+  implementedBy: [de.regelsuche.learning.MacroLearningPipeline]
+  verifiedBy: [LearnedMacroRuleReuseTest]
+  documentedBy: [docs/macro-rules.md]
+- id: proof-bridge
+  status: partial
+  documentedBy: [docs/discovery-engine.md]

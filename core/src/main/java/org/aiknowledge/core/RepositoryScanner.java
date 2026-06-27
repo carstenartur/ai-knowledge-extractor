@@ -9,7 +9,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class RepositoryScanner {
     RepositorySnapshot scan(ExtractionOptions options) throws IOException {
@@ -24,6 +27,9 @@ final class RepositoryScanner {
                 if (name.equals("build.gradle") || name.equals("build.gradle.kts") || name.equals("pom.xml")) addModule(root, file, snapshot);
                 if (path.endsWith(".java")) addJava(root, file, snapshot);
                 if (path.endsWith(".md")) addDoc(root, file, snapshot);
+                if (path.contains("/docs/generated/discovery/") && path.endsWith("/evidence.json")) addDiscoveryEvidence(root, file, snapshot);
+                if (path.contains("/src/jmh/java/") && path.endsWith(".java")) addBenchmarkSourceEvidence(path, snapshot);
+                if (path.startsWith(".github/workflows/") && (path.endsWith(".yml") || path.endsWith(".yaml"))) addWorkflowEvidence(root, file, snapshot);
             }
         }
         BuildMetadata.enrichModules(root, snapshot);
@@ -37,6 +43,7 @@ final class RepositoryScanner {
         counts.put("dependencies", snapshot.dependencies.size());
         counts.put("capabilities", snapshot.capabilities.size());
         counts.put("claims", snapshot.claims.size());
+        counts.put("evidence", snapshot.evidence.size());
         snapshot.index.put("schemaVersion", 1);
         snapshot.index.put("repository", root.getFileName().toString());
         snapshot.index.put("generationMode", "deterministic-static");
@@ -87,6 +94,8 @@ final class RepositoryScanner {
         data.put(test ? "testClass" : "class", pkg.isBlank() ? simple : pkg + "." + simple);
         data.put("sourceFile", path);
         data.put("package", pkg);
+        data.put("lineCount", source.split("\\R", -1).length);
+        data.put("methodCount", methods.size());
         if (test) { data.put("testMethods", methods); JavaSourceMetadata.enrich(data, source, simple, true); snapshot.tests.add(data); }
         else { data.put("publicApiMethods", methods); JavaSourceMetadata.enrich(data, source, simple, false); snapshot.classes.add(data); }
     }
@@ -107,6 +116,94 @@ final class RepositoryScanner {
         doc.put("headings", headings);
         doc.put("links", MarkdownMetadata.links(text));
         snapshot.docs.add(doc);
+    }
+
+    private static void addDiscoveryEvidence(Path root, Path file, RepositorySnapshot snapshot) throws IOException {
+        String text = read(file);
+        Map item = new LinkedHashMap();
+        item.put("type", "discovery-evidence");
+        item.put("path", rel(root, file));
+        putJsonString(item, text, "scenarioId");
+        putJsonString(item, text, "inputExpression");
+        putJsonString(item, text, "targetExpression");
+        putJsonString(item, text, "oracleStatus");
+        putJsonBoolean(item, text, "success");
+        putJsonBoolean(item, text, "promotionEligible");
+        putJsonNumber(item, text, "nodeCount");
+        putJsonNumber(item, text, "edgeCount");
+        item.put("bridgeRuleCount", jsonArrayCount(text, "bridgeRulesUsed"));
+        item.put("learnedMacroCount", jsonArrayCount(text, "learnedMacros"));
+        item.put("reusedMacroCount", jsonArrayCount(text, "reusedMacros"));
+        snapshot.evidence.add(item);
+    }
+
+    private static void addBenchmarkSourceEvidence(String path, RepositorySnapshot snapshot) {
+        Map item = new LinkedHashMap();
+        item.put("type", "benchmark-source");
+        item.put("path", path);
+        item.put("name", path.substring(path.lastIndexOf('/') + 1).replace(".java", ""));
+        snapshot.evidence.add(item);
+    }
+
+    private static void addWorkflowEvidence(Path root, Path file, RepositorySnapshot snapshot) throws IOException {
+        String text = read(file);
+        Map item = new LinkedHashMap();
+        item.put("type", "github-workflow");
+        item.put("path", rel(root, file));
+        item.put("name", yamlName(text, file.getFileName().toString()));
+        item.put("hasWorkflowDispatch", text.contains("workflow_dispatch"));
+        item.put("jobCount", countIndentedJobKeys(text));
+        snapshot.evidence.add(item);
+    }
+
+    private static void putJsonString(Map item, String text, String key) {
+        Matcher matcher = Pattern.compile("\\\"" + Pattern.quote(key) + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"").matcher(text);
+        if (matcher.find()) item.put(key, matcher.group(1));
+    }
+
+    private static void putJsonBoolean(Map item, String text, String key) {
+        Matcher matcher = Pattern.compile("\\\"" + Pattern.quote(key) + "\\\"\\s*:\\s*(true|false)", Pattern.CASE_INSENSITIVE).matcher(text);
+        if (matcher.find()) item.put(key, Boolean.parseBoolean(matcher.group(1).toLowerCase(Locale.ROOT)));
+    }
+
+    private static void putJsonNumber(Map item, String text, String key) {
+        Matcher matcher = Pattern.compile("\\\"" + Pattern.quote(key) + "\\\"\\s*:\\s*([0-9]+)").matcher(text);
+        if (matcher.find()) item.put(key, Long.parseLong(matcher.group(1)));
+    }
+
+    private static int jsonArrayCount(String text, String key) {
+        Matcher matcher = Pattern.compile("\\\"" + Pattern.quote(key) + "\\\"\\s*:\\s*\\[(.*?)\\]", Pattern.DOTALL).matcher(text);
+        if (!matcher.find()) return 0;
+        String body = matcher.group(1).trim();
+        if (body.isEmpty()) return 0;
+        int count = 1;
+        boolean inString = false;
+        for (int i = 0; i < body.length(); i++) {
+            char c = body.charAt(i);
+            if (c == '"') inString = !inString;
+            if (c == ',' && !inString) count++;
+        }
+        return count;
+    }
+
+    private static String yamlName(String text, String fallback) {
+        for (String line : text.split("\\R")) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("name:")) return trimmed.substring("name:".length()).trim().replace("\"", "").replace("'", "");
+        }
+        return fallback;
+    }
+
+    private static int countIndentedJobKeys(String text) {
+        boolean inJobs = false;
+        int count = 0;
+        for (String line : text.split("\\R")) {
+            if (line.trim().equals("jobs:")) { inJobs = true; continue; }
+            if (!inJobs) continue;
+            if (!line.startsWith("  ") && !line.isBlank()) break;
+            if (line.startsWith("  ") && !line.startsWith("    ") && line.trim().endsWith(":")) count++;
+        }
+        return count;
     }
 
     private static boolean ignored(String path) { return path.startsWith(".git/") || path.startsWith(".gradle/") || path.contains("/build/") || path.contains("/target/") || path.startsWith("build/") || path.startsWith("target/"); }

@@ -1,19 +1,32 @@
 {
   "title": "AI Knowledge Extractor",
   "upload_type": "software",
-  "description": "Deterministic build-integrated knowledge extraction for AI-assisted code understanding.",
+  "description": "AI Knowledge Extractor provides deterministic build-integrated knowledge extraction for AI-assisted code understanding. It extracts repository structure, modules, classes, tests, documentation, dependencies, capabilities and claims into stable JSON artifacts and can be used from Gradle and Maven builds.",
   "creators": [
     {
-      "name": "Artur, Carsten"
+      "name": "Hammer, Carsten",
+      "affiliation": "Independent researcher",
+      "orcid": "0009-0005-1047-6381"
     }
   ],
-  "license": "Apache-2.0",
   "access_right": "open",
+  "license": "Apache-2.0",
   "keywords": [
     "AI",
     "knowledge extraction",
     "static analysis",
-    "Gradle",
-    "Maven"
-  ]
+    "build tooling",
+    "Gradle plugin",
+    "Maven plugin",
+    "code understanding"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/carstenartur/ai-knowledge-extractor",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ],
+  "version": "0.1.0-SNAPSHOT",
+  "language": "eng"
 }

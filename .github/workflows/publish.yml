@@ -1,46 +1,69 @@
-name: Publish
+name: Release
 
 on:
-  release:
-    types: [created]
   workflow_dispatch:
     inputs:
-      releaseVersion:
-        description: Release version to publish
+      release_version:
+        description: Release version to publish, without leading v, e.g. 0.1.0
+        required: true
+        type: string
+        default: 0.1.0
+      next_development_version:
+        description: Optional next development version, e.g. 0.1.1-SNAPSHOT
         required: false
-        default: 0.1.0-SNAPSHOT
+        type: string
+      skip_tests:
+        description: Skip tests during release build
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: Validate and build, but do not push refs, publish packages, create a release, or open a PR
+        required: false
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
   packages: write
 
+env:
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
-  publish:
+  release:
+    name: Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-java@v5
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v6.1.0
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.1.0
         with:
           gradle-version: '9.5.1'
-      - name: Resolve release version
-        id: version
-        shell: bash
-        env:
-          RELEASE_VERSION_INPUT: ${{ github.event.inputs.releaseVersion }}
+
+      - name: Configure git author
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            release_version="${GITHUB_REF_NAME#v}"
-          else
-            release_version="${RELEASE_VERSION_INPUT}"
-          fi
-          release_version="${release_version//$'\r'/}"
-          release_version="${release_version//$'\n'/}"
-          printf 'value=%s\n' "$release_version" >> "$GITHUB_OUTPUT"
-      - name: Publish to GitHub Packages
-        run: gradle publish "-PreleaseVersion=${{ steps.version.outputs.value }}"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Run release workflow
         env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          NEXT_VERSION_INPUT: ${{ inputs.next_development_version }}
+          SKIP_TESTS: ${{ inputs.skip_tests }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          METADATA_HELPER: .github/scripts/update-release-metadata.py
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/release.sh

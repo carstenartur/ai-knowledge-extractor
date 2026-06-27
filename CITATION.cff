@@ -1,20 +1,22 @@
 cff-version: 1.2.0
-title: AI Knowledge Extractor
-message: "If you use this software, please cite it using the metadata from this file."
+message: "If you use AI Knowledge Extractor, please cite it using the metadata from this file."
 type: software
+title: "AI Knowledge Extractor"
+abstract: "Deterministic build-integrated knowledge extraction for AI-assisted code understanding."
 authors:
-  - family-names: Artur
-    given-names: Carsten
-    alias: carstenartur
+  - family-names: "Hammer"
+    given-names: "Carsten"
+    alias: "carstenartur"
+    orcid: "https://orcid.org/0009-0005-1047-6381"
 repository-code: "https://github.com/carstenartur/ai-knowledge-extractor"
 url: "https://github.com/carstenartur/ai-knowledge-extractor"
-abstract: "Deterministic build-integrated knowledge extraction for AI-assisted code understanding."
+license: "Apache-2.0"
+version: "0.1.0-SNAPSHOT"
 keywords:
   - ai
   - knowledge-extraction
   - static-analysis
   - build-tooling
-  - gradle
-  - maven
-license: Apache-2.0
-version: 0.1.0
+  - gradle-plugin
+  - maven-plugin
+  - code-understanding

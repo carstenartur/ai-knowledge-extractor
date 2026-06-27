@@ -1,5 +1,5 @@
 group = 'org.aiknowledge'
-version = providers.gradleProperty('releaseVersion').orElse('0.1.0-SNAPSHOT').get()
+version = findProperty('releaseVersion') ?: findProperty('projectVersion') ?: '0.1.0-SNAPSHOT'
 
 subprojects {
     group = rootProject.group

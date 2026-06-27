@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 final class ReportAnalyzer {
@@ -43,19 +44,96 @@ final class ReportAnalyzer {
 
     Map optimization(ExtractionOptions options, RepositorySnapshot snapshot, Map complexity) {
         List smells = new ArrayList();
+
+        // Hidden Concept: capabilities with no code, test or doc evidence at all
         for (Object item : snapshot.capabilities) {
             Map cap = (Map) item;
-            Object status = cap.get("status");
-            if ("unknown".equals(status)) smells.add(smell("Hidden Concept", cap.get("id"), 300));
+            if ("unknown".equals(cap.get("status"))) smells.add(smell("Hidden Concept", cap.get("id"), 300));
         }
+
+        // Weak Evidence: capabilities that have some evidence but lack full implementation+test coverage
+        for (Object item : snapshot.capabilities) {
+            Map cap = (Map) item;
+            if ("partial".equals(cap.get("status"))) smells.add(smell("Weak Evidence", cap.get("id"), 200));
+        }
+
+        // Large Concept: a capability backed by more than five implementing classes
+        for (Object item : snapshot.capabilities) {
+            Map cap = (Map) item;
+            List classes = (List) cap.getOrDefault("classes", new ArrayList());
+            if (classes.size() > 5) smells.add(smell("Large Concept", cap.get("id"), (classes.size() - 5) * 200));
+        }
+
+        // Scattered Capability: a capability whose implementing classes span three or more packages
+        for (Object item : snapshot.capabilities) {
+            Map cap = (Map) item;
+            List classes = (List) cap.getOrDefault("classes", new ArrayList());
+            Map pkgs = new LinkedHashMap();
+            for (Object cls : classes) {
+                String pkg = packageOf(String.valueOf(cls));
+                if (!pkg.isBlank()) pkgs.put(pkg, Boolean.TRUE);
+            }
+            if (pkgs.size() >= 3) smells.add(smell("Scattered Capability", cap.get("id"), pkgs.size() * 150));
+        }
+
+        // Concept Cycle: pairs of packages that directly depend on each other (A imports B and B imports A)
+        Map packageDeps = new LinkedHashMap();
+        for (Object item : snapshot.classes) {
+            Map cls = (Map) item;
+            String pkg = String.valueOf(cls.getOrDefault("package", ""));
+            if (pkg.isBlank()) continue;
+            List refs = (List) cls.getOrDefault("referencedProjectClasses", new ArrayList());
+            for (Object ref : refs) {
+                String depPkg = packageOf(String.valueOf(ref));
+                if (!depPkg.isBlank() && !depPkg.equals(pkg)) {
+                    if (!packageDeps.containsKey(pkg)) packageDeps.put(pkg, new ArrayList());
+                    List deps = (List) packageDeps.get(pkg);
+                    if (!deps.contains(depPkg)) deps.add(depPkg);
+                }
+            }
+        }
+        List cyclesSeen = new ArrayList();
+        for (Object pkgKey : packageDeps.keySet()) {
+            String pkg = String.valueOf(pkgKey);
+            for (Object depKey : (List) packageDeps.get(pkg)) {
+                String dep = String.valueOf(depKey);
+                List reverseDeps = (List) packageDeps.getOrDefault(dep, new ArrayList());
+                if (reverseDeps.contains(pkg)) {
+                    String pair = pkg.compareTo(dep) < 0 ? pkg + " <-> " + dep : dep + " <-> " + pkg;
+                    if (!cyclesSeen.contains(pair)) {
+                        cyclesSeen.add(pair);
+                        smells.add(smell("Concept Cycle", pair, 400));
+                    }
+                }
+            }
+        }
+
+        // Duplicate Knowledge: documentation files that share the same normalised title
+        Map normTitleCount = new LinkedHashMap();
+        for (Object item : snapshot.docs) {
+            Map doc = (Map) item;
+            String norm = normalizeTitle(String.valueOf(doc.getOrDefault("title", "")));
+            if (!norm.isBlank()) normTitleCount.put(norm, ((Integer) normTitleCount.getOrDefault(norm, 0)) + 1);
+        }
+        for (Object norm : normTitleCount.keySet()) {
+            int count = (Integer) normTitleCount.get(norm);
+            if (count > 1) smells.add(smell("Duplicate Knowledge", norm, (count - 1) * 100));
+        }
+
+        // Oversized Context Cluster: repository contains too many classes for a single AI context window
         if (snapshot.classes.size() > 80) smells.add(smell("Oversized Context Cluster", "repository", snapshot.classes.size() * 20));
-        if (snapshot.docs.size() > 30) smells.add(smell("Duplicate Documentation", "docs", snapshot.docs.size() * 25));
+
+        // Rank smells by estimated token savings, highest impact first
+        smells.sort((a, b) -> Integer.compare(
+                ((Number) ((Map) b).get("estimatedTokenSavings")).intValue(),
+                ((Number) ((Map) a).get("estimatedTokenSavings")).intValue()));
+
         List recommendations = new ArrayList();
         for (Object object : smells) {
             Map s = (Map) object;
             Map r = new LinkedHashMap();
             r.put("title", "Reduce " + s.get("type") + " around " + s.get("subject"));
-            r.put("action", "Improve locality, documentation and test evidence.");
+            r.put("action", actionFor(String.valueOf(s.get("type"))));
             r.put("estimatedTokenSavings", s.get("estimatedTokenSavings"));
             recommendations.add(r);
         }
@@ -115,6 +193,20 @@ final class ReportAnalyzer {
         return results.isEmpty() ? "none" : ((Map) results.get(0)).get("profile");
     }
 
+    private static String packageOf(String fqn) { int last = fqn.lastIndexOf('.'); return last < 0 ? "" : fqn.substring(0, last); }
+    private static String normalizeTitle(String title) { return title.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", ""); }
+    private static String actionFor(String type) {
+        return switch (type) {
+            case "Large Concept" -> "Split the concept into smaller, more focused modules or packages.";
+            case "Hidden Concept" -> "Add implementation classes and tests to reveal and verify the capability.";
+            case "Concept Cycle" -> "Introduce an abstraction layer or extract shared code to break the cycle.";
+            case "Scattered Capability" -> "Consolidate capability classes into a single cohesive package.";
+            case "Weak Evidence" -> "Add test coverage and implementation to strengthen the evidence for this capability.";
+            case "Duplicate Knowledge" -> "Consolidate duplicate documentation into a single authoritative source.";
+            case "Oversized Context Cluster" -> "Modularize the repository by splitting large clusters into smaller bounded contexts.";
+            default -> "Improve locality, documentation and test evidence.";
+        };
+    }
     private static Map smell(String type, Object subject, int savings) { Map s = new LinkedHashMap(); s.put("type", type); s.put("subject", subject); s.put("estimatedTokenSavings", savings); return s; }
     private static Map after(Map before, List smells) { int savings = 0; for (Object item : smells) savings += ((Number) ((Map) item).get("estimatedTokenSavings")).intValue(); Map after = new LinkedHashMap(); int tokens = ((Number) before.get("estimatedContextTokens")).intValue(); after.put("estimatedContextTokens", Math.max(0, tokens - savings)); after.put("estimatedTokenSavings", savings); return after; }
     static String html(String title, Map report) { return "<!doctype html><html><head><meta charset=\"utf-8\"><title>" + title + "</title></head><body><h1>" + title + "</h1><pre>" + escape(JsonSupport.toJson(report)) + "</pre></body></html>\n"; }

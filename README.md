@@ -29,7 +29,15 @@ For Regelsuche, use the project as a composite build first. See `docs/regelsuche
 
 ## Maven
 
-The current Maven module contains the shared configuration and first goal classes. The Gradle plugin is more complete in this commit; the remaining Maven goal descriptor wiring still needs CI verification.
+After publishing or installing locally, the Maven plugin exposes matching goals:
+
+```bash
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:generate
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:analyze
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:optimize
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:benchmark
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:check
+```
 
 ## Scope
 

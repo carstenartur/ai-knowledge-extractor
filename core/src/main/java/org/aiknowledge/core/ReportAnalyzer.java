@@ -78,7 +78,10 @@ final class ReportAnalyzer {
             result.put("estimatedTokens", profile.get("estimatedCompressedTokens"));
             result.put("rawTokens", profile.get("estimatedRawTokens"));
             result.put("compressionRatio", profile.get("targetCompressionRatio"));
-            result.put("fitsDefaultBudget", profile.get("compressedFitsPracticalBudget"));
+            result.put("rawFitsPracticalBudget", profile.get("fitsPracticalBudget"));
+            result.put("rawFitsHardLimit", profile.get("fitsHardLimit"));
+            result.put("compressedFitsPracticalBudget", profile.get("compressedFitsPracticalBudget"));
+            result.put("compressedFitsHardLimit", profile.get("compressedFitsHardLimit"));
             result.put("risk", risk(profile));
             results.add(result);
         }

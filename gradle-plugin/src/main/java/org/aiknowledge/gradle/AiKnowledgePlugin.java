@@ -54,7 +54,10 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                     extension.getSeedDirectory().get().getAsFile().toPath(),
                     extension.getModelProfileDirectory().get().getAsFile().toPath(),
                     extension.getFailOnWarnings().get(),
-                    extension.getMaxCognitiveDebt().get());
+                    extension.getMaxCognitiveDebt().get(),
+                    extension.getMaxCognitiveDebtIncrease().get(),
+                    extension.getMaxConceptRadiusIncrease().get(),
+                    extension.getMaxContextTokenIncrease().get());
             switch (mode) {
                 case "generate" -> runner.generate(options);
                 case "analyze" -> runner.analyze(options);

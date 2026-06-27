@@ -64,6 +64,8 @@ final class RepositoryScanner {
                 Map dep = new LinkedHashMap();
                 dep.put("source", rel(root, file));
                 dep.put("notation", t);
+                dep.put("scope", t.substring(0, t.indexOf(' ')));
+                dep.put("buildSystem", "gradle");
                 snapshot.dependencies.add(dep);
             }
         }

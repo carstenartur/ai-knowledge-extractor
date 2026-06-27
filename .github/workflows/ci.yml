@@ -24,3 +24,5 @@ jobs:
           gradle-version: '9.5.1'
       - name: Build
         run: gradle build
+      - name: Verify consumer fixtures
+        run: bash .github/scripts/verify-consumer-fixtures.sh

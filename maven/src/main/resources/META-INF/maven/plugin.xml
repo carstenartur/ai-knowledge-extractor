@@ -9,10 +9,20 @@
   <mojos>
     <mojo>
       <goal>generate</goal>
+      <description>Generate AI knowledge artifacts.</description>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution>
+      <requiresDependencyCollection>runtime</requiresDependencyCollection>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <phase>generate-resources</phase>
       <implementation>org.aiknowledge.maven.GenerateGoal</implementation>
       <language>java</language>
-      <phase>generate-resources</phase>
-      <requiresProject>true</requiresProject>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
       <threadSafe>true</threadSafe>
       <parameters>
         <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
@@ -33,10 +43,20 @@
     </mojo>
     <mojo>
       <goal>analyze</goal>
+      <description>Analyze AI knowledge artifacts.</description>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution>
+      <requiresDependencyCollection>runtime</requiresDependencyCollection>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <phase>verify</phase>
       <implementation>org.aiknowledge.maven.AnalyzeGoal</implementation>
       <language>java</language>
-      <phase>verify</phase>
-      <requiresProject>true</requiresProject>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
       <threadSafe>true</threadSafe>
       <parameters>
         <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
@@ -57,10 +77,20 @@
     </mojo>
     <mojo>
       <goal>optimize</goal>
+      <description>Optimize AI knowledge artifacts.</description>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution>
+      <requiresDependencyCollection>runtime</requiresDependencyCollection>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <phase>verify</phase>
       <implementation>org.aiknowledge.maven.OptimizeGoal</implementation>
       <language>java</language>
-      <phase>verify</phase>
-      <requiresProject>true</requiresProject>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
       <threadSafe>true</threadSafe>
       <parameters>
         <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
@@ -81,10 +111,20 @@
     </mojo>
     <mojo>
       <goal>benchmark</goal>
+      <description>Benchmark AI knowledge artifacts.</description>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution>
+      <requiresDependencyCollection>runtime</requiresDependencyCollection>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <phase>verify</phase>
       <implementation>org.aiknowledge.maven.BenchmarkGoal</implementation>
       <language>java</language>
-      <phase>verify</phase>
-      <requiresProject>true</requiresProject>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
       <threadSafe>true</threadSafe>
       <parameters>
         <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
@@ -105,10 +145,20 @@
     </mojo>
     <mojo>
       <goal>check</goal>
+      <description>Check AI knowledge artifacts.</description>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution>
+      <requiresDependencyCollection>runtime</requiresDependencyCollection>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <phase>verify</phase>
       <implementation>org.aiknowledge.maven.CheckGoal</implementation>
       <language>java</language>
-      <phase>verify</phase>
-      <requiresProject>true</requiresProject>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
       <threadSafe>true</threadSafe>
       <parameters>
         <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>

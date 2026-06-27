@@ -73,8 +73,11 @@ final class JavaSourceMetadata {
         for (String line : source.split("\\R")) {
             String text = line.trim();
             if (text.startsWith("@Tag(")) {
-                String value = text.substring("@Tag(".length(), text.indexOf(')')).replace("\"", "").replace("'", "").trim();
-                result.add(value);
+                int end = text.indexOf(')');
+                if (end > "@Tag(".length()) {
+                    String value = text.substring("@Tag(".length(), end).replace("\"", "").replace("'", "").trim();
+                    if (!value.isBlank()) result.add(value);
+                }
             }
         }
         return result;

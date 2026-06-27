@@ -29,6 +29,7 @@ final class RepositoryScanner {
             }
         }
         capabilities(snapshot);
+        SeedSupport.mergeSeeds(options, snapshot);
         Map counts = new LinkedHashMap();
         counts.put("modules", snapshot.modules.size());
         counts.put("classes", snapshot.classes.size());

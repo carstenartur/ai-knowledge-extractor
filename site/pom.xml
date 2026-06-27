@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.aiknowledge</groupId>
+  <artifactId>ai-knowledge-maven-plugin</artifactId>
+  <version>${revision}</version>
+  <packaging>jar</packaging>
+
+  <name>AI Knowledge Maven Plugin</name>
+  <description>Deterministic build-integrated knowledge extraction for AI-assisted code understanding.</description>
+  <url>https://carstenartur.github.io/ai-knowledge-extractor/</url>
+  <inceptionYear>2024</inceptionYear>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git</connection>
+    <developerConnection>scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git</developerConnection>
+    <url>https://github.com/carstenartur/ai-knowledge-extractor</url>
+  </scm>
+
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/carstenartur/ai-knowledge-extractor/issues</url>
+  </issueManagement>
+
+  <properties>
+    <revision>0.1.0-SNAPSHOT</revision>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <!--
+    No compile dependencies needed: this project does not compile sources.
+    It uses the hand-written plugin descriptor from the maven/ module resources
+    to generate Maven Site documentation via maven-plugin-plugin:report.
+    The plugin.xml is copied into target/classes via the resources phase.
+  -->
+
+  <build>
+    <resources>
+      <resource>
+        <!-- Pull in the hand-written plugin descriptor from the maven/ module -->
+        <directory>../maven/src/main/resources</directory>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>3.21.0</version>
+      </plugin>
+    </plugins>
+  </build>
+
+  <reporting>
+    <plugins>
+      <!--
+        maven-plugin-plugin:report reads META-INF/maven/plugin.xml from
+        target/classes (populated by process-resources) and generates the
+        standard Maven plugin reference pages (plugin-info.html, goal pages).
+        The report goal is present in 3.6.4 but was removed in 3.9+.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>3.6.4</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>report</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+      <!--
+        maven-project-info-reports-plugin generates project metadata pages
+        (coordinates, license, SCM, issue management).
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>3.9.0</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>index</report>
+              <report>summary</report>
+              <report>licenses</report>
+              <report>scm</report>
+              <report>issue-management</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
+
+</project>

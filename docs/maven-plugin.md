@@ -12,6 +12,9 @@ Canonical Maven plugin coordinates:
 
 The plugin exposes goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`, and `help`.
 
+For the generated Maven plugin reference with full goal and parameter documentation, see the
+[GitHub Pages documentation site](https://carstenartur.github.io/ai-knowledge-extractor/).
+
 ## Help goal
 
 Show all goals:

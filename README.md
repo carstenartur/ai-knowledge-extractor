@@ -7,6 +7,7 @@
 [![Release version](https://img.shields.io/github/v/release/carstenartur/ai-knowledge-extractor?sort=semver)](https://github.com/carstenartur/ai-knowledge-extractor/releases)
 [![GitHub Packages](https://img.shields.io/badge/packages-GitHub%20Packages-blue)](docs/publishing.md)
 [![Citation](https://img.shields.io/badge/citation-CFF-informational)](CITATION.cff)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://carstenartur.github.io/ai-knowledge-extractor/)
 
 Deterministic build-integrated knowledge extraction for AI-assisted code understanding.
 
@@ -51,7 +52,7 @@ Optional empirical benchmark layer parameters:
 - `empiricalBenchmarkEnabled` (default `false`)
 - `empiricalBenchmarkFixtureFile` (default `${project.basedir}/ai-knowledge/benchmark-fixtures.yaml`)
 
-Canonical Maven goal, parameter and help usage reference: [`docs/maven-plugin.md`](docs/maven-plugin.md).
+Canonical Maven goal, parameter and help usage reference: [`docs/maven-plugin.md`](docs/maven-plugin.md). For the generated Maven plugin reference with full parameter tables for all goals, see the [GitHub Pages documentation site](https://carstenartur.github.io/ai-knowledge-extractor/).
 
 ## Scope
 

@@ -11,10 +11,12 @@
 4. Review the user-facing docs:
    - README badges and quick start are current.
    - [`gradle-plugin.md`](gradle-plugin.md) and [`maven-plugin.md`](maven-plugin.md) still match the released plugin behavior.
+   - GitHub Pages documentation site at <https://carstenartur.github.io/ai-knowledge-extractor/> reflects the release.
 5. Confirm consumer coverage before publishing:
    - Gradle consumer fixture runs `generateAiKnowledgeIndex`, `analyzeAiComplexity`, `optimizeAiKnowledge`, `benchmarkAiKnowledge`, `checkAiKnowledgeIndex`, and `publishAiKnowledgeIndex`.
    - Maven consumer fixture runs `generate`, `analyze`, `optimize`, `benchmark`, `check`, and `help`.
    - At least one released-version consumer path resolves artifacts from GitHub Packages, not only via a local composite build.
+   - Verify that the `Pages` workflow ran successfully after tagging and that <https://carstenartur.github.io/ai-knowledge-extractor/> shows the new version.
 6. Prepare release notes.
 7. Run the `Release` workflow once with `dry_run=true` from `main`.
 8. Run the real `Release` workflow from `main`.

@@ -10,6 +10,8 @@ AI Knowledge Extractor publishes three project-oriented artifacts:
 
 The normal release flow is documented in [`release.md`](release.md). It publishes all Gradle publications to GitHub Packages and creates a GitHub Release with the built jar artifacts.
 
+The generated Maven plugin reference documentation (goal overview, parameter tables, project coordinates) is published to [GitHub Pages](https://carstenartur.github.io/ai-knowledge-extractor/) on every push to `main` and on release tags via the `Pages` workflow.
+
 Canonical plugin usage references:
 
 - Gradle plugin: [`gradle-plugin.md`](gradle-plugin.md)

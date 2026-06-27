@@ -60,7 +60,16 @@ jobs:
           grep -rl "benchmark" site/target/site/
           grep -rl "check" site/target/site/
           grep -rl "help" site/target/site/
-          ! grep -r "/home/runner/" site/target/site/ 2>/dev/null
+          if grep -r "/home/runner/" site/target/site/; then
+            echo "Found forbidden absolute paths in generated site" >&2
+            exit 1
+          else
+            status=$?
+            if [ "$status" -ne 1 ]; then
+              echo "grep failed while checking for forbidden absolute paths" >&2
+              exit "$status"
+            fi
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

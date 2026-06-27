@@ -14,8 +14,16 @@ final class SeedSupport {
     static void mergeSeeds(ExtractionOptions options, RepositorySnapshot snapshot) throws IOException {
         Path seedDir = options.seedDirectory();
         if (seedDir == null || !Files.isDirectory(seedDir)) return;
-        merge(seedDir.resolve("capabilities.seed.yaml"), snapshot.capabilities);
-        merge(seedDir.resolve("claims.seed.yaml"), snapshot.claims);
+        mergeAll(seedDir, "capabilities", snapshot.capabilities);
+        mergeAll(seedDir, "claims", snapshot.claims);
+    }
+
+    private static void mergeAll(Path seedDir, String name, List target) throws IOException {
+        merge(seedDir.resolve(name + ".seed.yaml"), target);
+        merge(seedDir.resolve(name + ".seed.yml"), target);
+        merge(seedDir.resolve(name + ".yaml"), target);
+        merge(seedDir.resolve(name + ".yml"), target);
+        merge(seedDir.resolve(name + ".json"), target);
     }
 
     private static void merge(Path file, List target) throws IOException {
@@ -46,6 +54,12 @@ final class SeedSupport {
     }
 
     private static List<Map> parse(Path file) throws IOException {
+        String name = file.getFileName().toString();
+        if (name.endsWith(".json")) return parseJsonSeed(Files.readString(file));
+        return parseYamlSeed(file);
+    }
+
+    private static List<Map> parseYamlSeed(Path file) throws IOException {
         List<Map> result = new ArrayList<>();
         Map current = null;
         for (String raw : Files.readAllLines(file)) {
@@ -63,19 +77,99 @@ final class SeedSupport {
         return result;
     }
 
+    private static List<Map> parseJsonSeed(String text) {
+        List<Map> result = new ArrayList<>();
+        for (String object : objectBodies(text)) {
+            Map map = new LinkedHashMap();
+            for (String field : splitTopLevel(object, ',')) {
+                int colon = topLevelColon(field);
+                if (colon < 0) continue;
+                String key = stripQuotes(field.substring(0, colon).trim());
+                String value = field.substring(colon + 1).trim();
+                map.put(key, parseValue(value));
+            }
+            if (!map.isEmpty()) result.add(map);
+        }
+        return result;
+    }
+
+    private static List<String> objectBodies(String text) {
+        List<String> bodies = new ArrayList<>();
+        int depth = 0;
+        int start = -1;
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (escaped) { escaped = false; continue; }
+            if (c == '\\') { escaped = true; continue; }
+            if (c == '"') { inString = !inString; continue; }
+            if (inString) continue;
+            if (c == '{') {
+                if (depth == 0) start = i + 1;
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0 && start >= 0) bodies.add(text.substring(start, i));
+            }
+        }
+        return bodies;
+    }
+
+    private static int topLevelColon(String text) {
+        boolean inString = false;
+        boolean escaped = false;
+        int bracketDepth = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (escaped) { escaped = false; continue; }
+            if (c == '\\') { escaped = true; continue; }
+            if (c == '"') { inString = !inString; continue; }
+            if (inString) continue;
+            if (c == '[') bracketDepth++;
+            else if (c == ']') bracketDepth--;
+            else if (c == ':' && bracketDepth == 0) return i;
+        }
+        return -1;
+    }
+
+    private static List<String> splitTopLevel(String text, char separator) {
+        List<String> parts = new ArrayList<>();
+        int start = 0;
+        int bracketDepth = 0;
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (escaped) { escaped = false; continue; }
+            if (c == '\\') { escaped = true; continue; }
+            if (c == '"') { inString = !inString; continue; }
+            if (inString) continue;
+            if (c == '[') bracketDepth++;
+            else if (c == ']') bracketDepth--;
+            else if (c == separator && bracketDepth == 0) {
+                parts.add(text.substring(start, i).trim());
+                start = i + 1;
+            }
+        }
+        parts.add(text.substring(start).trim());
+        return parts;
+    }
+
     private static Object parseValue(String value) {
-        String trimmed = stripQuotes(value.trim());
+        String trimmed = value.trim();
         if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
             List list = new ArrayList();
             String body = trimmed.substring(1, trimmed.length() - 1).trim();
-            if (!body.isEmpty()) for (String part : body.split(",")) list.add(stripQuotes(part.trim()));
+            if (!body.isEmpty()) for (String part : splitTopLevel(body, ',')) list.add(stripQuotes(part.trim()));
             return list;
         }
-        return trimmed;
+        return stripQuotes(trimmed);
     }
 
     private static String stripQuotes(String value) {
-        if (value.length() >= 2 && ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")))) return value.substring(1, value.length() - 1);
-        return value;
+        String trimmed = value.trim();
+        if (trimmed.length() >= 2 && ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'")))) return trimmed.substring(1, trimmed.length() - 1);
+        return trimmed;
     }
 }

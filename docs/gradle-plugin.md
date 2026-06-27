@@ -14,7 +14,7 @@ Consumer build:
 
 ```groovy
 plugins {
-    id 'org.aiknowledge.extractor' version '0.1.0'
+    id 'org.aiknowledge.extractor' version '<version>'
 }
 ```
 
@@ -107,7 +107,7 @@ aiKnowledge {
 
 ```groovy
 plugins {
-    id 'org.aiknowledge.extractor' version '0.1.0'
+    id 'org.aiknowledge.extractor' version '<version>'
 }
 
 tasks.named('check') {

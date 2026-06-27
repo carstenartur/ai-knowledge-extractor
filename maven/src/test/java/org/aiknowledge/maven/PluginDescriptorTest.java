@@ -4,8 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -38,16 +39,10 @@ class PluginDescriptorTest {
         assertEquals(Set.of("goal", "detail"), parameters);
     }
 
-    private static Set<String> sharedParameters() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/org/aiknowledge/maven/AbstractAiKnowledgeMojo.java"));
-        return source
-                .lines()
-                .map(String::trim)
-                .filter(line -> line.startsWith("protected "))
-                .filter(line -> line.endsWith(";"))
-                .filter(line -> !line.contains("("))
-                .map(line -> line.replace(";", ""))
-                .map(line -> line.substring(line.lastIndexOf(' ') + 1))
+    private static Set<String> sharedParameters() {
+        return Arrays.stream(AbstractAiKnowledgeMojo.class.getDeclaredFields())
+                .filter(f -> Modifier.isProtected(f.getModifiers()))
+                .map(Field::getName)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
@@ -80,7 +75,12 @@ class PluginDescriptorTest {
     private static Document document() throws Exception {
         try (InputStream stream = PluginDescriptorTest.class.getResourceAsStream("/META-INF/maven/plugin.xml")) {
             assertTrue(stream != null, "plugin descriptor should be available on test classpath");
-            return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(stream);
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setExpandEntityReferences(false);
+            return factory.newDocumentBuilder().parse(stream);
         }
     }
 

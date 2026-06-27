@@ -230,8 +230,6 @@
     <mojo>
       <goal>help</goal>
       <description>Displays plugin goal and parameter help for the AI Knowledge Maven Plugin.</description>
-      <requiresDependencyResolution>runtime</requiresDependencyResolution>
-      <requiresDependencyCollection>runtime</requiresDependencyCollection>
       <requiresDirectInvocation>false</requiresDirectInvocation>
       <requiresProject>false</requiresProject>
       <requiresReports>false</requiresReports>

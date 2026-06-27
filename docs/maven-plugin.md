@@ -17,13 +17,13 @@ The plugin exposes goals: `generate`, `analyze`, `optimize`, `benchmark`, `check
 Show all goals:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:help
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help
 ```
 
 Show one goal with full parameter detail:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:help -Dgoal=benchmark -Ddetail=true
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Dgoal=benchmark -Ddetail=true
 ```
 
 ## Shared parameters (all operational goals)
@@ -62,7 +62,7 @@ Threshold overrides can also be passed as JVM properties:
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:generate
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:generate
 ```
 
 `pom.xml` execution:
@@ -85,7 +85,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:generate
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:analyze
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:analyze
 ```
 
 `pom.xml` execution:
@@ -108,7 +108,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:analyze
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:optimize
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:optimize
 ```
 
 `pom.xml` execution:
@@ -131,7 +131,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:optimize
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:benchmark
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:benchmark
 ```
 
 `pom.xml` execution:
@@ -154,7 +154,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:benchmark
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:${ai-knowledge.version}:check
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
 ```
 
 `pom.xml` execution:

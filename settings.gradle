@@ -13,6 +13,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = 'ai-knowledge-extractor'
-include 'ai-knowledge-core'
-include 'ai-knowledge-gradle-plugin'
-include 'ai-knowledge-maven-plugin'
+include 'core'
+include 'gradle-plugin'
+include 'maven-plugin'

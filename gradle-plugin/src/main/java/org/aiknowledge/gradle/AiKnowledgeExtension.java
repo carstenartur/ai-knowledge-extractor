@@ -13,6 +13,9 @@ public abstract class AiKnowledgeExtension {
     private final DirectoryProperty modelProfileDirectory;
     private final Property<Boolean> failOnWarnings;
     private final Property<Double> maxCognitiveDebt;
+    private final Property<Double> maxCognitiveDebtIncrease;
+    private final Property<Double> maxConceptRadiusIncrease;
+    private final Property<Double> maxContextTokenIncrease;
 
     @Inject
     public AiKnowledgeExtension(Project project) {
@@ -23,6 +26,9 @@ public abstract class AiKnowledgeExtension {
         this.modelProfileDirectory = objects.directoryProperty().convention(project.getLayout().getProjectDirectory().dir("ai-knowledge"));
         this.failOnWarnings = objects.property(Boolean.class).convention(false);
         this.maxCognitiveDebt = objects.property(Double.class).convention(100.0d);
+        this.maxCognitiveDebtIncrease = objects.property(Double.class).convention(Double.MAX_VALUE);
+        this.maxConceptRadiusIncrease = objects.property(Double.class).convention(Double.MAX_VALUE);
+        this.maxContextTokenIncrease = objects.property(Double.class).convention(Double.MAX_VALUE);
     }
 
     public DirectoryProperty getOutputDirectory() { return outputDirectory; }
@@ -31,4 +37,7 @@ public abstract class AiKnowledgeExtension {
     public DirectoryProperty getModelProfileDirectory() { return modelProfileDirectory; }
     public Property<Boolean> getFailOnWarnings() { return failOnWarnings; }
     public Property<Double> getMaxCognitiveDebt() { return maxCognitiveDebt; }
+    public Property<Double> getMaxCognitiveDebtIncrease() { return maxCognitiveDebtIncrease; }
+    public Property<Double> getMaxConceptRadiusIncrease() { return maxConceptRadiusIncrease; }
+    public Property<Double> getMaxContextTokenIncrease() { return maxContextTokenIncrease; }
 }

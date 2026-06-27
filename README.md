@@ -1,8 +1,23 @@
 # AI Knowledge Extractor
 
+[![CI](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml/badge.svg)](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml)
+[![Release](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml/badge.svg)](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml)
+[![License](https://img.shields.io/github/license/carstenartur/ai-knowledge-extractor)](LICENSE)
+![Java 17](https://img.shields.io/badge/Java-17-blue)
+[![Release version](https://img.shields.io/github/v/release/carstenartur/ai-knowledge-extractor?sort=semver)](https://github.com/carstenartur/ai-knowledge-extractor/releases)
+[![GitHub Packages](https://img.shields.io/badge/packages-GitHub%20Packages-blue)](docs/publishing.md)
+[![Citation](https://img.shields.io/badge/citation-CFF-informational)](CITATION.cff)
+
 Deterministic build-integrated knowledge extraction for AI-assisted code understanding.
 
 This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` for modules, classes, tests, docs, dependencies, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.
+
+## Quick start
+
+- Gradle: apply plugin `org.aiknowledge.extractor` and run `./gradlew generateAiKnowledgeIndex`.
+- Maven: invoke `mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:generate`.
+- Consumer setup, tasks, extension parameters, goals and repository configuration are documented in [`docs/gradle-plugin.md`](docs/gradle-plugin.md), [`docs/maven-plugin.md`](docs/maven-plugin.md) and [`docs/publishing.md`](docs/publishing.md).
+- Releases are published through the GitHub Actions [`Release` workflow](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml); use the documented `dry_run` mode before the first real release.
 
 ## Gradle
 
@@ -60,6 +75,10 @@ Trend baselines, `metrics-snapshot.json`, `trend.json` and CI threshold configur
 ## Publishing and consumption
 
 Artifact IDs, local development consumption, GitHub Packages repository configuration and release-version handling are documented in [`docs/publishing.md`](docs/publishing.md). Plugin-specific canonical usage docs: [`docs/gradle-plugin.md`](docs/gradle-plugin.md) and [`docs/maven-plugin.md`](docs/maven-plugin.md).
+
+## Release process
+
+Release execution, `dry_run`, metadata updates, tagging and the follow-up PR flow are documented in [`docs/release.md`](docs/release.md).
 
 ## Citation
 

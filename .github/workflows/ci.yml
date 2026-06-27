@@ -28,19 +28,48 @@ jobs:
         run: gradle publishToMavenLocal
       - name: Verify Gradle consumer fixture
         run: |
-          gradle -p examples/fixtures/gradle-consumer generateAiKnowledgeIndex checkAiKnowledgeIndex publishAiKnowledgeIndex
+          gradle -p examples/fixtures/gradle-consumer \
+            generateAiKnowledgeIndex \
+            analyzeAiComplexity \
+            optimizeAiKnowledge \
+            benchmarkAiKnowledge \
+            checkAiKnowledgeIndex \
+            publishAiKnowledgeIndex
           test -f examples/fixtures/gradle-consumer/build/ai-knowledge/index.json
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/complexity.json
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/optimization.json
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/benchmark.json
           test -f examples/fixtures/gradle-consumer/build/ai-knowledge/check.json
           test -f examples/fixtures/gradle-consumer/docs/ai-knowledge/index.json
       - name: Verify Maven consumer fixture
         run: |
           VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
-          mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
-            -DaiKnowledge.version="$VERSION" \
-            org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":generate \
-            org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check 2>&1 | tee maven-consumer-fixture.log
+          {
+            mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
+              -DaiKnowledge.version="$VERSION" \
+              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":generate \
+              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":analyze \
+              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":optimize \
+              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":benchmark \
+              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check
+            mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
+              -DaiKnowledge.version="$VERSION" \
+              -Ddetail=true \
+              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":help
+            mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
+              -DaiKnowledge.version="$VERSION" \
+              -Dgoal=benchmark \
+              -Ddetail=true \
+              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":help
+          } 2>&1 | tee maven-consumer-fixture.log
           test -f examples/fixtures/maven-consumer/target/ai-knowledge/index.json
+          test -f examples/fixtures/maven-consumer/target/ai-knowledge/complexity.json
+          test -f examples/fixtures/maven-consumer/target/ai-knowledge/optimization.json
+          test -f examples/fixtures/maven-consumer/target/ai-knowledge/benchmark.json
           test -f examples/fixtures/maven-consumer/target/ai-knowledge/check.json
+          grep -F "AI Knowledge Maven Plugin goals:" maven-consumer-fixture.log
+          grep -F "benchmark (phase: verify)" maven-consumer-fixture.log
+          grep -F "empiricalBenchmarkFixtureFile [java.io.File]" maven-consumer-fixture.log
       - name: Upload Maven fixture log
         if: always()
         uses: actions/upload-artifact@v4

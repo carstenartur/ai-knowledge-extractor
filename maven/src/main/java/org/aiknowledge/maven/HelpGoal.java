@@ -25,8 +25,10 @@ public final class HelpGoal extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException {
         List<MojoMetadata> mojos = readMojos();
-        if (goal != null && !goal.isBlank()) {
-            String normalizedGoal = goal.trim().toLowerCase(Locale.ROOT);
+        String requestedGoal = firstNonBlank(goal, System.getProperty("goal"));
+        boolean showDetail = detail || Boolean.parseBoolean(System.getProperty("detail", "false"));
+        if (requestedGoal != null) {
+            String normalizedGoal = requestedGoal.trim().toLowerCase(Locale.ROOT);
             MojoMetadata selected = null;
             for (MojoMetadata mojo : mojos) {
                 if (mojo.goal.equalsIgnoreCase(normalizedGoal)) {
@@ -35,7 +37,7 @@ public final class HelpGoal extends AbstractMojo {
                 }
             }
             if (selected == null) {
-                throw new MojoExecutionException("Unknown goal: " + goal);
+                throw new MojoExecutionException("Unknown goal: " + requestedGoal);
             }
             printMojo(selected, true);
             return;
@@ -43,9 +45,15 @@ public final class HelpGoal extends AbstractMojo {
         getLog().info("AI Knowledge Maven Plugin goals:");
         for (MojoMetadata mojo : mojos) {
             if ("help".equals(mojo.goal)) continue;
-            printMojo(mojo, detail);
+            printMojo(mojo, showDetail);
         }
         getLog().info("Use -Dgoal=<goal> -Ddetail=true to show one goal with parameters.");
+    }
+
+    private static String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) return first.trim();
+        if (second != null && !second.isBlank()) return second.trim();
+        return null;
     }
 
     private List<MojoMetadata> readMojos() throws MojoExecutionException {

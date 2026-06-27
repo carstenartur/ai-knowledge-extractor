@@ -1,0 +1,20 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+description = 'Gradle plugin for AI knowledge extraction and complexity analysis.'
+
+dependencies {
+    implementation project(':core')
+}
+
+gradlePlugin {
+    plugins {
+        aiKnowledge {
+            id = 'io.github.carstenartur.ai-knowledge'
+            displayName = 'AI Knowledge Extractor'
+            description = 'Generates deterministic machine-readable repository knowledge indexes and AI-oriented complexity reports.'
+            implementationClass = 'io.github.carstenartur.aiknowledge.gradle.AiKnowledgePlugin'
+        }
+    }
+}

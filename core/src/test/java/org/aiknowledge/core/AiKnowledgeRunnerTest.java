@@ -32,6 +32,7 @@ class AiKnowledgeRunnerTest {
         assertTrue(Files.isRegularFile(output.resolve("classes.json")));
         assertTrue(Files.isRegularFile(output.resolve("tests.json")));
         assertTrue(Files.isRegularFile(output.resolve("docs.json")));
+        assertTrue(Files.readString(output.resolve("index.json")).contains("schemaVersion"));
         assertTrue(Files.readString(output.resolve("classes.json")).contains("example.App"));
     }
 
@@ -103,6 +104,55 @@ class AiKnowledgeRunnerTest {
         assertTrue(claims.contains("implementedBy"));
         assertTrue(claims.contains("verifiedBy"));
         assertTrue(claims.contains("documentedBy"));
+    }
+
+    @Test
+    void generateScansMavenBuildFiles() throws Exception {
+        Path project = temp.resolve("maven-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example/maven"));
+        Files.writeString(project.resolve("pom.xml"), """
+                <project>
+                  <modelVersion>4.0.0</modelVersion>
+                  <groupId>example</groupId>
+                  <artifactId>maven-fixture</artifactId>
+                  <version>1.0.0</version>
+                  <dependencies>
+                    <dependency>
+                      <groupId>org.example</groupId>
+                      <artifactId>sample-lib</artifactId>
+                      <version>1.2.3</version>
+                      <scope>runtime</scope>
+                    </dependency>
+                  </dependencies>
+                </project>
+                """);
+        Files.writeString(project.resolve("src/main/java/example/maven/MavenType.java"), "package example.maven;\npublic class MavenType {}\n");
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, output));
+
+        String modules = Files.readString(output.resolve("modules.json"));
+        String dependencies = Files.readString(output.resolve("dependencies.json"));
+        assertTrue(modules.contains("\"buildSystem\":\"maven\""));
+        assertTrue(dependencies.contains("org.example:sample-lib:1.2.3"));
+        assertTrue(dependencies.contains("\"scope\":\"runtime\""));
+    }
+
+    @Test
+    void generateIsDeterministicAcrossRepeatedRuns() throws Exception {
+        Path project = temp.resolve("deterministic-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\nimplementation 'org.example:library:1.0'\n");
+        Files.writeString(project.resolve("src/main/java/example/App.java"), "package example;\npublic class App {}\n");
+
+        Path first = project.resolve("build/ai-knowledge-one");
+        Path second = project.resolve("build/ai-knowledge-two");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, first));
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, second));
+
+        for (String artifact : new String[] {"index.json", "modules.json", "classes.json", "tests.json", "docs.json", "dependencies.json", "capabilities.json", "claims.json"}) {
+            assertEquals(Files.readString(first.resolve(artifact)), Files.readString(second.resolve(artifact)), artifact + " should be deterministic");
+        }
     }
 
     @Test

@@ -166,7 +166,14 @@ The quality gate output includes:
 
 ## benchmark.json
 
-Each benchmark `results` entry contains profile-specific budget flags:
+Top-level fields:
+
+- `schemaVersion`
+- `method`: extraction method used; currently `deterministic-preflight`.
+- `results`: array of per-profile budget entries (see below).
+- `recommendedProfile`: the profile name recommended for the current codebase size; resolves to `review` for most codebases.
+
+Each `results` entry contains profile-specific budget flags:
 
 - `profile`
 - `estimatedTokens`
@@ -176,6 +183,8 @@ Each benchmark `results` entry contains profile-specific budget flags:
 - `rawFitsHardLimit`
 - `compressedFitsPracticalBudget`
 - `compressedFitsHardLimit`
+- `budgetRisk`
+- `missingContextRisk`
 - `risk`
 
 See `docs/model-profiles.md` for profile configuration and `docs/trend-gates.md` for trend-gate configuration.

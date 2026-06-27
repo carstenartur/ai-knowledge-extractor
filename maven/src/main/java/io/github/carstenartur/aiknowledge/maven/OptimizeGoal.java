@@ -1,4 +1,4 @@
-package io.github.carstenartur.aiknowledge.maven;
+package org.aiknowledge.legacy.maven;
 
-public final class OptimizeGoal {
+final class RemovedOptimizeGoal {
 }

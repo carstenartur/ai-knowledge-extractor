@@ -10,7 +10,7 @@ The extractor writes deterministic JSON and HTML artifacts below the configured 
 | `modules.json` | `modules` | Build modules discovered from Gradle and Maven build files. |
 | `classes.json` | `classes` | Production Java classes with package, source file and API hints. |
 | `tests.json` | `tests` | Test classes with source file and test methods. |
-| `docs.json` | `docs` | Markdown documents with title and heading outline. |
+| `docs.json` | `docs` | Markdown documents with title, heading outline and links. |
 | `dependencies.json` | `dependencies` | Static dependency notations found in build files. |
 | `capabilities.json` | `capabilities` | Capability status inferred from code, tests, docs and optional seeds. |
 | `claims.json` | `claims` | Machine-readable claims linked to capability evidence. |
@@ -34,9 +34,6 @@ Current module fields:
 - `path`
 - `buildFile`
 - `buildSystem`
-
-Planned module fields for the scanner enrichment milestone:
-
 - `sourceSets`
 - `mainPackages`
 - `projectDependencies`
@@ -50,9 +47,6 @@ Current production Java type fields:
 - `sourceFile`
 - `package`
 - `publicApiMethods`
-
-Planned class fields for the scanner enrichment milestone:
-
 - `kind`
 - `imports`
 - `superclass`
@@ -67,9 +61,6 @@ Current test type fields:
 - `sourceFile`
 - `package`
 - `testMethods`
-
-Planned test fields for the scanner enrichment milestone:
-
 - `kind`
 - `imports`
 - `testedClass`
@@ -82,14 +73,11 @@ Current Markdown document fields:
 - `path`
 - `title`
 - `headings`
-
-Planned documentation fields for the scanner enrichment milestone:
-
 - `links`
 
 ## capabilities.json and claims.json
 
-Capabilities and claims are evidence-based. The generator may combine static evidence with optional seed files:
+Capabilities and claims are evidence-based. The generator combines static evidence with optional seed files:
 
 - `ai-knowledge/capabilities.seed.yaml`
 - `ai-knowledge/claims.seed.yaml`

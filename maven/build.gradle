@@ -7,8 +7,5 @@ jar {
 dependencies {
     implementation project(':core')
     compileOnly 'org.apache.maven:maven-plugin-api:3.9.11'
-    runtimeOnly('org.apache.maven:maven-plugin-api:3.9.11') {
-        transitive = false
-    }
     compileOnly 'org.apache.maven.plugin-tools:maven-plugin-annotations:3.15.2'
 }

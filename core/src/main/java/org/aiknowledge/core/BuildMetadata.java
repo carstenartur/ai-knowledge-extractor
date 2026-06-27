@@ -16,6 +16,23 @@ final class BuildMetadata {
         module.put("externalDependencies", new ArrayList());
     }
 
+    static void enrichModules(Path root, RepositorySnapshot snapshot) {
+        for (Object object : snapshot.modules) {
+            Map module = (Map) object;
+            String modulePath = String.valueOf(module.get("path"));
+            Path moduleRoot = modulePath.isBlank() ? root : root.resolve(modulePath);
+            addSourceSets(moduleRoot, module);
+            for (Object classObject : snapshot.classes) {
+                Map classMap = (Map) classObject;
+                addMainPackage(module, classMap.get("package"));
+            }
+            for (Object dependencyObject : snapshot.dependencies) {
+                Map dependency = (Map) dependencyObject;
+                if (String.valueOf(dependency.get("source")).equals(String.valueOf(module.get("buildFile")))) addDependency(dependency, module);
+            }
+        }
+    }
+
     static void addDependency(Map dep, Map module) {
         Object notation = dep.get("notation");
         if (notation == null) return;

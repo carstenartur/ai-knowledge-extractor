@@ -44,15 +44,17 @@ Supported fields:
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `id` | yes | Stable profile identifier. |
-| `practicalContextBudget` | no | Preferred usable context budget in estimated tokens. |
-| `hardContextLimit` | no | Absolute context limit in estimated tokens. |
-| `targetCompressionRatio` | no | Intended ratio after compacting the raw extracted context. |
+| `practicalContextBudget` | no | Preferred usable context budget in estimated tokens. Values below 1 are normalized to 1. |
+| `hardContextLimit` | no | Absolute context limit in estimated tokens. Values below 1 are normalized, and values below the practical budget are raised to the practical budget. |
+| `targetCompressionRatio` | no | Intended ratio after compacting the raw extracted context. Values are clamped to the range 0..1. |
 | `compressionPreference` | no | Human-readable guidance for compaction. |
 
 Aliases are accepted for convenience:
 
 - `practicalBudget` → `practicalContextBudget`
 - `compressionRatio` → `targetCompressionRatio`
+
+Invalid numeric values are normalized and reported as profile warnings in `complexity.json`. This keeps CI output deterministic and prevents negative budgets or out-of-range compression ratios from producing misleading token estimates.
 
 ## Generated metrics
 
@@ -65,5 +67,12 @@ For each profile, `complexity.json` contains:
 - `compressedFitsPracticalBudget`
 - `compressedFitsHardLimit`
 - profile-specific `warnings`
+
+`benchmark.json` uses the same configured profiles and emits explicit profile budget fields:
+
+- `rawFitsPracticalBudget`
+- `rawFitsHardLimit`
+- `compressedFitsPracticalBudget`
+- `compressedFitsHardLimit`
 
 Top-level warnings include the first warning per profile so CI can fail on budget pressure when `failOnWarnings` is enabled.

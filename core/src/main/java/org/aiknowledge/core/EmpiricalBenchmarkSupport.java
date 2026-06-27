@@ -13,20 +13,20 @@ import java.util.Set;
 final class EmpiricalBenchmarkSupport {
     private EmpiricalBenchmarkSupport() {}
 
-    static Map report(ExtractionOptions options) throws IOException {
-        Map empirical = new LinkedHashMap();
+    static Map<String, Object> report(ExtractionOptions options) throws IOException {
+        Map<String, Object> empirical = new LinkedHashMap<>();
         empirical.put("enabled", options.empiricalBenchmarkEnabled());
         Path fixtureFile = options.empiricalBenchmarkFixtureFile();
         empirical.put("fixtureFile", fixtureFile.toString());
         if (!options.empiricalBenchmarkEnabled()) {
             empirical.put("fixtureCount", 0);
-            empirical.put("results", new ArrayList());
+            empirical.put("results", new ArrayList<>());
             empirical.put("summary", summary(0, 0, 0.0d, 0.0d, 0, 0, 0));
             return empirical;
         }
 
-        List<Map> fixtures = parse(fixtureFile);
-        List results = new ArrayList();
+        List<Map<String, Object>> fixtures = parse(fixtureFile);
+        List<Map<String, Object>> results = new ArrayList<>();
         int tokens = 0;
         int latency = 0;
         double quality = 0.0d;
@@ -34,14 +34,14 @@ final class EmpiricalBenchmarkSupport {
         int missed = 0;
         int success = 0;
         for (int i = 0; i < fixtures.size(); i++) {
-            Map fixture = fixtures.get(i);
-            Map result = evaluate(fixture, i + 1);
+            Map<String, Object> fixture = fixtures.get(i);
+            Map<String, Object> result = evaluate(fixture, i + 1);
             results.add(result);
             tokens += ((Number) result.get("tokenUsage")).intValue();
             latency += ((Number) result.get("latencyMs")).intValue();
             quality += ((Number) result.get("reviewQuality")).doubleValue();
             duplicates += ((Number) result.get("duplicateSuggestions")).intValue();
-            List missedExisting = (List) result.get("missedExistingFeatures");
+            List<Object> missedExisting = listValue(result.get("missedExistingFeatures"));
             missed += missedExisting.size();
             if (Boolean.TRUE.equals(result.get("taskSuccess"))) success++;
         }
@@ -51,18 +51,18 @@ final class EmpiricalBenchmarkSupport {
         return empirical;
     }
 
-    private static Map evaluate(Map fixture, int index) {
-        Map result = new LinkedHashMap();
+    private static Map<String, Object> evaluate(Map<String, Object> fixture, int index) {
+        Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", fixture.getOrDefault("id", "fixture-" + index));
         result.put("profile", fixture.getOrDefault("profile", "review"));
         int tokenUsage = intValue(fixture.get("tokenUsage"), intValue(fixture.get("tokens"), 0));
         int latencyMs = intValue(fixture.get("latencyMs"), 0);
         double reviewQuality = boundedQuality(doubleValue(fixture.get("reviewQuality"), 0.0d));
-        List suggestions = listValue(fixture.get("suggestions"));
-        List existingFeatures = listValue(fixture.get("existingFeatures"));
-        List suggestedFeatures = listValue(fixture.get("suggestedFeatures"));
+        List<Object> suggestions = listValue(fixture.get("suggestions"));
+        List<Object> existingFeatures = listValue(fixture.get("existingFeatures"));
+        List<Object> suggestedFeatures = listValue(fixture.get("suggestedFeatures"));
         int duplicateSuggestions = duplicateCount(suggestions);
-        List missedExistingFeatures = missed(existingFeatures, suggestedFeatures);
+        List<Object> missedExistingFeatures = missed(existingFeatures, suggestedFeatures);
         boolean baselineSuccess = boolValue(fixture.get("taskSuccess"), true);
         boolean taskSuccess = baselineSuccess && missedExistingFeatures.isEmpty();
         result.put("tokenUsage", tokenUsage);
@@ -74,10 +74,10 @@ final class EmpiricalBenchmarkSupport {
         return result;
     }
 
-    private static Map summary(int fixtures, int tokenUsage, double quality, double latency, int duplicates, int missed, int success) {
-        Map summary = new LinkedHashMap();
-        summary.put("averageTokenUsage", average(tokenUsage, fixtures));
-        summary.put("averageLatencyMs", average(latency, fixtures));
+    private static Map<String, Object> summary(int fixtures, int tokenUsage, double quality, double totalLatency, int duplicates, int missed, int success) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("averageTokenUsage", roundedAverage(tokenUsage, fixtures));
+        summary.put("averageLatencyMs", roundedAverage(totalLatency, fixtures));
         summary.put("averageReviewQuality", fixtures == 0 ? 0.0d : quality / fixtures);
         summary.put("totalDuplicateSuggestions", duplicates);
         summary.put("totalMissedExistingFeatures", missed);
@@ -85,13 +85,13 @@ final class EmpiricalBenchmarkSupport {
         return summary;
     }
 
-    private static int average(double value, int count) {
+    private static int roundedAverage(double total, int count) {
         if (count <= 0) return 0;
-        return (int) Math.round(value / count);
+        return (int) Math.round(total / count);
     }
 
-    private static int duplicateCount(List suggestions) {
-        Set seen = new LinkedHashSet();
+    private static int duplicateCount(List<Object> suggestions) {
+        Set<String> seen = new LinkedHashSet<>();
         int duplicates = 0;
         for (Object suggestion : suggestions) {
             if (!seen.add(String.valueOf(suggestion))) duplicates++;
@@ -99,26 +99,26 @@ final class EmpiricalBenchmarkSupport {
         return duplicates;
     }
 
-    private static List missed(List existingFeatures, List suggestedFeatures) {
-        Set suggested = new LinkedHashSet();
+    private static List<Object> missed(List<Object> existingFeatures, List<Object> suggestedFeatures) {
+        Set<String> suggested = new LinkedHashSet<>();
         for (Object item : suggestedFeatures) suggested.add(String.valueOf(item));
-        List missed = new ArrayList();
+        Set<String> missed = new LinkedHashSet<>();
         for (Object item : existingFeatures) {
             String feature = String.valueOf(item);
-            if (!suggested.contains(feature) && !missed.contains(feature)) missed.add(feature);
+            if (!suggested.contains(feature)) missed.add(feature);
         }
-        return missed;
+        return new ArrayList<>(missed);
     }
 
-    private static List<Map> parse(Path file) throws IOException {
-        List<Map> result = new ArrayList<>();
+    private static List<Map<String, Object>> parse(Path file) throws IOException {
+        List<Map<String, Object>> result = new ArrayList<>();
         if (!Files.isRegularFile(file)) return result;
-        Map current = null;
+        Map<String, Object> current = null;
         for (String raw : Files.readAllLines(file)) {
             String line = raw.trim();
             if (line.isEmpty() || line.startsWith("#")) continue;
             if (line.startsWith("- ")) {
-                current = new LinkedHashMap();
+                current = new LinkedHashMap<>();
                 result.add(current);
                 line = line.substring(2).trim();
             }
@@ -132,7 +132,7 @@ final class EmpiricalBenchmarkSupport {
     private static Object parseValue(String value) {
         String trimmed = stripQuotes(value.trim());
         if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-            List list = new ArrayList();
+            List<Object> list = new ArrayList<>();
             String body = trimmed.substring(1, trimmed.length() - 1).trim();
             if (!body.isEmpty()) for (String part : body.split(",")) list.add(stripQuotes(part.trim()));
             return list;
@@ -187,10 +187,10 @@ final class EmpiricalBenchmarkSupport {
         return fallback;
     }
 
-    private static List listValue(Object value) {
-        if (value instanceof List list) return list;
-        if (value == null) return new ArrayList();
-        List list = new ArrayList();
+    private static List<Object> listValue(Object value) {
+        if (value instanceof List<?> list) return new ArrayList<>(list);
+        if (value == null) return new ArrayList<>();
+        List<Object> list = new ArrayList<>();
         list.add(value);
         return list;
     }

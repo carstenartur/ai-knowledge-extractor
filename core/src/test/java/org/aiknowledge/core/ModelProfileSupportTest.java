@@ -89,7 +89,7 @@ class ModelProfileSupportTest {
                   suggestions: [extract-service, extract-service, add-test]
                   existingFeatures: [search, index]
                   suggestedFeatures: [index]
-                  taskSuccess: true
+                  taskSuccess: false
                 - id: success-case
                   profile: architecture
                   tokenUsage: 1900

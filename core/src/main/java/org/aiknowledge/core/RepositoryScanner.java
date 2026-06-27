@@ -26,7 +26,8 @@ final class RepositoryScanner {
                 if (path.endsWith(".md")) addDoc(root, file, snapshot);
             }
         }
-        addCapabilities(snapshot);
+        BuildMetadata.enrichModules(root, snapshot);
+        CapabilityEvidence.addCapabilities(snapshot);
         SeedSupport.mergeSeeds(options, snapshot);
         Map counts = new LinkedHashMap();
         counts.put("modules", snapshot.modules.size());
@@ -50,6 +51,7 @@ final class RepositoryScanner {
         module.put("path", rel(root, dir));
         module.put("buildFile", rel(root, file));
         module.put("buildSystem", file.getFileName().toString().equals("pom.xml") ? "maven" : "gradle");
+        BuildMetadata.initializeModuleFields(module);
         snapshot.modules.add(module);
         for (String line : read(file).split("\\R")) {
             String t = line.trim();
@@ -78,8 +80,8 @@ final class RepositoryScanner {
         data.put(test ? "testClass" : "class", pkg.isBlank() ? simple : pkg + "." + simple);
         data.put("sourceFile", path);
         data.put("package", pkg);
-        if (test) { data.put("testMethods", methods); snapshot.tests.add(data); }
-        else { data.put("publicApiMethods", methods); snapshot.classes.add(data); }
+        if (test) { data.put("testMethods", methods); JavaSourceMetadata.enrich(data, source, simple, true); snapshot.tests.add(data); }
+        else { data.put("publicApiMethods", methods); JavaSourceMetadata.enrich(data, source, simple, false); snapshot.classes.add(data); }
     }
 
     private static String parsePackage(String line) {
@@ -89,30 +91,15 @@ final class RepositoryScanner {
     }
 
     private static void addDoc(Path root, Path file, RepositorySnapshot snapshot) throws IOException {
+        String text = read(file);
         List headings = new ArrayList();
-        for (String line : read(file).split("\\R")) if (line.startsWith("#")) headings.add(line.replaceFirst("^#+\\s*", ""));
+        for (String line : text.split("\\R")) if (line.startsWith("#")) headings.add(line.replaceFirst("^#+\\s*", ""));
         Map doc = new LinkedHashMap();
         doc.put("path", rel(root, file));
         doc.put("title", headings.isEmpty() ? file.getFileName().toString() : headings.get(0));
         doc.put("headings", headings);
+        doc.put("links", MarkdownMetadata.links(text));
         snapshot.docs.add(doc);
-    }
-
-    private static void addCapabilities(RepositorySnapshot snapshot) {
-        String[] ids = {"equality-saturation", "e-graph", "macro-rule-learning", "replay", "proof-bridge", "benchmark-report", "search-strategies", "rule-inventory"};
-        for (String id : ids) {
-            Map cap = new LinkedHashMap();
-            cap.put("id", id);
-            cap.put("status", "unknown");
-            cap.put("classes", new ArrayList());
-            cap.put("tests", new ArrayList());
-            cap.put("docs", new ArrayList());
-            snapshot.capabilities.add(cap);
-            Map claim = new LinkedHashMap();
-            claim.put("id", id);
-            claim.put("status", "unknown");
-            snapshot.claims.add(claim);
-        }
     }
 
     private static boolean ignored(String path) { return path.startsWith(".git/") || path.startsWith(".gradle/") || path.contains("/build/") || path.contains("/target/") || path.startsWith("build/") || path.startsWith("target/"); }

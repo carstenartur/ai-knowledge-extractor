@@ -9,7 +9,7 @@
   <mojos>
     <mojo>
       <goal>generate</goal>
-      <description>Generate AI knowledge artifacts.</description>
+      <description>Scans the repository and generates deterministic AI knowledge index artifacts.</description>
       <requiresDependencyResolution>runtime</requiresDependencyResolution>
       <requiresDependencyCollection>runtime</requiresDependencyCollection>
       <requiresDirectInvocation>false</requiresDirectInvocation>
@@ -31,6 +31,11 @@
         <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -39,11 +44,16 @@
         <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
         <failOnWarnings implementation="boolean" default-value="false"/>
         <maxCognitiveDebt implementation="double" default-value="100.0"/>
+        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
+        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
       </configuration>
     </mojo>
     <mojo>
       <goal>analyze</goal>
-      <description>Analyze AI knowledge artifacts.</description>
+      <description>Computes AI complexity metrics and trend report artifacts.</description>
       <requiresDependencyResolution>runtime</requiresDependencyResolution>
       <requiresDependencyCollection>runtime</requiresDependencyCollection>
       <requiresDirectInvocation>false</requiresDirectInvocation>
@@ -65,6 +75,11 @@
         <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -73,11 +88,16 @@
         <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
         <failOnWarnings implementation="boolean" default-value="false"/>
         <maxCognitiveDebt implementation="double" default-value="100.0"/>
+        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
+        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
       </configuration>
     </mojo>
     <mojo>
       <goal>optimize</goal>
-      <description>Optimize AI knowledge artifacts.</description>
+      <description>Detects knowledge smells and writes ranked optimization suggestions.</description>
       <requiresDependencyResolution>runtime</requiresDependencyResolution>
       <requiresDependencyCollection>runtime</requiresDependencyCollection>
       <requiresDirectInvocation>false</requiresDirectInvocation>
@@ -99,6 +119,11 @@
         <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -107,11 +132,16 @@
         <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
         <failOnWarnings implementation="boolean" default-value="false"/>
         <maxCognitiveDebt implementation="double" default-value="100.0"/>
+        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
+        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
       </configuration>
     </mojo>
     <mojo>
       <goal>benchmark</goal>
-      <description>Benchmark AI knowledge artifacts.</description>
+      <description>Compares extraction profiles and optional empirical fixtures against context budgets.</description>
       <requiresDependencyResolution>runtime</requiresDependencyResolution>
       <requiresDependencyCollection>runtime</requiresDependencyCollection>
       <requiresDirectInvocation>false</requiresDirectInvocation>
@@ -133,6 +163,11 @@
         <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -141,11 +176,16 @@
         <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
         <failOnWarnings implementation="boolean" default-value="false"/>
         <maxCognitiveDebt implementation="double" default-value="100.0"/>
+        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
+        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
       </configuration>
     </mojo>
     <mojo>
       <goal>check</goal>
-      <description>Check AI knowledge artifacts.</description>
+      <description>Runs AI knowledge quality gates and fails the build on configured threshold violations.</description>
       <requiresDependencyResolution>runtime</requiresDependencyResolution>
       <requiresDependencyCollection>runtime</requiresDependencyCollection>
       <requiresDirectInvocation>false</requiresDirectInvocation>
@@ -167,6 +207,11 @@
         <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -175,6 +220,34 @@
         <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
         <failOnWarnings implementation="boolean" default-value="false"/>
         <maxCognitiveDebt implementation="double" default-value="100.0"/>
+        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
+        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
+        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
+      </configuration>
+    </mojo>
+    <mojo>
+      <goal>help</goal>
+      <description>Displays plugin goal and parameter help for the AI Knowledge Maven Plugin.</description>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>false</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <implementation>org.aiknowledge.maven.HelpGoal</implementation>
+      <language>java</language>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
+      <threadSafe>true</threadSafe>
+      <parameters>
+        <parameter><name>goal</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>detail</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+      </parameters>
+      <configuration>
+        <goal implementation="java.lang.String"/>
+        <detail implementation="boolean" default-value="false"/>
       </configuration>
     </mojo>
   </mojos>

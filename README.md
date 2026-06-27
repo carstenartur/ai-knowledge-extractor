@@ -17,16 +17,26 @@ Optional empirical benchmark layer (disabled by default):
 
 For local plugin development, consumers may use a Gradle composite build with `includeBuild('../ai-knowledge-extractor')`.
 
+Canonical Gradle plugin usage (plugin id, tasks, extension defaults, CI/local examples): [`docs/gradle-plugin.md`](docs/gradle-plugin.md).
+
 ## Maven
 
 Maven plugin coordinates: `org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT`.
 
-Goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`.
+Goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`, `help`.
+
+Maven help goal:
+
+```bash
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Ddetail=true
+```
 
 Optional empirical benchmark layer parameters:
 
 - `empiricalBenchmarkEnabled` (default `false`)
 - `empiricalBenchmarkFixtureFile` (default `${project.basedir}/ai-knowledge/benchmark-fixtures.yaml`)
+
+Canonical Maven goal, parameter and help usage reference: [`docs/maven-plugin.md`](docs/maven-plugin.md).
 
 ## Scope
 
@@ -49,7 +59,7 @@ Trend baselines, `metrics-snapshot.json`, `trend.json` and CI threshold configur
 
 ## Publishing and consumption
 
-Artifact IDs, local development consumption, GitHub Packages repository configuration and release-version handling are documented in [`docs/publishing.md`](docs/publishing.md).
+Artifact IDs, local development consumption, GitHub Packages repository configuration and release-version handling are documented in [`docs/publishing.md`](docs/publishing.md). Plugin-specific canonical usage docs: [`docs/gradle-plugin.md`](docs/gradle-plugin.md) and [`docs/maven-plugin.md`](docs/maven-plugin.md).
 
 ## Citation
 

@@ -10,6 +10,11 @@ AI Knowledge Extractor publishes three project-oriented artifacts:
 
 The normal release flow is documented in [`release.md`](release.md). It publishes all Gradle publications to GitHub Packages and creates a GitHub Release with the built jar artifacts.
 
+Canonical plugin usage references:
+
+- Gradle plugin: [`gradle-plugin.md`](gradle-plugin.md)
+- Maven plugin: [`maven-plugin.md`](maven-plugin.md)
+
 ## Local development consumption
 
 For local development, prefer using the repository directly instead of a published package.
@@ -45,6 +50,8 @@ The MVP task family is:
 - `benchmarkAiKnowledge`
 - `checkAiKnowledgeIndex`
 - `publishAiKnowledgeIndex`
+
+Composite builds are a local development workflow, not a released-artifact distribution channel.
 
 ### Maven local repository
 
@@ -82,6 +89,8 @@ repositories {
 ```
 
 For plugin resolution in a consuming Gradle build, add the same GitHub Packages repository under `pluginManagement.repositories` in `settings.gradle`.
+
+GitHub Packages is the canonical released-artifact consumption path for both Gradle and Maven.
 
 ### Maven repository configuration
 
@@ -122,3 +131,9 @@ The matching credentials belong in `~/.m2/settings.xml`:
 Development versions use `X.Y.Z-SNAPSHOT` in `gradle.properties`, `CITATION.cff` and `.zenodo.json`.
 
 Release versions use `X.Y.Z` and are produced by the `Release` workflow. Consumers should depend on released versions rather than snapshot versions unless they are testing an unreleased build.
+
+## Distribution channels at a glance
+
+- Local composite build: development-only, source checkout required, fastest feedback for plugin contributors.
+- GitHub Packages: released binary artifacts for external consumers.
+- Gradle Plugin Portal: not yet part of the release flow; track separately when distribution there is added.

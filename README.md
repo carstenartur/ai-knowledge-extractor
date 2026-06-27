@@ -2,46 +2,25 @@
 
 Deterministic build-integrated knowledge extraction for AI-assisted code understanding.
 
-This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` so tools can inspect modules, classes, tests, docs, dependencies, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.
+This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` for modules, classes, tests, docs, dependencies, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.
 
 ## Gradle
 
-Apply the plugin in a consuming root build:
+Plugin id: `org.aiknowledge.extractor`
 
-```groovy
-plugins {
-    id 'io.github.carstenartur.ai-knowledge'
-}
-```
+Tasks: `generateAiKnowledgeIndex`, `analyzeAiComplexity`, `optimizeAiKnowledge`, `benchmarkAiKnowledge`, `checkAiKnowledgeIndex`, `publishAiKnowledgeIndex`.
 
-Available tasks:
-
-```bash
-./gradlew generateAiKnowledgeIndex
-./gradlew analyzeAiComplexity
-./gradlew optimizeAiKnowledge
-./gradlew benchmarkAiKnowledge
-./gradlew checkAiKnowledgeIndex
-./gradlew publishAiKnowledgeIndex
-```
-
-For Regelsuche, use the project as a composite build first. See `docs/regelsuche-integration.md`.
+For local plugin development, consumers may use a Gradle composite build with `includeBuild('../ai-knowledge-extractor')`.
 
 ## Maven
 
-After publishing or installing locally, the Maven plugin exposes matching goals:
+Maven plugin coordinates: `org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT`.
 
-```bash
-mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:generate
-mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:analyze
-mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:optimize
-mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:benchmark
-mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:check
-```
+Goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`.
 
 ## Scope
 
-Implemented as deterministic static analysis without external LLM calls:
+Implemented as deterministic static analysis without external model calls:
 
 - repository knowledge extraction
 - AI cognitive complexity estimate

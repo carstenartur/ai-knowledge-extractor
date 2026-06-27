@@ -1,0 +1,19 @@
+{
+  "title": "AI Knowledge Extractor",
+  "upload_type": "software",
+  "description": "Deterministic build-integrated knowledge extraction for AI-assisted code understanding.",
+  "creators": [
+    {
+      "name": "Artur, Carsten"
+    }
+  ],
+  "license": "Apache-2.0",
+  "access_right": "open",
+  "keywords": [
+    "AI",
+    "knowledge extraction",
+    "static analysis",
+    "Gradle",
+    "Maven"
+  ]
+}

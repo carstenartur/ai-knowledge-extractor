@@ -27,4 +27,8 @@ Implemented as deterministic static analysis without external model calls:
 - knowledge-smell recommendations
 - deterministic extraction-profile benchmark scaffold
 
+## Citation
+
+Citation metadata is maintained in `CITATION.cff`. Release metadata is maintained in `.zenodo.json`. See `docs/release.md` for the release checklist.
+
 License: Apache-2.0

@@ -53,12 +53,19 @@ final class RepositoryScanner {
         module.put("buildSystem", file.getFileName().toString().equals("pom.xml") ? "maven" : "gradle");
         BuildMetadata.initializeModuleFields(module);
         snapshot.modules.add(module);
-        for (String line : read(file).split("\\R")) {
+        String buildText = read(file);
+        if (file.getFileName().toString().equals("pom.xml")) {
+            MavenMetadata.addDependencies(root, file, buildText, snapshot);
+            return;
+        }
+        for (String line : buildText.split("\\R")) {
             String t = line.trim();
             if (t.startsWith("implementation ") || t.startsWith("api ") || t.startsWith("compileOnly ") || t.startsWith("testImplementation ")) {
                 Map dep = new LinkedHashMap();
                 dep.put("source", rel(root, file));
                 dep.put("notation", t);
+                dep.put("scope", t.substring(0, t.indexOf(' ')));
+                dep.put("buildSystem", "gradle");
                 snapshot.dependencies.add(dep);
             }
         }

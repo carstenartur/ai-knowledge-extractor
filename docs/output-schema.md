@@ -6,35 +6,37 @@ The extractor writes deterministic JSON and HTML artifacts below the configured 
 
 | File | Primary key | Purpose |
 |---|---|---|
-| `index.json` | object | Repository metadata, generation mode, artifact directory and counts. |
+| `index.json` | object | Repository metadata, generation mode and counts. |
 | `modules.json` | `modules` | Build modules discovered from Gradle and Maven build files. |
-| `classes.json` | `classes` | Production Java classes with package, source file, kind, imports and API hints. |
-| `tests.json` | `tests` | Test classes with source file, test methods and inferred tested class where possible. |
-| `docs.json` | `docs` | Markdown documents with title, heading outline and links. |
+| `classes.json` | `classes` | Production Java classes with package, source file and API hints. |
+| `tests.json` | `tests` | Test classes with source file and test methods. |
+| `docs.json` | `docs` | Markdown documents with title and heading outline. |
 | `dependencies.json` | `dependencies` | Static dependency notations found in build files. |
 | `capabilities.json` | `capabilities` | Capability status inferred from code, tests, docs and optional seeds. |
-| `claims.json` | `claims` | Machine-readable claims linked to implementation, test and documentation evidence. |
+| `claims.json` | `claims` | Machine-readable claims linked to capability evidence. |
 
 All list artifacts are wrapped in an object with the primary key shown above. Producers must keep file names and primary keys stable. New fields may be added, but existing fields should not be removed without increasing `schemaVersion`.
 
 ## index.json
 
-Required fields:
+Current fields:
 
 - `schemaVersion`: integer schema version.
 - `repository`: repository root directory name.
 - `generationMode`: currently `deterministic-static`.
-- `artifactDirectory`: conventional output directory.
 - `counts`: object with counts for modules, classes, tests, docs, dependencies, capabilities and claims.
 
 ## modules.json
 
-Each module should include:
+Current module fields:
 
 - `name`
 - `path`
 - `buildFile`
 - `buildSystem`
+
+Planned module fields for the scanner enrichment milestone:
+
 - `sourceSets`
 - `mainPackages`
 - `projectDependencies`
@@ -42,38 +44,47 @@ Each module should include:
 
 ## classes.json
 
-Each production Java type should include:
+Current production Java type fields:
 
-- `class`: fully qualified class/interface/record/enum name.
+- `class`: fully qualified class/interface/record/enum name when the package can be detected.
 - `sourceFile`
 - `package`
+- `publicApiMethods`
+
+Planned class fields for the scanner enrichment milestone:
+
 - `kind`
 - `imports`
-- `publicApiMethods`
 - `superclass`
 - `interfaces`
 - `referencedProjectClasses`
 
 ## tests.json
 
-Each test type should include:
+Current test type fields:
 
 - `testClass`
 - `sourceFile`
 - `package`
+- `testMethods`
+
+Planned test fields for the scanner enrichment milestone:
+
 - `kind`
 - `imports`
-- `testMethods`
 - `testedClass`
 - `tags`
 
 ## docs.json
 
-Each Markdown document should include:
+Current Markdown document fields:
 
 - `path`
 - `title`
 - `headings`
+
+Planned documentation fields for the scanner enrichment milestone:
+
 - `links`
 
 ## capabilities.json and claims.json

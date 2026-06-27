@@ -24,6 +24,11 @@ class ModelProfileSupportTest {
                   hardContextLimit: 2
                   targetCompressionRatio: 1.0
                   compressionPreference: strict CI budget
+                - id: invalid-profile
+                  practicalContextBudget: -10
+                  hardContextLimit: -20
+                  targetCompressionRatio: 2.5
+                  compressionPreference: invalid values
                 """);
 
         Path output = project.resolve("build/ai-knowledge");
@@ -34,5 +39,27 @@ class ModelProfileSupportTest {
         assertTrue(complexity.contains("estimatedCompressedTokens"));
         assertTrue(complexity.contains("Profile tiny-ci-profile"));
         assertTrue(complexity.contains("maxCognitiveDebt"));
+        assertTrue(complexity.contains("invalid-profile"));
+        assertTrue(complexity.contains("Configured practical context budget must be positive"));
+        assertTrue(complexity.contains("Configured target compression ratio is above 1"));
+        assertTrue(complexity.contains("\"practicalContextBudget\":1"));
+        assertTrue(complexity.contains("\"targetCompressionRatio\":1.0"));
+    }
+
+    @Test
+    void benchmarkUsesProfileSpecificBudgetNames() throws Exception {
+        Path project = temp.resolve("benchmark-profile-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/ProfiledApp.java"), "package example;\npublic class ProfiledApp { public void run() {} }\n");
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().benchmark(ExtractionOptions.defaults(project, output));
+
+        String benchmark = Files.readString(output.resolve("benchmark.json"));
+        assertTrue(benchmark.contains("compressedFitsPracticalBudget"));
+        assertTrue(benchmark.contains("compressedFitsHardLimit"));
+        assertTrue(benchmark.contains("rawFitsPracticalBudget"));
+        assertTrue(benchmark.contains("rawFitsHardLimit"));
     }
 }

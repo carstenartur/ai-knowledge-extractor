@@ -1,0 +1,12 @@
+plugins {
+    id 'java'
+    id 'org.aiknowledge.extractor'
+}
+
+group = 'example.consumer'
+version = '1.0.0'
+
+aiKnowledge {
+    failOnWarnings = false
+    maxCognitiveDebt = 1000.0d
+}

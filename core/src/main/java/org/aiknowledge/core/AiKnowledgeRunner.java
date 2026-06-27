@@ -87,6 +87,7 @@ public final class AiKnowledgeRunner {
         StableIo.writeJson(outputDirectory.resolve("dependencies.json"), envelope("dependencies", snapshot.dependencies));
         StableIo.writeJson(outputDirectory.resolve("capabilities.json"), envelope("capabilities", snapshot.capabilities));
         StableIo.writeJson(outputDirectory.resolve("claims.json"), envelope("claims", snapshot.claims));
+        StableIo.writeJson(outputDirectory.resolve("evidence.json"), envelope("evidence", snapshot.evidence));
     }
 
     private static Map envelope(String key, Object value) {

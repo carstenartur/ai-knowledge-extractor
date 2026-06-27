@@ -1,6 +1,7 @@
 package org.aiknowledge.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -105,6 +106,43 @@ class AiKnowledgeRunnerTest {
     }
 
     @Test
+    void generateScopesModulePackagesAndHandlesMalformedTag() throws Exception {
+        Path project = temp.resolve("multi-module-fixture");
+        Files.createDirectories(project.resolve("api/src/main/java/api/pkg"));
+        Files.createDirectories(project.resolve("api/src/test/java/api/pkg"));
+        Files.createDirectories(project.resolve("service/src/main/java/service/pkg"));
+        Files.writeString(project.resolve("api/build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("service/build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("api/src/main/java/api/pkg/ApiType.java"), "package api.pkg;\npublic class ApiType {}\n");
+        Files.writeString(project.resolve("api/src/main/java/DefaultType.java"), "public class DefaultType {}\n");
+        Files.writeString(project.resolve("api/src/test/java/api/pkg/ApiTypeTest.java"), """
+                package api.pkg;
+
+                class ApiTypeTest {
+                    @Tag(
+                    @org.junit.jupiter.api.Test
+                    void run() {}
+                }
+                """);
+        Files.writeString(project.resolve("service/src/main/java/service/pkg/ServiceType.java"), "package service.pkg;\npublic class ServiceType {}\n");
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, output));
+
+        String modules = Files.readString(output.resolve("modules.json"));
+        String tests = Files.readString(output.resolve("tests.json"));
+        String apiModule = objectContaining(modules, "\"path\":\"api\"");
+        String serviceModule = objectContaining(modules, "\"path\":\"service\"");
+
+        assertTrue(apiModule.contains("api.pkg"));
+        assertFalse(apiModule.contains("service.pkg"));
+        assertFalse(apiModule.contains("\"mainPackages\":[\"\"]"));
+        assertTrue(serviceModule.contains("service.pkg"));
+        assertFalse(serviceModule.contains("api.pkg"));
+        assertTrue(tests.contains("ApiTypeTest"));
+    }
+
+    @Test
     void generateMergesSeedListsAdditivelyAndHandlesQuoteEdges() throws Exception {
         Path project = temp.resolve("seed-fixture");
         Files.createDirectories(project.resolve("ai-knowledge"));
@@ -137,6 +175,14 @@ class AiKnowledgeRunnerTest {
         assertTrue(claims.contains("seeded-claim"));
         assertEquals(1, occurrences(claims, "example.App"));
         assertTrue(claims.contains("example.Other"));
+    }
+
+    private static String objectContaining(String json, String marker) {
+        int markerIndex = json.indexOf(marker);
+        assertTrue(markerIndex >= 0, "Missing marker " + marker + " in " + json);
+        int start = json.lastIndexOf('{', markerIndex);
+        int end = json.indexOf('}', markerIndex);
+        return json.substring(start, end + 1);
     }
 
     private static int occurrences(String text, String value) {

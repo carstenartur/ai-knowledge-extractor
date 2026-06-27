@@ -1,4 +1,4 @@
-package io.github.carstenartur.aiknowledge.maven;
+package org.aiknowledge.legacy.maven;
 
-public final class BenchmarkGoal {
+final class RemovedProfileCheckGoal {
 }

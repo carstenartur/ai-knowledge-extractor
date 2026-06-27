@@ -20,7 +20,7 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v6.1.0
         with:
-          gradle-version: '9.6.1'
+          gradle-version: '9.5.1'
       - name: Publish to GitHub Packages
         run: gradle publish
         env:

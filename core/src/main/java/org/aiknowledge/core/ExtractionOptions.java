@@ -13,7 +13,9 @@ public record ExtractionOptions(
         double maxCognitiveDebt,
         double maxCognitiveDebtIncrease,
         double maxConceptRadiusIncrease,
-        double maxContextTokenIncrease) {
+        double maxContextTokenIncrease,
+        boolean empiricalBenchmarkEnabled,
+        Path empiricalBenchmarkFixtureFile) {
 
     public ExtractionOptions(
             Path repositoryRoot,
@@ -22,7 +24,20 @@ public record ExtractionOptions(
             Path modelProfileDirectory,
             boolean failOnWarnings,
             double maxCognitiveDebt) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, false, null);
+    }
+
+    public ExtractionOptions(
+            Path repositoryRoot,
+            Path outputDirectory,
+            Path seedDirectory,
+            Path modelProfileDirectory,
+            boolean failOnWarnings,
+            double maxCognitiveDebt,
+            double maxCognitiveDebtIncrease,
+            double maxConceptRadiusIncrease,
+            double maxContextTokenIncrease) {
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, false, null);
     }
 
     public ExtractionOptions {
@@ -30,6 +45,9 @@ public record ExtractionOptions(
         outputDirectory = Objects.requireNonNull(outputDirectory, "outputDirectory").toAbsolutePath().normalize();
         seedDirectory = seedDirectory == null ? repositoryRoot.resolve("ai-knowledge") : seedDirectory.toAbsolutePath().normalize();
         modelProfileDirectory = modelProfileDirectory == null ? seedDirectory : modelProfileDirectory.toAbsolutePath().normalize();
+        empiricalBenchmarkFixtureFile = empiricalBenchmarkFixtureFile == null
+                ? seedDirectory.resolve("benchmark-fixtures.yaml")
+                : empiricalBenchmarkFixtureFile.toAbsolutePath().normalize();
         maxCognitiveDebtIncrease = normalizeThreshold(maxCognitiveDebtIncrease);
         maxConceptRadiusIncrease = normalizeThreshold(maxConceptRadiusIncrease);
         maxContextTokenIncrease = normalizeThreshold(maxContextTokenIncrease);

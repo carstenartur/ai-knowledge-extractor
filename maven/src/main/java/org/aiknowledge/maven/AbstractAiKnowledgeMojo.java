@@ -24,6 +24,10 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     protected double maxConceptRadiusIncrease;
     @Parameter(defaultValue = "1.7976931348623157E308")
     protected double maxContextTokenIncrease;
+    @Parameter(defaultValue = "false")
+    protected boolean empiricalBenchmarkEnabled;
+    @Parameter(defaultValue = "${project.basedir}/ai-knowledge/benchmark-fixtures.yaml")
+    protected File empiricalBenchmarkFixtureFile;
 
     protected final ExtractionOptions options() {
         return new ExtractionOptions(
@@ -35,7 +39,9 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
                 systemDouble("aiKnowledge.maxCognitiveDebt", maxCognitiveDebt),
                 systemDouble("aiKnowledge.maxCognitiveDebtIncrease", maxCognitiveDebtIncrease),
                 systemDouble("aiKnowledge.maxConceptRadiusIncrease", maxConceptRadiusIncrease),
-                systemDouble("aiKnowledge.maxContextTokenIncrease", maxContextTokenIncrease));
+                systemDouble("aiKnowledge.maxContextTokenIncrease", maxContextTokenIncrease),
+                empiricalBenchmarkEnabled,
+                empiricalBenchmarkFixtureFile != null ? empiricalBenchmarkFixtureFile.toPath() : null);
     }
 
     protected final AiKnowledgeRunner runner() {

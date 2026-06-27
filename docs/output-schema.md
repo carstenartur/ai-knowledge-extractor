@@ -171,7 +171,7 @@ Top-level fields:
 - `schemaVersion`
 - `method`: extraction method used; currently `deterministic-preflight`.
 - `results`: array of per-profile budget entries (see below).
-- `recommendedProfile`: the profile name recommended for the current codebase size (defaults to `review` when present).
+- `recommendedProfile`: the profile name recommended for the current codebase size; resolves to `review` for most codebases.
 
 Each `results` entry contains profile-specific budget flags:
 

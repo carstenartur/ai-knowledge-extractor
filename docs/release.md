@@ -3,23 +3,46 @@
 ## Before a release
 
 1. Ensure CI is green on `main`.
-2. Decide the release version, for example `0.1.0`.
-3. Update `version` in `CITATION.cff` if needed.
-4. Confirm `.zenodo.json` metadata is accurate.
-5. Create a GitHub release tag, for example `v0.1.0`.
+2. Confirm the next release version in `release.properties`, for example `next.release.version=0.1.0`.
+3. Confirm development metadata uses the matching snapshot version:
+   - `gradle.properties`: `projectVersion=0.1.0-SNAPSHOT`
+   - `CITATION.cff`: `version: "0.1.0-SNAPSHOT"`
+   - `.zenodo.json`: `"version": "0.1.0-SNAPSHOT"`
+4. Run the `Release` workflow from `main`.
 
-## Package publishing
+## Workflow inputs
 
-The `Publish` workflow runs for created GitHub releases and publishes artifacts to GitHub Packages.
+- `release_version`: required release version without leading `v`, for example `0.1.0`.
+- `next_development_version`: optional next snapshot version, for example `0.1.1-SNAPSHOT`. If omitted, the patch version is incremented automatically.
+- `skip_tests`: build release artifacts without running tests.
+- `dry_run`: validate metadata and build artifacts without pushing refs, publishing packages, creating a GitHub release, or opening a follow-up PR.
 
-## Archive metadata
+## Release workflow behavior
 
-The repository contains `.zenodo.json` and `CITATION.cff` so release metadata and citation metadata can stay versioned with the code.
+The workflow validates that the requested release matches the current snapshot metadata. It then:
 
-## Version alignment
+1. updates `gradle.properties`, `CITATION.cff`, and `.zenodo.json` to the release version,
+2. adds release-only date metadata to `CITATION.cff` and `.zenodo.json`,
+3. builds and verifies the Gradle project,
+4. creates a release branch named `release/vX.Y.Z`,
+5. creates an annotated tag named `vX.Y.Z`,
+6. publishes the Gradle artifacts to GitHub Packages,
+7. creates and publishes a GitHub Release with generated notes and jar assets,
+8. bumps the repository back to the next snapshot version on a `release/prepare-next-X.Y.Z-SNAPSHOT` branch,
+9. opens or updates a PR for the next development iteration.
 
-Keep these values aligned for a release:
+## Metadata states
 
-- Git tag, for example `v0.1.0`.
-- Gradle release version, for example `-PreleaseVersion=0.1.0`.
-- `version` in `CITATION.cff`.
+Development state:
+
+- `gradle.properties`, `CITATION.cff`, and `.zenodo.json` all use an `X.Y.Z-SNAPSHOT` version.
+- `.zenodo.json` does not contain `publication_date`.
+- `CITATION.cff` does not contain `date-released`.
+
+Release state:
+
+- `gradle.properties`, `CITATION.cff`, and `.zenodo.json` all use the release version `X.Y.Z`.
+- `.zenodo.json` contains `publication_date`.
+- `CITATION.cff` contains `date-released`.
+
+Do not create release tags manually for the normal process; let the `Release` workflow create the release branch, tag, package publication, GitHub Release, and follow-up PR.

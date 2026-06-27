@@ -27,6 +27,10 @@ Implemented as deterministic static analysis without external model calls:
 - knowledge-smell recommendations
 - deterministic extraction-profile benchmark scaffold
 
+## Publishing and consumption
+
+Artifact IDs, local development consumption, GitHub Packages repository configuration and release-version handling are documented in [`docs/publishing.md`](docs/publishing.md).
+
 ## Citation
 
 Citation metadata is maintained in `CITATION.cff`. Release metadata is maintained in `.zenodo.json`. See `docs/release.md` for the release checklist.

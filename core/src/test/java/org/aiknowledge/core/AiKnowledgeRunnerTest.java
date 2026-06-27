@@ -78,6 +78,7 @@ class AiKnowledgeRunnerTest {
         String classes = Files.readString(output.resolve("classes.json"));
         String tests = Files.readString(output.resolve("tests.json"));
         String docs = Files.readString(output.resolve("docs.json"));
+        String dependencies = Files.readString(output.resolve("dependencies.json"));
         String capabilities = Files.readString(output.resolve("capabilities.json"));
         String claims = Files.readString(output.resolve("claims.json"));
 
@@ -99,6 +100,9 @@ class AiKnowledgeRunnerTest {
         assertTrue(tests.contains("fast"));
         assertTrue(docs.contains("links"));
         assertTrue(docs.contains("SearchStrategies"));
+        assertTrue(dependencies.contains("\"buildSystem\":\"gradle\""));
+        assertTrue(dependencies.contains("\"scope\":\"implementation\""));
+        assertTrue(dependencies.contains("\"scope\":\"testImplementation\""));
         assertTrue(capabilities.contains("search-strategies"));
         assertTrue(capabilities.contains("implemented"));
         assertTrue(claims.contains("implementedBy"));
@@ -136,6 +140,7 @@ class AiKnowledgeRunnerTest {
         assertTrue(modules.contains("\"buildSystem\":\"maven\""));
         assertTrue(dependencies.contains("org.example:sample-lib:1.2.3"));
         assertTrue(dependencies.contains("\"scope\":\"runtime\""));
+        assertTrue(dependencies.contains("\"buildSystem\":\"maven\""));
     }
 
     @Test

@@ -1,0 +1,18 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'ai-knowledge-extractor'
+include 'ai-knowledge-core'
+include 'ai-knowledge-gradle-plugin'
+include 'ai-knowledge-maven-plugin'

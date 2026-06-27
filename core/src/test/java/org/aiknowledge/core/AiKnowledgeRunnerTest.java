@@ -35,6 +35,76 @@ class AiKnowledgeRunnerTest {
     }
 
     @Test
+    void generateWritesEnrichedScannerMetadata() throws Exception {
+        Path project = temp.resolve("scanner-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example/feature"));
+        Files.createDirectories(project.resolve("src/test/java/example/feature"));
+        Files.createDirectories(project.resolve("docs"));
+        Files.writeString(project.resolve("build.gradle"), """
+                plugins { id 'java' }
+                implementation 'org.example:library:1.0'
+                testImplementation project(':test-support')
+                """);
+        Files.writeString(project.resolve("src/main/java/example/feature/SearchStrategies.java"), """
+                package example.feature;
+
+                import example.shared.Helper;
+                import java.util.List;
+
+                public class SearchStrategies extends BaseSearch implements StrategyApi {
+                    public void run() {}
+                    protected String name() { return "search"; }
+                }
+                """);
+        Files.writeString(project.resolve("src/test/java/example/feature/SearchStrategiesTest.java"), """
+                package example.feature;
+
+                import org.junit.jupiter.api.Tag;
+
+                class SearchStrategiesTest {
+                    @Tag("fast")
+                    @org.junit.jupiter.api.Test
+                    void run() {}
+                }
+                """);
+        Files.writeString(project.resolve("docs/search-strategies.md"), "# Search Strategies\nSee [SearchStrategies](../src/main/java/example/feature/SearchStrategies.java).\n");
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, output));
+
+        String modules = Files.readString(output.resolve("modules.json"));
+        String classes = Files.readString(output.resolve("classes.json"));
+        String tests = Files.readString(output.resolve("tests.json"));
+        String docs = Files.readString(output.resolve("docs.json"));
+        String capabilities = Files.readString(output.resolve("capabilities.json"));
+        String claims = Files.readString(output.resolve("claims.json"));
+
+        assertTrue(modules.contains("sourceSets"));
+        assertTrue(modules.contains("main/java"));
+        assertTrue(modules.contains("externalDependencies"));
+        assertTrue(modules.contains("projectDependencies"));
+        assertTrue(classes.contains("kind"));
+        assertTrue(classes.contains("imports"));
+        assertTrue(classes.contains("superclass"));
+        assertTrue(classes.contains("BaseSearch"));
+        assertTrue(classes.contains("interfaces"));
+        assertTrue(classes.contains("StrategyApi"));
+        assertTrue(classes.contains("referencedProjectClasses"));
+        assertTrue(classes.contains("example.shared.Helper"));
+        assertTrue(tests.contains("testedClass"));
+        assertTrue(tests.contains("example.feature.SearchStrategies"));
+        assertTrue(tests.contains("tags"));
+        assertTrue(tests.contains("fast"));
+        assertTrue(docs.contains("links"));
+        assertTrue(docs.contains("SearchStrategies"));
+        assertTrue(capabilities.contains("search-strategies"));
+        assertTrue(capabilities.contains("implemented"));
+        assertTrue(claims.contains("implementedBy"));
+        assertTrue(claims.contains("verifiedBy"));
+        assertTrue(claims.contains("documentedBy"));
+    }
+
+    @Test
     void generateMergesSeedListsAdditivelyAndHandlesQuoteEdges() throws Exception {
         Path project = temp.resolve("seed-fixture");
         Files.createDirectories(project.resolve("ai-knowledge"));

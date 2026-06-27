@@ -2,18 +2,99 @@
 
 The extractor writes deterministic JSON and HTML artifacts below the configured output directory, usually `build/ai-knowledge/`.
 
-## Knowledge index
+## Stable knowledge artifacts
 
-| File | Purpose |
-|---|---|
-| `index.json` | Repository metadata, generation mode and counts. |
-| `modules.json` | Build modules discovered from Gradle and Maven build files. |
-| `classes.json` | Production Java classes with package, source file, imports and public/protected API hints. |
-| `tests.json` | Test classes and discovered test/API method hints. |
-| `docs.json` | Markdown files with title and heading outline. |
-| `dependencies.json` | Static dependency notations found in build files. |
-| `capabilities.json` | Capability status inferred from code, tests and docs. |
-| `claims.json` | Machine-readable claims linked to implementation, tests and documentation evidence. |
+| File | Primary key | Purpose |
+|---|---|---|
+| `index.json` | object | Repository metadata, generation mode and counts. |
+| `modules.json` | `modules` | Build modules discovered from Gradle and Maven build files. |
+| `classes.json` | `classes` | Production Java classes with package, source file and API hints. |
+| `tests.json` | `tests` | Test classes with source file and test methods. |
+| `docs.json` | `docs` | Markdown documents with title and heading outline. |
+| `dependencies.json` | `dependencies` | Static dependency notations found in build files. |
+| `capabilities.json` | `capabilities` | Capability status inferred from code, tests, docs and optional seeds. |
+| `claims.json` | `claims` | Machine-readable claims linked to capability evidence. |
+
+All list artifacts are wrapped in an object with the primary key shown above. Producers must keep file names and primary keys stable. New fields may be added, but existing fields should not be removed without increasing `schemaVersion`.
+
+## index.json
+
+Current fields:
+
+- `schemaVersion`: integer schema version.
+- `repository`: repository root directory name.
+- `generationMode`: currently `deterministic-static`.
+- `counts`: object with counts for modules, classes, tests, docs, dependencies, capabilities and claims.
+
+## modules.json
+
+Current module fields:
+
+- `name`
+- `path`
+- `buildFile`
+- `buildSystem`
+
+Planned module fields for the scanner enrichment milestone:
+
+- `sourceSets`
+- `mainPackages`
+- `projectDependencies`
+- `externalDependencies`
+
+## classes.json
+
+Current production Java type fields:
+
+- `class`: fully qualified class/interface/record/enum name when the package can be detected.
+- `sourceFile`
+- `package`
+- `publicApiMethods`
+
+Planned class fields for the scanner enrichment milestone:
+
+- `kind`
+- `imports`
+- `superclass`
+- `interfaces`
+- `referencedProjectClasses`
+
+## tests.json
+
+Current test type fields:
+
+- `testClass`
+- `sourceFile`
+- `package`
+- `testMethods`
+
+Planned test fields for the scanner enrichment milestone:
+
+- `kind`
+- `imports`
+- `testedClass`
+- `tags`
+
+## docs.json
+
+Current Markdown document fields:
+
+- `path`
+- `title`
+- `headings`
+
+Planned documentation fields for the scanner enrichment milestone:
+
+- `links`
+
+## capabilities.json and claims.json
+
+Capabilities and claims are evidence-based. The generator may combine static evidence with optional seed files:
+
+- `ai-knowledge/capabilities.seed.yaml`
+- `ai-knowledge/claims.seed.yaml`
+
+Seed files are optional. Seed entries are merged by `id`. List values are merged additively so generated evidence is not lost when a seed adds curated context.
 
 ## Analysis reports
 
@@ -26,5 +107,3 @@ The extractor writes deterministic JSON and HTML artifacts below the configured 
 | `benchmark.json` | Deterministic extraction-profile comparison for model context budgets. |
 | `benchmark.html` | Human-readable benchmark report. |
 | `check.json` | Quality-gate result for CI. |
-
-The schema is intentionally conservative for the first version. New fields may be added, but existing top-level file names and primary list keys should remain stable.

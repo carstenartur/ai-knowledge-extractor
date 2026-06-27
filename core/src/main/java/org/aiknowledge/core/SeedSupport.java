@@ -23,7 +23,20 @@ final class SeedSupport {
         for (Map item : parse(file)) {
             if (!item.containsKey("id")) continue;
             Object existing = find(target, String.valueOf(item.get("id")));
-            if (existing instanceof Map map) map.putAll(item); else target.add(item);
+            if (existing instanceof Map map) mergeMap(map, item); else target.add(item);
+        }
+    }
+
+    private static void mergeMap(Map target, Map source) {
+        for (Object object : source.entrySet()) {
+            Map.Entry entry = (Map.Entry) object;
+            Object oldValue = target.get(entry.getKey());
+            Object newValue = entry.getValue();
+            if (oldValue instanceof List oldList && newValue instanceof List newList) {
+                for (Object value : newList) if (!oldList.contains(value)) oldList.add(value);
+            } else {
+                target.put(entry.getKey(), newValue);
+            }
         }
     }
 
@@ -51,12 +64,18 @@ final class SeedSupport {
     }
 
     private static Object parseValue(String value) {
-        if (value.startsWith("[") && value.endsWith("]")) {
+        String trimmed = stripQuotes(value.trim());
+        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
             List list = new ArrayList();
-            String body = value.substring(1, value.length() - 1).trim();
-            if (!body.isEmpty()) for (String part : body.split(",")) list.add(part.trim());
+            String body = trimmed.substring(1, trimmed.length() - 1).trim();
+            if (!body.isEmpty()) for (String part : body.split(",")) list.add(stripQuotes(part.trim()));
             return list;
         }
+        return trimmed;
+    }
+
+    private static String stripQuotes(String value) {
+        if (value.length() >= 2 && ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")))) return value.substring(1, value.length() - 1);
         return value;
     }
 }

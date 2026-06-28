@@ -5,11 +5,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class MarkdownMetadata {
+public final class MarkdownMetadata {
     private MarkdownMetadata() {
     }
 
-    static List links(String text) {
+    public static List links(String text) {
         List links = new ArrayList();
         int pos = 0;
         while ((pos = text.indexOf("](", pos)) >= 0) {

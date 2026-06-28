@@ -5,18 +5,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-final class BuildMetadata {
+public final class BuildMetadata {
     private BuildMetadata() {
     }
 
-    static void initializeModuleFields(Map module) {
+    public static void initializeModuleFields(Map module) {
         module.put("sourceSets", new ArrayList());
         module.put("mainPackages", new ArrayList());
         module.put("projectDependencies", new ArrayList());
         module.put("externalDependencies", new ArrayList());
     }
 
-    static void enrichModules(Path root, RepositorySnapshot snapshot) {
+    public static void enrichModules(Path root, RepositorySnapshot snapshot) {
         for (Object object : snapshot.modules) {
             Map module = (Map) object;
             String modulePath = String.valueOf(module.get("path"));

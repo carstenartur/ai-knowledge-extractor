@@ -56,8 +56,7 @@ final class KnowledgeExtractionPipeline {
     RepositorySnapshot extract(ExtractionOptions options) throws IOException {
         Path root = options.repositoryRoot();
         RepositorySnapshot snapshot = new RepositorySnapshot();
-        for (Object object : inventoryScanner.scan(root)) {
-            Path file = (Path) object;
+        for (Path file : inventoryScanner.scan(root)) {
             String path = inventoryScanner.rel(root, file);
             moduleScanner.extract(root, file, path, snapshot);
             if (javaKnowledgeProvider.supports(path)) javaKnowledgeProvider.extract(root, file, path, snapshot);

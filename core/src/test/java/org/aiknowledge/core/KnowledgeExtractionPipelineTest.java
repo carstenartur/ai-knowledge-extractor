@@ -30,10 +30,10 @@ class KnowledgeExtractionPipelineTest {
 
             @Override
             public void extract(Path root, Path file, String path, RepositorySnapshot snapshot) {
-                Map clazz = new LinkedHashMap();
-                clazz.put("class", "custom.ProviderType");
-                clazz.put("sourceFile", path);
-                snapshot.classes.add(clazz);
+                Map classData = new LinkedHashMap();
+                classData.put("class", "custom.ProviderType");
+                classData.put("sourceFile", path);
+                snapshot.classes.add(classData);
             }
         };
 

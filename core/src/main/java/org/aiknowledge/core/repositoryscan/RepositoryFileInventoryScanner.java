@@ -8,7 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class RepositoryFileInventoryScanner {
-    public List scan(Path root) throws IOException {
+    public List<Path> scan(Path root) throws IOException {
         try (var stream = Files.walk(root)) {
             return stream
                     .filter(Files::isRegularFile)

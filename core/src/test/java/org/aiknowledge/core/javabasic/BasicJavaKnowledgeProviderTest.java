@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.aiknowledge.core.javaspi.JavaKnowledgeRequest;
 import org.aiknowledge.core.javaspi.JavaKnowledgeResult;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,10 @@ class BasicJavaKnowledgeProviderTest {
         assertEquals("src/test/java/example/AppTest.java", testFact.get("sourceFile"));
         assertTrue(main.typeFacts().toString().contains("example.App"));
         assertTrue(main.methodFacts().toString().contains("public void run"));
+        List signatures = (List) main.methodFacts().stream()
+                .map(methodFact -> ((Map) methodFact).get("signature"))
+                .collect(Collectors.toList());
+        assertEquals(List.of("public void run"), signatures);
         assertTrue(main.packageFacts().toString().contains("example"));
         assertTrue(main.referenceFacts().toString().contains("example.shared.Helper"));
         assertTrue(main.warnings().toString().contains("heuristic-line-parser"));

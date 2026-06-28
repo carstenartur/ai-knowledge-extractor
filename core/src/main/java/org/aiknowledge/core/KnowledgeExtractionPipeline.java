@@ -3,6 +3,7 @@ package org.aiknowledge.core;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,19 +78,21 @@ final class KnowledgeExtractionPipeline {
             if (path.endsWith(".java")) javaSources.add(new JavaSourceUnit(file, path));
         }
         Map buildMetadata = Map.of("modules", List.copyOf(snapshot.modules));
+        List<Path> sourceRoots = sourceRoots(root, snapshot.modules);
+        List<Path> testSourceRoots = testSourceRoots(root, snapshot.modules);
         for (JavaSourceUnit source : javaSources) {
             JavaKnowledgeResult result = javaKnowledgeProvider.extract(new JavaKnowledgeRequest(
                     root,
                     source.file(),
                     source.path(),
                     snapshot.modules,
-                    sourceRoots(root, snapshot.modules),
-                    testSourceRoots(root, snapshot.modules),
+                    sourceRoots,
+                    testSourceRoots,
                     buildMetadata,
                     List.of(),
                     Map.of()));
-            snapshot.classes.addAll(result.classFacts());
-            snapshot.tests.addAll(result.testFacts());
+            snapshot.classes.addAll(enrichFacts(result.classFacts(), result));
+            snapshot.tests.addAll(enrichFacts(result.testFacts(), result));
         }
         BuildMetadata.enrichModules(root, snapshot);
         capabilityLinker.link(snapshot);
@@ -120,6 +123,20 @@ final class KnowledgeExtractionPipeline {
             if (fallback.toFile().isDirectory()) roots.add(fallback);
         }
         return roots;
+    }
+
+    private static List enrichFacts(List facts, JavaKnowledgeResult result) {
+        List enriched = new ArrayList();
+        for (Object factObject : facts) {
+            Map fact = new LinkedHashMap((Map) factObject);
+            if (!result.typeFacts().isEmpty()) fact.put("typeFacts", result.typeFacts());
+            if (!result.methodFacts().isEmpty()) fact.put("methodFacts", result.methodFacts());
+            if (!result.packageFacts().isEmpty()) fact.put("packageFacts", result.packageFacts());
+            if (!result.referenceFacts().isEmpty()) fact.put("referenceFacts", result.referenceFacts());
+            if (!result.warnings().isEmpty()) fact.put("warnings", result.warnings());
+            enriched.add(fact);
+        }
+        return enriched;
     }
 
     private record JavaSourceUnit(Path file, String path) {

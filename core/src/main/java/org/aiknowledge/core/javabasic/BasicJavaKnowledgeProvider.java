@@ -8,12 +8,16 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.aiknowledge.core.JavaSourceMetadata;
 import org.aiknowledge.core.javaspi.JavaKnowledgeRequest;
 import org.aiknowledge.core.javaspi.JavaKnowledgeProvider;
 import org.aiknowledge.core.javaspi.JavaKnowledgeResult;
 
 public final class BasicJavaKnowledgeProvider implements JavaKnowledgeProvider {
+    private static final Pattern ACCESS_MODIFIER = Pattern.compile("\\b(public|protected)\\b");
+
     @Override
     public JavaKnowledgeResult extract(JavaKnowledgeRequest request) throws IOException {
         if (!request.sourcePath().endsWith(".java")) return JavaKnowledgeResult.empty();
@@ -26,9 +30,7 @@ public final class BasicJavaKnowledgeProvider implements JavaKnowledgeProvider {
             String trimmed = line.trim();
             if (trimmed.startsWith("package ")) pkg = parsePackage(trimmed);
             if (trimmed.startsWith("import ")) imports.add(parseImport(trimmed));
-            if ((trimmed.startsWith("public ") || trimmed.startsWith("protected ")) && trimmed.contains("(")) {
-                methods.add(trimmed.substring(0, trimmed.indexOf('(')).trim());
-            }
+            methods.addAll(extractMethodSignatures(trimmed));
         }
         boolean test = request.sourcePath().contains("/src/test/") || simple.endsWith("Test") || source.contains("@Test");
         Map data = new LinkedHashMap();
@@ -68,6 +70,30 @@ public final class BasicJavaKnowledgeProvider implements JavaKnowledgeProvider {
         if (value.startsWith("static ")) value = value.substring("static ".length()).trim();
         int semicolon = value.indexOf(';');
         return semicolon >= 0 ? value.substring(0, semicolon).trim() : value.trim();
+    }
+
+    private static List<String> extractMethodSignatures(String line) {
+        List<String> signatures = new ArrayList<>();
+        Matcher matcher = ACCESS_MODIFIER.matcher(line);
+        while (matcher.find()) {
+            int start = matcher.start();
+            int openParen = line.indexOf('(', start);
+            if (openParen < 0) continue;
+            String signature = line.substring(start, openParen).trim();
+            if (!isMethodLikeSignature(signature)) continue;
+            signatures.add(signature);
+        }
+        return signatures;
+    }
+
+    private static boolean isMethodLikeSignature(String signature) {
+        if (signature.isBlank()) return false;
+        if (signature.contains("{") || signature.contains("=")) return false;
+        String normalized = " " + signature + " ";
+        return !normalized.contains(" class ")
+                && !normalized.contains(" interface ")
+                && !normalized.contains(" enum ")
+                && !normalized.contains(" record ");
     }
 
     private static List methodFacts(String typeName, List<String> methods) {

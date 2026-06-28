@@ -79,7 +79,7 @@ The core extractor is organized as package-level modules (within `core`) so resp
 
 ### Java provider selection and limitations
 
-- Java extraction is resolved via Java `ServiceLoader` (`JavaKnowledgeProvider` SPI). The first provider on the classpath is used.
+- Java extraction is resolved via Java `ServiceLoader` (`JavaKnowledgeProvider` SPI). The first provider discovered during `ServiceLoader` iteration is used.
 - The built-in fallback is `org.aiknowledge.core.javabasic.BasicJavaKnowledgeProvider`.
 - `BasicJavaKnowledgeProvider` preserves current `classes.json` and `tests.json` fields and adds structured Java facts, but it is still heuristic line-based parsing and may miss complex Java syntax.
 

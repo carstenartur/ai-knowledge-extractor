@@ -168,10 +168,9 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         return null;
     }
 
-    private static List<Path> javaFiles(List sourceRoots, List testSourceRoots) throws IOException {
+    private static List<Path> javaFiles(List<?> sourceRoots, List<?> testSourceRoots) throws IOException {
         Set<Path> files = new LinkedHashSet<>();
-        for (Object rootObject : mergeRoots(sourceRoots, testSourceRoots)) {
-            if (!(rootObject instanceof Path root)) continue;
+        for (Path root : mergeRoots(sourceRoots, testSourceRoots)) {
             if (!Files.isDirectory(root)) continue;
             try (Stream<Path> stream = Files.walk(root)) {
                 stream.filter(path -> path.toString().endsWith(".java"))
@@ -182,11 +181,17 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         return List.copyOf(files);
     }
 
-    private static List mergeRoots(List sourceRoots, List testSourceRoots) {
-        List roots = new ArrayList();
-        roots.addAll(sourceRoots);
-        roots.addAll(testSourceRoots);
+    private static List<Path> mergeRoots(List<?> sourceRoots, List<?> testSourceRoots) {
+        List<Path> roots = new ArrayList<>();
+        appendPathRoots(roots, sourceRoots);
+        appendPathRoots(roots, testSourceRoots);
         return roots;
+    }
+
+    private static void appendPathRoots(List<Path> roots, List<?> candidates) {
+        for (Object candidate : candidates) {
+            if (candidate instanceof Path path) roots.add(path);
+        }
     }
 
     private static SourceFacts parseSource(JavaKnowledgeRequest request, Path file) throws IOException {
@@ -204,7 +209,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
                 null,
                 true);
         CompilationUnit unit = (CompilationUnit) parser.createAST(null);
-        List unitTypes = unit.types();
+        List<?> unitTypes = unit.types();
         if (unitTypes.isEmpty()) return null;
 
         Object firstType = unitTypes.get(0);
@@ -220,7 +225,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         collectTypeReferences(unit, references);
         List<Map<String, Object>> warnings = new ArrayList<>();
         if (hasBindingProblems(unit)) warnings.add(warning("jdt-bindings-incomplete", "JDT reported unresolved bindings in this source file."));
-        boolean test = isTestPath(request, file) || simpleName.endsWith("Test");
+        boolean test = isTestSource(request, file, simpleName);
         return new SourceFacts(
                 request.repositoryRoot().relativize(file).toString().replace('\\', '/'),
                 typeName,
@@ -245,13 +250,14 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         return options;
     }
 
-    private static boolean isTestPath(JavaKnowledgeRequest request, Path file) {
+    private static boolean isTestSource(JavaKnowledgeRequest request, Path file, String simpleName) {
         for (Object rootObject : request.testSourceRoots()) {
             if (!(rootObject instanceof Path root)) continue;
             if (file.normalize().startsWith(root.normalize())) return true;
         }
         String relative = request.repositoryRoot().relativize(file).toString().replace('\\', '/');
-        return relative.contains("/src/test/");
+        if (relative.contains("/src/test/")) return true;
+        return simpleName.endsWith("Test");
     }
 
     private static String kind(Object declaration) {
@@ -280,7 +286,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
 
     private static List<String> interfaces(Object declaration) {
         List<String> interfaces = new ArrayList<>();
-        List source = declaration instanceof TypeDeclaration type ? type.superInterfaceTypes()
+        List<?> source = declaration instanceof TypeDeclaration type ? type.superInterfaceTypes()
                 : declaration instanceof RecordDeclaration record ? record.superInterfaceTypes()
                 : List.of();
         for (Object object : source) {
@@ -309,7 +315,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
 
     private static List<MethodDeclaration> methodDeclarations(Object declaration) {
         List<MethodDeclaration> methods = new ArrayList<>();
-        List body = declaration instanceof TypeDeclaration type ? type.bodyDeclarations()
+        List<?> body = declaration instanceof TypeDeclaration type ? type.bodyDeclarations()
                 : declaration instanceof RecordDeclaration record ? record.bodyDeclarations()
                 : declaration instanceof EnumDeclaration enumDeclaration ? enumDeclaration.bodyDeclarations()
                 : declaration instanceof AnnotationTypeDeclaration annotation ? annotation.bodyDeclarations()
@@ -329,7 +335,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         if (!method.isConstructor()) signature.append(method.getReturnType2()).append(' ');
         signature.append(method.getName());
         signature.append('(');
-        List parameters = method.parameters();
+        List<?> parameters = method.parameters();
         for (int i = 0; i < parameters.size(); i++) {
             if (i > 0) signature.append(", ");
             signature.append(parameters.get(i));
@@ -372,7 +378,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         return Stream.of(unit.getProblems()).anyMatch(problem -> problem != null && problem.isError());
     }
 
-    private static String[] stringArray(List values) {
+    private static String[] stringArray(List<?> values) {
         String[] array = new String[values.size()];
         for (int i = 0; i < values.size(); i++) {
             array[i] = String.valueOf(values.get(i));
@@ -400,7 +406,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         return sourceFacts.packageName().isBlank() ? base : sourceFacts.packageName() + "." + base;
     }
 
-    private static String modulePath(List modules, String sourcePath) {
+    private static String modulePath(List<?> modules, String sourcePath) {
         for (Object object : modules) {
             if (!(object instanceof Map<?, ?> module)) continue;
             Object pathObject = module.get("path");
@@ -465,11 +471,13 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
     private static List<Map<String, Object>> referenceFacts(String typeName, List<String> references, List<String> referencedBy) {
         List<Map<String, Object>> facts = new ArrayList<>();
         for (String reference : references) {
+            SearchPattern pattern = SearchPattern.createPattern(reference, IJavaSearchConstants.TYPE, IJavaSearchConstants.REFERENCES, SearchPattern.R_EXACT_MATCH);
+            if (pattern == null) continue;
+            if ((pattern.getMatchRule() & SearchPattern.R_EXACT_MATCH) == 0) continue;
             Map<String, Object> fact = new LinkedHashMap<>();
             fact.put("type", typeName);
             fact.put("reference", reference);
-            SearchPattern pattern = SearchPattern.createPattern(reference, IJavaSearchConstants.TYPE, IJavaSearchConstants.REFERENCES, SearchPattern.R_EXACT_MATCH);
-            fact.put("searchPattern", String.valueOf(pattern));
+            fact.put("search", "jdt-type-reference-exact");
             facts.add(fact);
         }
         for (String reference : referencedBy) {

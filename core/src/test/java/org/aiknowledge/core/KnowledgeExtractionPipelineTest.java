@@ -109,7 +109,11 @@ class KnowledgeExtractionPipelineTest {
             assertTrue(snapshot.classes.toString().contains("implementations"));
             assertTrue(snapshot.classes.toString().contains("example.impl.ServiceImpl"));
         } finally {
-            if (previous == null) System.clearProperty("aiknowledge.javaProvider"); else System.setProperty("aiknowledge.javaProvider", previous);
+            if (previous == null) {
+                System.clearProperty("aiknowledge.javaProvider");
+            } else {
+                System.setProperty("aiknowledge.javaProvider", previous);
+            }
         }
     }
 }

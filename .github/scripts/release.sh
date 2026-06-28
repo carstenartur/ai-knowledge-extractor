@@ -13,6 +13,19 @@ SOURCE_BRANCH=${SOURCE_BRANCH:-main}
 TAG_NAME="v${RELEASE_VERSION}"
 RELEASE_BRANCH="release/${TAG_NAME}"
 MAVEN_PLUGIN_DESCRIPTOR="maven/src/main/resources/META-INF/maven/plugin.xml"
+SITE_POM="site/pom.xml"
+MAVEN_EXAMPLE_POMS=(
+  "examples/maven-consumer/pom.xml"
+  "examples/fixtures/maven-consumer/pom.xml"
+)
+VERSIONED_METADATA_FILES=(
+  "gradle.properties"
+  "CITATION.cff"
+  ".zenodo.json"
+  "$MAVEN_PLUGIN_DESCRIPTOR"
+  "$SITE_POM"
+  "${MAVEN_EXAMPLE_POMS[@]}"
+)
 
 if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "::error::release_version must use X.Y.Z without a leading v"
@@ -107,6 +120,18 @@ verify_metadata() {
     echo "::error::Maven plugin descriptor version does not match ${expected}"
     exit 1
   }
+
+  grep -q "<revision>${expected}</revision>" "$SITE_POM" || {
+    echo "::error::Maven site pom revision does not match ${expected}"
+    exit 1
+  }
+
+  for pom in "${MAVEN_EXAMPLE_POMS[@]}"; do
+    grep -q "<aiKnowledge.version>${expected}</aiKnowledge.version>" "$pom" || {
+      echo "::error::${pom} aiKnowledge.version does not match ${expected}"
+      exit 1
+    }
+  done
 
   EXPECTED_VERSION="$expected" RELEASE_MODE="$release_mode" python3 - <<'PY'
 import json
@@ -203,7 +228,7 @@ if [[ "$STATE" == "new" ]]; then
   set_maven_plugin_descriptor_version "$RELEASE_VERSION"
   python3 "$METADATA_HELPER" "$RELEASE_VERSION" --release
   verify_metadata "$RELEASE_VERSION" true
-  git add gradle.properties CITATION.cff .zenodo.json "$MAVEN_PLUGIN_DESCRIPTOR"
+  git add "${VERSIONED_METADATA_FILES[@]}"
   git commit -m "Release version ${RELEASE_VERSION}"
 else
   git checkout --detach "$TAG_NAME"
@@ -273,7 +298,7 @@ verify_metadata "$NEXT_VERSION" false
 
 NEXT_BRANCH="release/prepare-next-${NEXT_VERSION}"
 git switch -C "$NEXT_BRANCH"
-git add gradle.properties CITATION.cff .zenodo.json release.properties "$MAVEN_PLUGIN_DESCRIPTOR"
+git add "${VERSIONED_METADATA_FILES[@]}" release.properties
 git commit -m "Prepare next development version ${NEXT_VERSION}"
 
 if [[ "$DRY_RUN" != "true" ]]; then
@@ -292,6 +317,8 @@ Automated follow-up after release ${RELEASE_VERSION}.
 ## Changes
 - Bump Gradle projectVersion to ${NEXT_VERSION}
 - Update Maven plugin descriptor to ${NEXT_VERSION}
+- Update Maven site revision to ${NEXT_VERSION}
+- Update Maven consumer examples to ${NEXT_VERSION}
 - Update CITATION.cff to ${NEXT_VERSION}
 - Update .zenodo.json to ${NEXT_VERSION}
 - Remove release-only date metadata from the development snapshot

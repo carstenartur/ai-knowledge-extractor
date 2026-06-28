@@ -3,6 +3,7 @@ package org.aiknowledge.core;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +63,30 @@ final class KnowledgeExtractionPipeline {
     }
 
     private static JavaKnowledgeProvider loadJavaKnowledgeProvider() {
-        return ServiceLoader.load(JavaKnowledgeProvider.class).findFirst().orElseGet(BasicJavaKnowledgeProvider::new);
+        String configuredProvider = System.getProperty("aiknowledge.javaProvider", "basic").trim();
+        if (configuredProvider.isBlank()) configuredProvider = "basic";
+        List<JavaKnowledgeProvider> providers = ServiceLoader.load(JavaKnowledgeProvider.class).stream()
+                .map(ServiceLoader.Provider::get)
+                .sorted(Comparator.comparing(provider -> provider.getClass().getName()))
+                .toList();
+        for (JavaKnowledgeProvider provider : providers) {
+            String fqcn = provider.getClass().getName();
+            String simple = provider.getClass().getSimpleName();
+            if (matchesProvider(configuredProvider, fqcn) || matchesProvider(configuredProvider, simple)) return provider;
+        }
+        return providers.stream()
+                .filter(provider -> provider.getClass().equals(BasicJavaKnowledgeProvider.class))
+                .findFirst()
+                .orElseGet(BasicJavaKnowledgeProvider::new);
+    }
+
+    private static boolean matchesProvider(String configuredProvider, String candidate) {
+        String normalizedConfigured = configuredProvider.toLowerCase();
+        String normalizedCandidate = candidate.toLowerCase();
+        if (normalizedConfigured.equals(normalizedCandidate)) return true;
+        if (normalizedConfigured.equals("basic")) return normalizedCandidate.contains("basicjavaknowledgeprovider");
+        if (normalizedConfigured.equals("jdt")) return normalizedCandidate.contains("jdtjavaknowledgeprovider");
+        return false;
     }
 
     RepositorySnapshot extract(ExtractionOptions options) throws IOException {
@@ -90,7 +114,7 @@ final class KnowledgeExtractionPipeline {
                     testSourceRoots,
                     buildMetadata,
                     List.of(),
-                    Map.of()));
+                    Map.of("javaProvider", System.getProperty("aiknowledge.javaProvider", "basic"))));
             snapshot.classes.addAll(enrichFacts(result.classFacts(), result));
             snapshot.tests.addAll(enrichFacts(result.testFacts(), result));
         }

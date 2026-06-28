@@ -79,8 +79,11 @@ The core extractor is organized as package-level modules (within `core`) so resp
 
 ### Java provider selection and limitations
 
-- Java extraction is resolved via Java `ServiceLoader` (`JavaKnowledgeProvider` SPI). The first provider discovered during `ServiceLoader` iteration is used.
+- Java extraction is resolved via Java `ServiceLoader` (`JavaKnowledgeProvider` SPI) and selected through `-Daiknowledge.javaProvider=<basic|jdt|providerClassName>`.
 - The built-in fallback is `org.aiknowledge.core.javabasic.BasicJavaKnowledgeProvider`.
+- The optional JDT provider is `org.aiknowledge.core.javajdt.JdtJavaKnowledgeProvider` and enriches type/interface/reference facts (`classes.json` and `tests.json`) using Eclipse JDT model/search APIs.
+- Use the JDT provider when you need stronger interface implementation mapping, type reference discovery and test-to-production links; keep `basic` for lightweight heuristic extraction.
+- JDT runs best with complete compile classpaths. If classpath data is incomplete, the provider records warnings in extracted facts (for example `jdt-classpath-incomplete` / `jdt-bindings-incomplete`).
 - `BasicJavaKnowledgeProvider` preserves current `classes.json` and `tests.json` fields and adds structured Java facts, but it is still heuristic line-based parsing and may miss complex Java syntax.
 
 ## Model profiles

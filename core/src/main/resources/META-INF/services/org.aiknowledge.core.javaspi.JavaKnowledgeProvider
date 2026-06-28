@@ -1,1 +1,2 @@
 org.aiknowledge.core.javabasic.BasicJavaKnowledgeProvider
+org.aiknowledge.core.javajdt.JdtJavaKnowledgeProvider

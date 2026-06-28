@@ -52,6 +52,7 @@ Threshold overrides can also be passed as JVM properties:
 - `-DaiKnowledge.maxCognitiveDebtIncrease=...`
 - `-DaiKnowledge.maxConceptRadiusIncrease=...`
 - `-DaiKnowledge.maxContextTokenIncrease=...`
+- `-Daiknowledge.javaProvider=jdt` (selects the JDT Java provider for stronger type/reference extraction)
 
 ## Goal reference
 
@@ -168,4 +169,3 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
   <goals><goal>check</goal></goals>
 </execution>
 ```
-

@@ -8,6 +8,9 @@
    - `gradle.properties`: `projectVersion=0.1.0-SNAPSHOT`
    - `CITATION.cff`: `version: "0.1.0-SNAPSHOT"`
    - `.zenodo.json`: `"version": "0.1.0-SNAPSHOT"`
+   - `maven/src/main/resources/META-INF/maven/plugin.xml`: `<version>0.1.0-SNAPSHOT</version>`
+   - `site/pom.xml`: `<revision>0.1.0-SNAPSHOT</revision>`
+   - Maven consumer example properties: `<aiKnowledge.version>0.1.0-SNAPSHOT</aiKnowledge.version>`
 4. Review the user-facing docs:
    - README badges and quick start are current.
    - [`gradle-plugin.md`](gradle-plugin.md) and [`maven-plugin.md`](maven-plugin.md) still match the released plugin behavior.
@@ -32,7 +35,7 @@
 
 The workflow validates that the requested release matches the current snapshot metadata. It then:
 
-1. updates `gradle.properties`, `CITATION.cff`, and `.zenodo.json` to the release version,
+1. updates `gradle.properties`, Maven plugin descriptor metadata, Maven site revision, Maven consumer examples, `CITATION.cff`, and `.zenodo.json` to the release version,
 2. adds release-only date metadata to `CITATION.cff` and `.zenodo.json`,
 3. builds and verifies the Gradle project,
 4. creates a release branch named `release/vX.Y.Z`,
@@ -46,13 +49,14 @@ The workflow validates that the requested release matches the current snapshot m
 
 Development state:
 
-- `gradle.properties`, `CITATION.cff`, and `.zenodo.json` all use an `X.Y.Z-SNAPSHOT` version.
+- `gradle.properties`, Maven plugin descriptor metadata, Maven site revision, Maven consumer examples, `CITATION.cff`, and `.zenodo.json` all use an `X.Y.Z-SNAPSHOT` version.
+- `release.properties` uses the corresponding `X.Y.Z` release version without `-SNAPSHOT`.
 - `.zenodo.json` does not contain `publication_date`.
 - `CITATION.cff` does not contain `date-released`.
 
 Release state:
 
-- `gradle.properties`, `CITATION.cff`, and `.zenodo.json` all use the release version `X.Y.Z`.
+- `gradle.properties`, Maven plugin descriptor metadata, Maven site revision, Maven consumer examples, `CITATION.cff`, and `.zenodo.json` all use the release version `X.Y.Z`.
 - `.zenodo.json` contains `publication_date`.
 - `CITATION.cff` contains `date-released`.
 

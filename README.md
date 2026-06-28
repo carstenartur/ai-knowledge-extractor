@@ -37,7 +37,7 @@ Canonical Gradle plugin usage (plugin id, tasks, extension defaults, CI/local ex
 
 ## Maven
 
-Maven plugin coordinates: `org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT`.
+Maven plugin coordinates: `org.aiknowledge:ai-knowledge-maven-plugin:<version>`.
 
 Goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`, `help`.
 

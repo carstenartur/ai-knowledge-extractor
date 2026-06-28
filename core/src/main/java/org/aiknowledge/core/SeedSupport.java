@@ -8,10 +8,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class SeedSupport {
+public final class SeedSupport {
     private SeedSupport() {}
 
-    static void mergeSeeds(ExtractionOptions options, RepositorySnapshot snapshot) throws IOException {
+    public static void mergeSeeds(ExtractionOptions options, RepositorySnapshot snapshot) throws IOException {
         Path seedDir = options.seedDirectory();
         if (seedDir == null || !Files.isDirectory(seedDir)) return;
         mergeAll(seedDir, "capabilities", snapshot.capabilities);

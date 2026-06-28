@@ -5,11 +5,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class JavaSourceMetadata {
+public final class JavaSourceMetadata {
     private JavaSourceMetadata() {
     }
 
-    static void enrich(Map data, String source, String simpleName, boolean test) {
+    public static void enrich(Map data, String source, String simpleName, boolean test) {
         data.put("kind", kind(source));
         data.put("imports", imports(source));
         data.put("superclass", superclass(source));

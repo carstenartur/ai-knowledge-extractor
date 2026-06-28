@@ -5,11 +5,11 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-final class MavenMetadata {
+public final class MavenMetadata {
     private MavenMetadata() {
     }
 
-    static void addDependencies(Path root, Path pom, String text, RepositorySnapshot snapshot) {
+    public static void addDependencies(Path root, Path pom, String text, RepositorySnapshot snapshot) {
         int start = 0;
         while ((start = text.indexOf("<dependency>", start)) >= 0) {
             int end = text.indexOf("</dependency>", start);

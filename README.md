@@ -65,6 +65,18 @@ Implemented as deterministic static analysis without external model calls:
 - deterministic extraction-profile benchmark scaffold with optional empirical fixture layer
 - configurable model-profile budget metrics
 
+## Extraction architecture packages
+
+The core extractor is organized as package-level modules (within `core`) so responsibilities stay separated while preserving the current artifacts:
+
+- `org.aiknowledge.core.model`: stable repository fact model helpers (`RepositoryFacts` index/count assembly).
+- `org.aiknowledge.core`: orchestration and outputs (`AiKnowledgeRunner`, `KnowledgeExtractionPipeline`).
+- `org.aiknowledge.core.repositoryscan`: repository inventory and non-Java scanners (build files, docs, workflows, discovery evidence, benchmark sources).
+- `org.aiknowledge.core.javaspi`: Java provider interface (`JavaKnowledgeProvider`).
+- `org.aiknowledge.core.javabasic`: default heuristic Java provider implementation.
+- `org.aiknowledge.core.linker`: capability/claim linking from extracted evidence.
+- `org.aiknowledge.core.context`: seed/context merge step before output writing.
+
 ## Model profiles
 
 Default model profiles and project-specific `ai-knowledge/model-profiles.yaml` configuration are documented in [`docs/model-profiles.md`](docs/model-profiles.md).

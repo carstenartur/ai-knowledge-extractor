@@ -5,13 +5,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class CapabilityEvidence {
+public final class CapabilityEvidence {
     private static final String[] IDS = {"equality-saturation", "e-graph", "macro-rule-learning", "replay", "counterexample-search", "proof-bridge", "benchmark-report", "search-strategies", "assumption-handling", "rule-inventory"};
 
     private CapabilityEvidence() {
     }
 
-    static void addCapabilities(RepositorySnapshot snapshot) {
+    public static void addCapabilities(RepositorySnapshot snapshot) {
         for (String id : IDS) {
             List classes = evidence(snapshot.classes, id, "class");
             List tests = evidence(snapshot.tests, id, "testClass");

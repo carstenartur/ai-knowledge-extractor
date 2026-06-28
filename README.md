@@ -77,6 +77,12 @@ The core extractor is organized as package-level modules (within `core`) so resp
 - `org.aiknowledge.core.linker`: capability/claim linking from extracted evidence.
 - `org.aiknowledge.core.context`: seed/context merge step before output writing.
 
+### Java provider selection and limitations
+
+- Java extraction is resolved via Java `ServiceLoader` (`JavaKnowledgeProvider` SPI). The first provider discovered during `ServiceLoader` iteration is used.
+- The built-in fallback is `org.aiknowledge.core.javabasic.BasicJavaKnowledgeProvider`.
+- `BasicJavaKnowledgeProvider` preserves current `classes.json` and `tests.json` fields and adds structured Java facts, but it is still heuristic line-based parsing and may miss complex Java syntax.
+
 ## Model profiles
 
 Default model profiles and project-specific `ai-knowledge/model-profiles.yaml` configuration are documented in [`docs/model-profiles.md`](docs/model-profiles.md).

@@ -2,6 +2,8 @@ package org.aiknowledge.core;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
+import java.util.ServiceLoader;
 import org.aiknowledge.core.context.SeedContextGenerator;
 import org.aiknowledge.core.javabasic.BasicJavaKnowledgeProvider;
 import org.aiknowledge.core.javaspi.JavaKnowledgeProvider;
@@ -22,7 +24,7 @@ final class KnowledgeExtractionPipeline {
     private final SeedContextGenerator seedContextGenerator;
 
     KnowledgeExtractionPipeline() {
-        this(new BasicJavaKnowledgeProvider());
+        this(loadJavaKnowledgeProvider());
     }
 
     KnowledgeExtractionPipeline(JavaKnowledgeProvider javaKnowledgeProvider) {
@@ -48,9 +50,13 @@ final class KnowledgeExtractionPipeline {
         this.moduleScanner = moduleScanner;
         this.markdownScanner = markdownScanner;
         this.evidenceScanner = evidenceScanner;
-        this.javaKnowledgeProvider = javaKnowledgeProvider;
+        this.javaKnowledgeProvider = Objects.requireNonNull(javaKnowledgeProvider, "javaKnowledgeProvider");
         this.capabilityLinker = capabilityLinker;
         this.seedContextGenerator = seedContextGenerator;
+    }
+
+    private static JavaKnowledgeProvider loadJavaKnowledgeProvider() {
+        return ServiceLoader.load(JavaKnowledgeProvider.class).findFirst().orElseGet(BasicJavaKnowledgeProvider::new);
     }
 
     RepositorySnapshot extract(ExtractionOptions options) throws IOException {

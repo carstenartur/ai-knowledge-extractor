@@ -16,7 +16,7 @@ class KnowledgeExtractionPipelineTest {
     Path temp;
 
     @Test
-    void usesConfiguredJavaProviderViaSpi() throws Exception {
+    void usesConfiguredJavaProviderViaConstructorInjection() throws Exception {
         Path project = temp.resolve("spi-fixture");
         Files.createDirectories(project.resolve("src/main/java/example"));
         Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");

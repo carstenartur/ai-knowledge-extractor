@@ -1,5 +1,6 @@
 package org.aiknowledge.core.repositoryscan;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,7 +18,7 @@ public final class BuildModuleScanner {
         Map module = new LinkedHashMap();
         Path dir = file.getParent();
         module.put("name", dir.equals(root) ? root.getFileName().toString() : dir.getFileName().toString());
-        module.put("path", root.relativize(dir).toString().replace('\\', '/'));
+        module.put("path", root.relativize(dir).toString().replace(File.separatorChar, '/'));
         module.put("buildFile", path);
         module.put("buildSystem", name.equals("pom.xml") ? "maven" : "gradle");
         BuildMetadata.initializeModuleFields(module);

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep CITATION.cff and .zenodo.json aligned with the project version."""
+"""Keep release metadata and documentation versions aligned."""
 
 from __future__ import annotations
 
@@ -8,6 +8,13 @@ import datetime as dt
 import json
 from pathlib import Path
 import re
+
+
+SITE_POM = Path("site/pom.xml")
+MAVEN_EXAMPLE_POMS = [
+    Path("examples/maven-consumer/pom.xml"),
+    Path("examples/fixtures/maven-consumer/pom.xml"),
+]
 
 
 def set_cff_key(text: str, key: str, value: str) -> str:
@@ -22,6 +29,33 @@ def set_cff_key(text: str, key: str, value: str) -> str:
 
 def remove_cff_key(text: str, key: str) -> str:
     return re.sub(rf'^{re.escape(key)}: .*\n?', "", text, flags=re.MULTILINE)
+
+
+def replace_one(path: Path, pattern: str, replacement: str, label: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    text, count = re.subn(pattern, replacement, text, count=1)
+    if count != 1:
+        raise SystemExit(f"Could not update {label} in {path}")
+    path.write_text(text, encoding="utf-8")
+
+
+def update_site_revision(version: str) -> None:
+    replace_one(
+        SITE_POM,
+        r"(<revision>)[^<]+(</revision>)",
+        rf"\g<1>{version}\g<2>",
+        "site revision",
+    )
+
+
+def update_maven_example_versions(version: str) -> None:
+    for path in MAVEN_EXAMPLE_POMS:
+        replace_one(
+            path,
+            r"(<aiKnowledge\.version>)[^<]+(</aiKnowledge\.version>)",
+            rf"\g<1>{version}\g<2>",
+            "aiKnowledge.version",
+        )
 
 
 def main() -> None:
@@ -56,6 +90,9 @@ def main() -> None:
         json.dumps(zenodo_data, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+
+    update_site_revision(args.version)
+    update_maven_example_versions(args.version)
 
 
 if __name__ == "__main__":

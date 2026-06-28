@@ -92,4 +92,28 @@ class KnowledgeExtractionPipelineTest {
         assertTrue(request.buildMetadata().containsKey("modules"));
         assertTrue(capturedRequests.size() >= 2);
     }
+
+    @Test
+    void selectsJdtProviderFromConfigurationProperty() throws Exception {
+        Path project = temp.resolve("jdt-provider-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example/api"));
+        Files.createDirectories(project.resolve("src/main/java/example/impl"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/api/Service.java"), "package example.api;\npublic interface Service {}\n");
+        Files.writeString(project.resolve("src/main/java/example/impl/ServiceImpl.java"), "package example.impl;\nimport example.api.Service;\npublic class ServiceImpl implements Service {}\n");
+
+        String previous = System.getProperty("aiknowledge.javaProvider");
+        try {
+            System.setProperty("aiknowledge.javaProvider", "jdt");
+            RepositorySnapshot snapshot = new KnowledgeExtractionPipeline().extract(ExtractionOptions.defaults(project, project.resolve("build/ai-knowledge")));
+            assertTrue(snapshot.classes.toString().contains("implementations"));
+            assertTrue(snapshot.classes.toString().contains("example.impl.ServiceImpl"));
+        } finally {
+            if (previous == null) {
+                System.clearProperty("aiknowledge.javaProvider");
+            } else {
+                System.setProperty("aiknowledge.javaProvider", previous);
+            }
+        }
+    }
 }

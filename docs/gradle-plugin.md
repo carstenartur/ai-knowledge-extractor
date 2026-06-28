@@ -123,6 +123,12 @@ aiKnowledge {
 }
 ```
 
+To use the JDT Java provider for stronger type/reference extraction, run Gradle with:
+
+```bash
+./gradlew generateAiKnowledgeIndex -Daiknowledge.javaProvider=jdt
+```
+
 ### Local development configuration
 
 ```groovy
@@ -135,4 +141,3 @@ aiKnowledge {
     empiricalBenchmarkFixtureFile = layout.projectDirectory.file('ai-knowledge/benchmark-fixtures.yaml')
 }
 ```
-

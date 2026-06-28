@@ -55,7 +55,9 @@ class KnowledgeExtractionPipelineTest {
 
         RepositorySnapshot snapshot = new KnowledgeExtractionPipeline(provider).extract(ExtractionOptions.defaults(project, project.resolve("build/ai-knowledge")));
 
-        Map classes = (Map) snapshot.classes.get(0);
+        Object classFact = snapshot.classes.get(0);
+        assertTrue(classFact instanceof Map<?, ?>);
+        Map<?, ?> classes = (Map<?, ?>) classFact;
         assertTrue(classes.toString().contains("custom.ProviderType"));
         assertFalse(classes.toString().contains("example.App"));
         assertTrue(classes.containsKey("typeFacts"));

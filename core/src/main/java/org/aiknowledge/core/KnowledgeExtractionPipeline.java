@@ -125,10 +125,15 @@ final class KnowledgeExtractionPipeline {
         return roots;
     }
 
-    private static List enrichFacts(List facts, JavaKnowledgeResult result) {
-        List enriched = new ArrayList();
+    private static List<Map<String, Object>> enrichFacts(List<?> facts, JavaKnowledgeResult result) {
+        List<Map<String, Object>> enriched = new ArrayList<>();
         for (Object factObject : facts) {
-            Map fact = new LinkedHashMap((Map) factObject);
+            if (!(factObject instanceof Map<?, ?> sourceFact)) continue;
+            Map<String, Object> fact = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : sourceFact.entrySet()) {
+                if (entry.getKey() == null) continue;
+                fact.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
             if (!result.typeFacts().isEmpty()) fact.put("typeFacts", result.typeFacts());
             if (!result.methodFacts().isEmpty()) fact.put("methodFacts", result.methodFacts());
             if (!result.packageFacts().isEmpty()) fact.put("packageFacts", result.packageFacts());

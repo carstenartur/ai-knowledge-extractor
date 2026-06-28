@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.aiknowledge.core.javaspi.JavaKnowledgeRequest;
 import org.aiknowledge.core.javaspi.JavaKnowledgeResult;
 import org.junit.jupiter.api.Test;
@@ -39,9 +39,10 @@ class BasicJavaKnowledgeProviderTest {
         assertEquals("src/test/java/example/AppTest.java", testFact.get("sourceFile"));
         assertTrue(main.typeFacts().toString().contains("example.App"));
         assertTrue(main.methodFacts().toString().contains("public void run"));
-        List signatures = (List) main.methodFacts().stream()
-                .map(methodFact -> ((Map) methodFact).get("signature"))
-                .collect(Collectors.toList());
+        List<String> signatures = new ArrayList<>();
+        for (Object methodFact : main.methodFacts()) {
+            if (methodFact instanceof Map<?, ?> map) signatures.add(String.valueOf(map.get("signature")));
+        }
         assertEquals(List.of("public void run"), signatures);
         assertTrue(main.packageFacts().toString().contains("example"));
         assertTrue(main.referenceFacts().toString().contains("example.shared.Helper"));

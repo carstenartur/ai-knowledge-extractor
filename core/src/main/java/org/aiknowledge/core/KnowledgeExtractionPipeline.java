@@ -64,20 +64,15 @@ final class KnowledgeExtractionPipeline {
 
     private static JavaKnowledgeProvider loadJavaKnowledgeProvider() {
         String configuredProvider = System.getProperty("aiknowledge.javaProvider", "basic").trim();
-        if (configuredProvider.isBlank()) configuredProvider = "basic";
-        List<JavaKnowledgeProvider> providers = ServiceLoader.load(JavaKnowledgeProvider.class).stream()
-                .map(ServiceLoader.Provider::get)
-                .sorted(Comparator.comparing(provider -> provider.getClass().getName()))
+        if (configuredProvider.isBlank() || "basic".equalsIgnoreCase(configuredProvider)) return new BasicJavaKnowledgeProvider();
+        List<ServiceLoader.Provider<JavaKnowledgeProvider>> providers = ServiceLoader.load(JavaKnowledgeProvider.class).stream()
+                .sorted(Comparator.comparing(provider -> provider.type().getName()))
                 .toList();
-        for (JavaKnowledgeProvider provider : providers) {
-            String fqcn = provider.getClass().getName();
-            String simple = provider.getClass().getSimpleName();
-            if (matchesProvider(configuredProvider, fqcn) || matchesProvider(configuredProvider, simple)) return provider;
+        for (ServiceLoader.Provider<JavaKnowledgeProvider> provider : providers) {
+            Class<? extends JavaKnowledgeProvider> type = provider.type();
+            if (matchesProvider(configuredProvider, type.getName()) || matchesProvider(configuredProvider, type.getSimpleName())) return provider.get();
         }
-        return providers.stream()
-                .filter(provider -> provider.getClass().equals(BasicJavaKnowledgeProvider.class))
-                .findFirst()
-                .orElseGet(BasicJavaKnowledgeProvider::new);
+        return new BasicJavaKnowledgeProvider();
     }
 
     private static boolean matchesProvider(String configuredProvider, String candidate) {
@@ -168,6 +163,5 @@ final class KnowledgeExtractionPipeline {
         return enriched;
     }
 
-    private record JavaSourceUnit(Path file, String path) {
-    }
+    private record JavaSourceUnit(Path file, String path) {}
 }

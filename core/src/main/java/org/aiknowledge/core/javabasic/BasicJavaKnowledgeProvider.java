@@ -56,7 +56,7 @@ public final class BasicJavaKnowledgeProvider implements JavaKnowledgeProvider {
         List packageFacts = pkg.isBlank() ? List.of() : List.of(packageFact(pkg, request.sourcePath()));
         List referenceFacts = referenceFacts(typeName, imports);
         List warnings = List.of(warning("heuristic-line-parser", "Basic provider uses line-based heuristics and may miss nested or complex Java syntax."));
-        return new JavaKnowledgeResult(typeFacts, methodFacts, testFacts, packageFacts, referenceFacts, classFacts, warnings);
+        return new JavaKnowledgeResult(typeFacts, methodFacts, List.of(), testFacts, packageFacts, referenceFacts, List.of(), classFacts, warnings);
     }
 
     private static String parsePackage(String line) {

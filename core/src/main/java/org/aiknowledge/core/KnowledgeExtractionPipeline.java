@@ -114,8 +114,8 @@ final class KnowledgeExtractionPipeline {
             snapshot.tests.addAll(enrichFacts(result.testFacts(), result));
         }
         BuildMetadata.enrichModules(root, snapshot);
-        capabilityLinker.link(snapshot);
         seedContextGenerator.generate(options, snapshot);
+        capabilityLinker.link(snapshot);
         RepositoryFacts.populateIndex(root, snapshot);
         return snapshot;
     }

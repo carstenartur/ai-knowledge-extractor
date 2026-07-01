@@ -235,6 +235,83 @@ class AiKnowledgeRunnerTest {
     }
 
     @Test
+    void capabilitySelectorsLinkEvidenceFromModulesTestsAndDiscovery() throws Exception {
+        Path project = temp.resolve("selector-fixture");
+        Files.createDirectories(project.resolve("search/src/main/java/de/regelsuche/search"));
+        Files.createDirectories(project.resolve("search/src/test/java/de/regelsuche/search"));
+        Files.createDirectories(project.resolve("docs/generated/discovery/complete-square"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.createDirectories(project.resolve(".github/workflows"));
+
+        Files.writeString(project.resolve("search/build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("search/src/main/java/de/regelsuche/search/RewriteSearch.java"),
+                "package de.regelsuche.search;\npublic class RewriteSearch {}\n");
+        Files.writeString(project.resolve("search/src/test/java/de/regelsuche/search/RewriteSearchTest.java"),
+                "package de.regelsuche.search;\nclass RewriteSearchTest { @org.junit.jupiter.api.Test void run() {} }\n");
+        Files.writeString(project.resolve("docs/generated/discovery/complete-square/evidence.json"), """
+                {
+                  "scenarioId": "complete-square-factorization",
+                  "success": true,
+                  "oracleStatus": "PROVED"
+                }
+                """);
+        Files.writeString(project.resolve(".github/workflows/ci.yml"), "name: CI\non: [push]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: rewrite-search
+                  label: Rewrite Search
+                  modules: [search]
+                  packages: [de.regelsuche.search]
+                  typePatterns: ['*Search*', '*Rewrite*']
+                  testPatterns: ['*Search*Test']
+                  docPatterns: ['docs/**/search*.md']
+                  evidenceTypes: [discovery-evidence]
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, output));
+
+        String capabilities = Files.readString(output.resolve("capabilities.json"));
+
+        // Selector-based linking must populate matched fields
+        assertTrue(capabilities.contains("\"id\":\"rewrite-search\""), "id must be present");
+        assertTrue(capabilities.contains("Rewrite Search"), "label from seed must be preserved");
+        assertTrue(capabilities.contains("matchedModules"), "matchedModules field must be present");
+        assertTrue(capabilities.contains("matchedPackages"), "matchedPackages field must be present");
+        assertTrue(capabilities.contains("matchedTypes"), "matchedTypes field must be present");
+        assertTrue(capabilities.contains("matchedTests"), "matchedTests field must be present");
+        assertTrue(capabilities.contains("matchedEvidence"), "matchedEvidence field must be present");
+        assertTrue(capabilities.contains("de.regelsuche.search.RewriteSearch"), "matched type must be listed");
+        assertTrue(capabilities.contains("de.regelsuche.search.RewriteSearchTest"), "matched test must be listed");
+        assertTrue(capabilities.contains("discovery-evidence"), "matched evidence type must be listed");
+
+        // Status must reflect evidence (discovery-evidence → evidence-backed)
+        assertTrue(capabilities.contains("evidence-backed"), "status must be evidence-backed when evidence is linked");
+
+        // No fixed-ID fallback capabilities must appear when seeds are present
+        assertFalse(capabilities.contains("equality-saturation"), "fixed fallback IDs must not appear when seeds are loaded");
+    }
+
+    @Test
+    void capabilityLinkerAddsWarningWhenNoEvidenceFound() throws Exception {
+        Path project = temp.resolve("no-evidence-fixture");
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: unimplemented-feature
+                  label: Unimplemented Feature
+                  typePatterns: ['*Nonexistent*']
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, output));
+
+        String capabilities = Files.readString(output.resolve("capabilities.json"));
+        assertTrue(capabilities.contains("\"status\":\"unknown\""), "status must be unknown when nothing matched");
+        assertTrue(capabilities.contains("no-evidence-found"), "warning must be emitted when no evidence found");
+    }
+
+
+    @Test
     void optimizeDetectsMultipleSmellTypesAndRanksRecommendations() throws Exception {
         Path project = temp.resolve("smell-fixture");
         Files.createDirectories(project.resolve("src/main/java/alpha"));

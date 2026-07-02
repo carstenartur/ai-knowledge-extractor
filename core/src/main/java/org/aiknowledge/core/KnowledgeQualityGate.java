@@ -41,7 +41,7 @@ public final class KnowledgeQualityGate {
             gateResults.add(checkClaimVerification(snapshot));
         }
         if (options.minContextPackCount() > 0) {
-            gateResults.add(checkMinContextPackCount(snapshot, options.minContextPackCount()));
+            gateResults.add(checkMinContextPackCount(options.outputDirectory(), options.minContextPackCount()));
         }
         if (options.maxContextPackTokens() < Integer.MAX_VALUE) {
             gateResults.add(checkContextPackTokens(options.outputDirectory(), options.maxContextPackTokens()));
@@ -95,16 +95,22 @@ public final class KnowledgeQualityGate {
 
     /**
      * Checks that the number of generated context packs meets the configured minimum.
+     * Counts packs from {@code context-packs/index.json} for consistency with the
+     * {@code maxContextPackTokens} gate which also reads from that file.
      */
-    static Map checkMinContextPackCount(RepositorySnapshot snapshot, int minCount) {
+    static Map checkMinContextPackCount(Path outputDirectory, int minCount) throws IOException {
+        List<String> violations = new ArrayList<>();
+        Path indexPath = outputDirectory.resolve("context-packs/index.json");
         int actual = 0;
-        for (Object obj : snapshot.capabilities) {
-            if (obj instanceof Map cap) {
-                String id = String.valueOf(cap.getOrDefault("id", ""));
-                if (!id.isBlank()) actual++;
+        if (Files.isRegularFile(indexPath)) {
+            String json = Files.readString(indexPath);
+            int listStart = json.indexOf('[');
+            int listEnd = json.lastIndexOf(']');
+            if (listStart >= 0 && listEnd > listStart) {
+                String listContent = json.substring(listStart + 1, listEnd);
+                actual = splitTopLevelObjects(listContent).size();
             }
         }
-        List<String> violations = new ArrayList<>();
         if (actual < minCount) {
             violations.add("context pack count " + actual + " is below required minimum " + minCount);
         }
@@ -140,7 +146,12 @@ public final class KnowledgeQualityGate {
         return buildGateResult("maxContextPackTokens", violations);
     }
 
-    /** Splits a JSON text into top-level {...} object bodies. */
+    /** Splits a JSON text into top-level {...} object bodies.
+     *
+     * <p>This parser handles string delimiters and single-char {@code \\} escapes. The
+     * JSON produced by this tool uses ASCII-safe capability IDs and numeric token estimates,
+     * so multi-char unicode escapes ({@code \\uXXXX}) do not occur in the scanned fields.
+     */
     private static List<String> splitTopLevelObjects(String text) {
         List<String> result = new ArrayList<>();
         int depth = 0;

@@ -67,7 +67,7 @@ public final class KnowledgeQualityGate {
             if (!(obj instanceof Map cap)) continue;
             String id = String.valueOf(cap.getOrDefault("id", ""));
             if (id.isBlank()) continue;
-            if (hasNoLinkedEvidence(cap)) {
+            if ("unknown".equals(cap.get("status"))) {
                 String label = String.valueOf(cap.getOrDefault("label", id));
                 violations.add("capability:" + id + " (" + label + ") has no matched module/type/doc/evidence");
             }
@@ -207,20 +207,6 @@ public final class KnowledgeQualityGate {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private static boolean hasNoLinkedEvidence(Map cap) {
-        return isEmptyList(cap.get("matchedModules"))
-                && isEmptyList(cap.get("matchedTypes"))
-                && isEmptyList(cap.get("matchedDocs"))
-                && isEmptyList(cap.get("matchedEvidence"))
-                && isEmptyList(cap.get("classes"))
-                && isEmptyList(cap.get("types"))
-                && isEmptyList(cap.get("docs"));
-    }
-
-    private static boolean isEmptyList(Object value) {
-        return !(value instanceof List<?> list) || list.isEmpty();
-    }
 
     private static Map buildGateResult(String gateName, List<String> violations) {
         Map result = new LinkedHashMap();

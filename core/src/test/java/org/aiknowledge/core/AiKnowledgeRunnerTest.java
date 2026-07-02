@@ -547,7 +547,8 @@ class AiKnowledgeRunnerTest {
         assertTrue(Boolean.TRUE.equals(result.get("passed")));
         String checkJson = Files.readString(output.resolve("check.json"));
         assertTrue(checkJson.contains("\"knowledgeQualityGates\""), "check.json must include knowledgeQualityGates");
-        assertTrue(checkJson.contains("\"passed\":true"), "quality gates must pass when disabled");
+        String knowledgeQualityGates = objectContaining(checkJson, "\"knowledgeQualityGates\"");
+        assertTrue(knowledgeQualityGates.contains("\"passed\":true"), "quality gates must pass when disabled");
     }
 
     @Test
@@ -610,7 +611,8 @@ class AiKnowledgeRunnerTest {
         assertTrue(Boolean.TRUE.equals(result.get("passed")));
         String checkJson = Files.readString(output.resolve("check.json"));
         assertTrue(checkJson.contains("requireCapabilityEvidence"), "gate must appear in output");
-        assertTrue(checkJson.contains("\"passed\":true"), "gate must pass when capability has evidence");
+        assertTrue(objectContaining(checkJson, "requireCapabilityEvidence").contains("\"passed\":true"),
+                "gate must pass when capability has evidence");
     }
 
     @Test
@@ -725,7 +727,8 @@ class AiKnowledgeRunnerTest {
         assertTrue(checkJson.contains("knowledgeQualityGates"), "check.json must contain knowledgeQualityGates");
         assertTrue(checkJson.contains("\"gates\""), "knowledgeQualityGates must contain gates list");
         // With defaults no gates are enabled, so gates list is empty but section passes
-        assertTrue(checkJson.contains("\"passed\":true"), "gates must pass when no gates are enabled");
+        assertTrue(objectContaining(checkJson, "\"knowledgeQualityGates\"").contains("\"passed\":true"),
+                "gates must pass when no gates are enabled");
     }
 
     private static String objectContaining(String json, String marker) {

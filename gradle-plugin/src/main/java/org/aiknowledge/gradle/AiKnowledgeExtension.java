@@ -19,6 +19,10 @@ public abstract class AiKnowledgeExtension {
     private final Property<Double> maxContextTokenIncrease;
     private final Property<Boolean> empiricalBenchmarkEnabled;
     private final RegularFileProperty empiricalBenchmarkFixtureFile;
+    private final Property<Boolean> requireCapabilityEvidence;
+    private final Property<Boolean> requireClaimVerification;
+    private final Property<Integer> minContextPackCount;
+    private final Property<Integer> maxContextPackTokens;
 
     @Inject
     public AiKnowledgeExtension(Project project) {
@@ -34,6 +38,10 @@ public abstract class AiKnowledgeExtension {
         this.maxContextTokenIncrease = objects.property(Double.class).convention(Double.MAX_VALUE);
         this.empiricalBenchmarkEnabled = objects.property(Boolean.class).convention(false);
         this.empiricalBenchmarkFixtureFile = objects.fileProperty().convention(project.getLayout().getProjectDirectory().file("ai-knowledge/benchmark-fixtures.yaml"));
+        this.requireCapabilityEvidence = objects.property(Boolean.class).convention(false);
+        this.requireClaimVerification = objects.property(Boolean.class).convention(false);
+        this.minContextPackCount = objects.property(Integer.class).convention(0);
+        this.maxContextPackTokens = objects.property(Integer.class).convention(Integer.MAX_VALUE);
     }
 
     public DirectoryProperty getOutputDirectory() { return outputDirectory; }
@@ -47,4 +55,8 @@ public abstract class AiKnowledgeExtension {
     public Property<Double> getMaxContextTokenIncrease() { return maxContextTokenIncrease; }
     public Property<Boolean> getEmpiricalBenchmarkEnabled() { return empiricalBenchmarkEnabled; }
     public RegularFileProperty getEmpiricalBenchmarkFixtureFile() { return empiricalBenchmarkFixtureFile; }
+    public Property<Boolean> getRequireCapabilityEvidence() { return requireCapabilityEvidence; }
+    public Property<Boolean> getRequireClaimVerification() { return requireClaimVerification; }
+    public Property<Integer> getMinContextPackCount() { return minContextPackCount; }
+    public Property<Integer> getMaxContextPackTokens() { return maxContextPackTokens; }
 }

@@ -28,6 +28,14 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     protected boolean empiricalBenchmarkEnabled;
     @Parameter(defaultValue = "${project.basedir}/ai-knowledge/benchmark-fixtures.yaml")
     protected File empiricalBenchmarkFixtureFile;
+    @Parameter(defaultValue = "false")
+    protected boolean requireCapabilityEvidence;
+    @Parameter(defaultValue = "false")
+    protected boolean requireClaimVerification;
+    @Parameter(defaultValue = "0")
+    protected int minContextPackCount;
+    @Parameter(defaultValue = "2147483647")
+    protected int maxContextPackTokens;
 
     protected final ExtractionOptions options() {
         return new ExtractionOptions(
@@ -41,7 +49,11 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
                 systemDouble("aiKnowledge.maxConceptRadiusIncrease", maxConceptRadiusIncrease),
                 systemDouble("aiKnowledge.maxContextTokenIncrease", maxContextTokenIncrease),
                 empiricalBenchmarkEnabled,
-                empiricalBenchmarkFixtureFile != null ? empiricalBenchmarkFixtureFile.toPath() : null);
+                empiricalBenchmarkFixtureFile != null ? empiricalBenchmarkFixtureFile.toPath() : null,
+                requireCapabilityEvidence,
+                requireClaimVerification,
+                minContextPackCount,
+                maxContextPackTokens);
     }
 
     protected final AiKnowledgeRunner runner() {

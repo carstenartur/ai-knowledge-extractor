@@ -46,6 +46,10 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Dgoal=benchmark -D
 | `maxContextTokenIncrease` | `double` | `1.7976931348623157E308` | no |
 | `empiricalBenchmarkEnabled` | `boolean` | `false` | no |
 | `empiricalBenchmarkFixtureFile` | `File` | `${project.basedir}/ai-knowledge/benchmark-fixtures.yaml` | no |
+| `requireCapabilityEvidence` | `boolean` | `false` | no |
+| `requireClaimVerification` | `boolean` | `false` | no |
+| `minContextPackCount` | `int` | `0` | no |
+| `maxContextPackTokens` | `int` | `2147483647` | no |
 
 Threshold overrides can also be passed as JVM properties:
 - `-DaiKnowledge.maxCognitiveDebt=...`

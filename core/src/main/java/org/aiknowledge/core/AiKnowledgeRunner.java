@@ -55,7 +55,9 @@ public final class AiKnowledgeRunner {
         int warnings = ((Number) complexity.getOrDefault("warningCount", 0)).intValue();
         int trendViolations = ((Number) trend.getOrDefault("violationCount", 0)).intValue();
         int claimFailures = ClaimVerifier.countErrorFailures(snapshot.claims);
-        boolean passed = debt <= options.maxCognitiveDebt() && trendViolations == 0 && claimFailures == 0 && (!options.failOnWarnings() || warnings == 0);
+        Map knowledgeGates = KnowledgeQualityGate.evaluate(options, snapshot);
+        boolean knowledgeGatesPassed = Boolean.TRUE.equals(knowledgeGates.get("passed"));
+        boolean passed = debt <= options.maxCognitiveDebt() && trendViolations == 0 && claimFailures == 0 && knowledgeGatesPassed && (!options.failOnWarnings() || warnings == 0);
         Map check = new LinkedHashMap();
         check.put("passed", passed);
         check.put("aiCognitiveDebt", debt);
@@ -66,9 +68,10 @@ public final class AiKnowledgeRunner {
         check.put("trendPassed", trend.get("passed"));
         check.put("trendThresholds", trend.get("thresholds"));
         check.put("claimFailureCount", claimFailures);
+        check.put("knowledgeQualityGates", knowledgeGates);
         StableIo.writeJson(options.outputDirectory().resolve("check.json"), check);
         if (!passed) {
-            throw new IOException("AI knowledge quality gate failed: debt=" + debt + ", warnings=" + warnings + ", trendViolations=" + trendViolations + ", claimFailures=" + claimFailures);
+            throw new IOException("AI knowledge quality gate failed: debt=" + debt + ", warnings=" + warnings + ", trendViolations=" + trendViolations + ", claimFailures=" + claimFailures + ", knowledgeGatesPassed=" + knowledgeGatesPassed);
         }
         return check;
     }

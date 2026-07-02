@@ -27,6 +27,10 @@ Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowle
 | `maxContextTokenIncrease` | `double` | no | yes | `Double.MAX_VALUE` | Maximum allowed increase in context tokens between builds. |
 | `empiricalBenchmarkEnabled` | `boolean` | no | yes | `false` | Enable the empirical benchmark fixture layer. |
 | `empiricalBenchmarkFixtureFile` | `java.io.File` | no | yes | `<project.basedir>/ai-knowledge/benchmark-fixtures.yaml` | Path to the empirical benchmark fixture YAML file. |
+| `requireCapabilityEvidence` | `boolean` | no | yes | `false` | Fail if any capability has no matched module/type/doc/evidence. |
+| `requireClaimVerification` | `boolean` | no | yes | `false` | Fail if any claim has `status=unverified`. |
+| `minContextPackCount` | `int` | no | yes | `0` | Minimum number of context packs that must be generated. |
+| `maxContextPackTokens` | `int` | no | yes | `2147483647` | Maximum token estimate allowed per context pack. |
 
 ## Example
 

@@ -2,7 +2,49 @@
 
 The extractor writes deterministic JSON and HTML artifacts below the configured output directory, usually `build/ai-knowledge/`.
 
-## Stable knowledge artifacts
+## AI context artifacts
+
+These are the primary outputs intended for AI-assisted review and architecture work.
+
+| File | Purpose |
+|---|---|
+| `review-context.md` | Human and AI readable summary: repository overview, module graph, capability status, architecture claims, risk areas and suggested context packs. |
+| `context-packs/<id>.json` | One capability-centred context pack per capability, containing matched modules, types, tests, docs, evidence, linked claims and suggested files for AI review. |
+| `context-packs/index.json` | Index of all context packs with token estimates and intended use descriptions. |
+
+### How to consume these artifacts
+
+**CI workflow**: Generate and commit `review-context.md` to track capability health over time. Run `generateAiKnowledgeIndex` (Gradle) or `ai-knowledge:generate` (Maven).
+
+**AI assistant**: Load `review-context.md` for a repository overview, then load a specific `context-packs/<capability-id>.json` for targeted review, bug-fixing or feature work. Use `context-packs/index.json` to discover available packs and pick the one with the right token budget.
+
+**Architecture review**: Cross-reference the _Architecture Claims_ table in `review-context.md` with the _Risk Areas_ section to identify gaps that need attention.
+
+### `context-packs/<id>.json` fields
+
+Each capability context pack contains:
+
+- `id`: capability identifier
+- `label`: human-readable label
+- `status`: capability status (see capability status values below)
+- `warnings`: list of warnings (e.g. `no-evidence-found`) when present
+- `modules`: matched build modules
+- `types`: matched production class names
+- `tests`: matched test class names
+- `docs`: matched document paths
+- `evidence`: matched evidence file paths
+- `claims`: list of claim summaries relevant to this capability (each with `id`, optional `category`, `status`, optional `violations`)
+- `suggestedFiles`: source file paths derived from matched types and docs — load these when performing AI review
+
+### `context-packs/index.json` fields
+
+- `contextPacks`: array of index entries; each entry has:
+  - `id`, `label`, `status`
+  - `tokenEstimate`: rough token count estimate for the pack (characters / 4)
+  - `file`: relative path to the pack JSON file
+  - `intendedUse`: one-line description of the recommended use for this pack
+
+## Stable knowledge artifacts (raw JSON)
 
 | File | Primary key | Purpose |
 |---|---|---|

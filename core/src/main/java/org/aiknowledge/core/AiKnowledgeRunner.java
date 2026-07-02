@@ -11,7 +11,7 @@ import org.aiknowledge.core.linker.ClaimVerifier;
 public final class AiKnowledgeRunner {
     public RepositorySnapshot generate(ExtractionOptions options) throws IOException {
         RepositorySnapshot snapshot = new RepositoryScanner().scan(options);
-        writeKnowledgeIndex(options.outputDirectory(), snapshot);
+        writeKnowledgeIndex(options.outputDirectory(), options, snapshot);
         return snapshot;
     }
 
@@ -83,7 +83,7 @@ public final class AiKnowledgeRunner {
         StableIo.writeText(options.outputDirectory().resolve("trend.html"), ReportAnalyzer.html("AI Complexity Trend", trend));
     }
 
-    private static void writeKnowledgeIndex(Path outputDirectory, RepositorySnapshot snapshot) throws IOException {
+    private static void writeKnowledgeIndex(Path outputDirectory, ExtractionOptions options, RepositorySnapshot snapshot) throws IOException {
         Files.createDirectories(outputDirectory);
         StableIo.writeJson(outputDirectory.resolve("index.json"), snapshot.index);
         StableIo.writeJson(outputDirectory.resolve("modules.json"), envelope("modules", snapshot.modules));
@@ -94,6 +94,7 @@ public final class AiKnowledgeRunner {
         StableIo.writeJson(outputDirectory.resolve("capabilities.json"), envelope("capabilities", snapshot.capabilities));
         StableIo.writeJson(outputDirectory.resolve("claims.json"), envelope("claims", snapshot.claims));
         StableIo.writeJson(outputDirectory.resolve("evidence.json"), envelope("evidence", snapshot.evidence));
+        ReviewContextGenerator.generate(options, snapshot);
     }
 
     private static Map envelope(String key, Object value) {

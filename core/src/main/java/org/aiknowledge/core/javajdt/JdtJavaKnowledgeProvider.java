@@ -96,7 +96,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         if (request.classpathEntries().isEmpty()) warnings.add(warning(
                 "jdt-classpath-incomplete",
                 "JDT provider was configured without explicit classpath entries; bindings may be incomplete."));
-        return new JavaKnowledgeResult(typeFacts, methodFacts, testFacts, packageFacts, referenceFacts, classFacts, warnings);
+        return new JavaKnowledgeResult(typeFacts, methodFacts, List.of(), testFacts, packageFacts, referenceFacts, List.of(), classFacts, warnings);
     }
 
     private static ProjectIndex buildIndex(JavaKnowledgeRequest request) throws IOException {

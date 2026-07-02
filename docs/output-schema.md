@@ -97,6 +97,47 @@ Capabilities and claims are evidence-based. The generator combines static eviden
 
 Seed files are optional. Seed entries are merged by `id`. List values are merged additively so generated evidence is not lost when a seed adds curated context.
 
+### Capability selector fields (seed-only)
+
+Seeds may declare optional selector fields to instruct the `CapabilityLinker` which repository facts prove the capability:
+
+| Field | Type | Description |
+|---|---|---|
+| `modules` | string list | Module names from `modules.json` to associate with this capability. |
+| `packages` | string list | Java package names; all types and tests in these packages are matched. |
+| `typePatterns` | string list | Glob patterns matched against simple class names (`*Search*`, `*Rewrite*`). |
+| `testPatterns` | string list | Glob patterns matched against simple test class names (`*SearchTest`). |
+| `docPatterns` | string list | Glob patterns matched against document paths; `**` matches any path segments. |
+| `evidenceTypes` | string list | Evidence `type` values from `evidence.json` (e.g. `discovery-evidence`, `benchmark-source`). |
+
+### Linked capability output fields
+
+When seed capabilities with selectors are present the linker adds these computed fields to each capability entry:
+
+| Field | Type | Description |
+|---|---|---|
+| `matchedModules` | string list | Module names matched from the `modules` selector. |
+| `matchedPackages` | string list | Distinct Java packages found in `classes.json` that satisfy the `packages` selector. |
+| `matchedTypes` | string list | Fully qualified class names matched via `typePatterns` or `packages`. |
+| `matchedTests` | string list | Fully qualified test class names matched via `testPatterns` or `packages`. |
+| `matchedDocs` | string list | Document paths matched via `docPatterns`. |
+| `matchedEvidence` | string list | Evidence item paths matched via `evidenceTypes`. |
+| `status` | string | Computed status (see below). |
+| `warnings` | string list | Present when no evidence was found; contains `no-evidence-found`. |
+
+### Capability status values
+
+| Status | Meaning |
+|---|---|
+| `unknown` | No repository facts linked to this capability. |
+| `documented` | Only documentation was matched; no types, tests, or evidence. |
+| `partial` | Tests were matched but no implementing types, or vice versa. |
+| `implemented` | Implementing types were matched but no corresponding tests or evidence. |
+| `implemented-and-tested` | Both types and tests matched; no direct evidence artifacts. |
+| `evidence-backed` | Evidence artifacts (e.g. discovery evidence, benchmarks) were matched — strongest proof. |
+
+When no seed capabilities are provided the extractor falls back to keyword-based inference using a fixed set of well-known capability IDs. Provide explicit seed capabilities with selectors to replace the fallback with precise evidence-linked facts.
+
 ## evidence.json
 
 Current evidence item types:

@@ -46,8 +46,10 @@ class KnowledgeExtractionPipelineTest {
                         List.of(typeFact),
                         List.of(methodFact),
                         List.of(),
+                        List.of(),
                         List.of(packageFact),
                         List.of(referenceFact),
+                        List.of(),
                         List.of(classData),
                         List.of(warning));
             }

@@ -6,6 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 public final class CapabilityEvidence {
+    /**
+     * Fixed capability IDs used by the fallback keyword-based inference path.
+     * This path is active only when no seed capabilities have been loaded.
+     * Prefer explicit capability selectors in seed files for new projects.
+     */
     private static final String[] IDS = {"equality-saturation", "e-graph", "macro-rule-learning", "replay", "counterexample-search", "proof-bridge", "benchmark-report", "search-strategies", "assumption-handling", "rule-inventory"};
 
     private CapabilityEvidence() {

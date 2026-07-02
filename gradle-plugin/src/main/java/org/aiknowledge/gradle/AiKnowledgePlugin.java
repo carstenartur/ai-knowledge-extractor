@@ -59,7 +59,11 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                     extension.getMaxConceptRadiusIncrease().get(),
                     extension.getMaxContextTokenIncrease().get(),
                     extension.getEmpiricalBenchmarkEnabled().get(),
-                    extension.getEmpiricalBenchmarkFixtureFile().get().getAsFile().toPath());
+                    extension.getEmpiricalBenchmarkFixtureFile().get().getAsFile().toPath(),
+                    extension.getRequireCapabilityEvidence().get(),
+                    extension.getRequireClaimVerification().get(),
+                    extension.getMinContextPackCount().get(),
+                    extension.getMaxContextPackTokens().get());
             switch (mode) {
                 case "generate" -> runner.generate(options);
                 case "analyze" -> runner.analyze(options);

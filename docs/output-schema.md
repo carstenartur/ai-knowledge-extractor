@@ -319,6 +319,17 @@ The quality gate output includes:
 - `trendPassed`
 - `trendThresholds`
 - `claimFailureCount`: number of claims with `status=failed` and `severity=error`. Non-zero causes the quality gate to fail.
+- `knowledgeQualityGates`: summary of all enabled knowledge quality gates (see below).
+
+### knowledgeQualityGates
+
+The `knowledgeQualityGates` object contains:
+
+- `passed`: `true` only when all enabled gates pass.
+- `gates`: array of per-gate results. Each entry has:
+  - `gate`: gate identifier (e.g. `requireCapabilityEvidence`)
+  - `passed`: whether this specific gate passed
+  - `violations`: list of specific violation messages (only present when `passed=false`). Each message names the capability, claim or context pack that caused the failure.
 
 ## benchmark.json
 

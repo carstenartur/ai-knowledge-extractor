@@ -84,6 +84,10 @@ aiKnowledge {
     maxContextTokenIncrease = Double.MAX_VALUE
     empiricalBenchmarkEnabled = false
     empiricalBenchmarkFixtureFile = layout.projectDirectory.file('ai-knowledge/benchmark-fixtures.yaml')
+    requireCapabilityEvidence = false
+    requireClaimVerification = false
+    minContextPackCount = 0
+    maxContextPackTokens = Integer.MAX_VALUE
 }
 ```
 
@@ -100,6 +104,10 @@ aiKnowledge {
 | `maxContextTokenIncrease` | `Property<Double>` | `Double.MAX_VALUE` |
 | `empiricalBenchmarkEnabled` | `Property<Boolean>` | `false` |
 | `empiricalBenchmarkFixtureFile` | `RegularFileProperty` | `ai-knowledge/benchmark-fixtures.yaml` |
+| `requireCapabilityEvidence` | `Property<Boolean>` | `false` |
+| `requireClaimVerification` | `Property<Boolean>` | `false` |
+| `minContextPackCount` | `Property<Integer>` | `0` |
+| `maxContextPackTokens` | `Property<Integer>` | `Integer.MAX_VALUE` |
 
 ## Example configurations
 
@@ -120,6 +128,9 @@ aiKnowledge {
     maxCognitiveDebtIncrease = 5.0d
     maxConceptRadiusIncrease = 0.5d
     maxContextTokenIncrease = 500.0d
+    requireCapabilityEvidence = true
+    requireClaimVerification = true
+    minContextPackCount = 3
 }
 ```
 

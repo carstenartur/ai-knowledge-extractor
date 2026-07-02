@@ -2,8 +2,10 @@ package org.aiknowledge.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -527,6 +529,203 @@ class AiKnowledgeRunnerTest {
         assertTrue(md.contains("rewrite-search"), "capability id must appear in markdown");
         assertTrue(md.contains("evidence-backed"), "status must appear in markdown");
         assertTrue(md.contains("context-packs/rewrite-search.json"), "pack file reference must appear in markdown");
+    }
+
+    @Test
+    void checkPassesWhenKnowledgeQualityGatesDisabled() throws Exception {
+        Path project = temp.resolve("check-pass-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/App.java"),
+                "package example;\npublic class App {}\n");
+
+        Path output = project.resolve("build/ai-knowledge");
+        // With all quality gate options at their defaults (disabled), check must pass
+        Map result = new AiKnowledgeRunner().check(ExtractionOptions.defaults(project, output));
+
+        assertTrue(Boolean.TRUE.equals(result.get("passed")));
+        String checkJson = Files.readString(output.resolve("check.json"));
+        assertTrue(checkJson.contains("\"knowledgeQualityGates\""), "check.json must include knowledgeQualityGates");
+        assertTrue(checkJson.contains("\"passed\":true"), "quality gates must pass when disabled");
+    }
+
+    @Test
+    void checkFailsWhenRequireCapabilityEvidenceIsSetAndCapabilityHasNoEvidence() throws Exception {
+        Path project = temp.resolve("check-cap-evidence-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/App.java"),
+                "package example;\npublic class App {}\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: ghost-feature
+                  label: Ghost Feature
+                  typePatterns: ['*Nonexistent*']
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        ExtractionOptions options = new ExtractionOptions(
+                project, output,
+                project.resolve("ai-knowledge"), project.resolve("ai-knowledge"),
+                false, 100.0d, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                false, null,
+                true, false, 0, Integer.MAX_VALUE);
+
+        assertThrows(IOException.class, () -> new AiKnowledgeRunner().check(options));
+
+        String checkJson = Files.readString(output.resolve("check.json"));
+        assertTrue(checkJson.contains("\"passed\":false"), "check must fail when capability has no evidence");
+        assertTrue(checkJson.contains("ghost-feature"), "violation must name the capability");
+        assertTrue(checkJson.contains("requireCapabilityEvidence"), "gate name must appear in check.json");
+    }
+
+    @Test
+    void checkPassesWhenRequireCapabilityEvidenceIsSetAndAllCapabilitiesLinked() throws Exception {
+        Path project = temp.resolve("check-cap-evidence-pass-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("src/test/java/example"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/SearchService.java"),
+                "package example;\npublic class SearchService {}\n");
+        Files.writeString(project.resolve("src/test/java/example/SearchServiceTest.java"),
+                "package example;\nclass SearchServiceTest { @org.junit.jupiter.api.Test void run() {} }\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: search
+                  label: Search Service
+                  packages: [example]
+                  typePatterns: ['*Search*']
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        ExtractionOptions options = new ExtractionOptions(
+                project, output,
+                project.resolve("ai-knowledge"), project.resolve("ai-knowledge"),
+                false, 100.0d, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                false, null,
+                true, false, 0, Integer.MAX_VALUE);
+
+        Map result = new AiKnowledgeRunner().check(options);
+        assertTrue(Boolean.TRUE.equals(result.get("passed")));
+        String checkJson = Files.readString(output.resolve("check.json"));
+        assertTrue(checkJson.contains("requireCapabilityEvidence"), "gate must appear in output");
+        assertTrue(checkJson.contains("\"passed\":true"), "gate must pass when capability has evidence");
+    }
+
+    @Test
+    void checkFailsWhenRequireClaimVerificationIsSetAndClaimIsUnverified() throws Exception {
+        Path project = temp.resolve("check-claim-verify-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/App.java"),
+                "package example;\npublic class App {}\n");
+        Files.writeString(project.resolve("ai-knowledge/claims.seed.yaml"), """
+                - id: open-claim
+                  category: quality
+                  description: This claim has no verifiable rules
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        ExtractionOptions options = new ExtractionOptions(
+                project, output,
+                project.resolve("ai-knowledge"), project.resolve("ai-knowledge"),
+                false, 100.0d, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                false, null,
+                false, true, 0, Integer.MAX_VALUE);
+
+        assertThrows(IOException.class, () -> new AiKnowledgeRunner().check(options));
+
+        String checkJson = Files.readString(output.resolve("check.json"));
+        assertTrue(checkJson.contains("\"passed\":false"), "check must fail for unverified claim");
+        assertTrue(checkJson.contains("open-claim"), "violation must name the claim");
+        assertTrue(checkJson.contains("requireClaimVerification"), "gate name must appear in check.json");
+    }
+
+    @Test
+    void checkFailsWhenMinContextPackCountNotMet() throws Exception {
+        Path project = temp.resolve("check-pack-count-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/App.java"),
+                "package example;\npublic class App {}\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: cap-one
+                  label: Cap One
+                  packages: [example]
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        ExtractionOptions options = new ExtractionOptions(
+                project, output,
+                project.resolve("ai-knowledge"), project.resolve("ai-knowledge"),
+                false, 100.0d, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                false, null,
+                false, false, 3, Integer.MAX_VALUE);
+
+        assertThrows(IOException.class, () -> new AiKnowledgeRunner().check(options));
+
+        String checkJson = Files.readString(output.resolve("check.json"));
+        assertTrue(checkJson.contains("\"passed\":false"), "check must fail when pack count is below minimum");
+        assertTrue(checkJson.contains("minContextPackCount"), "gate name must appear in check.json");
+        assertTrue(checkJson.contains("below required minimum 3"), "violation message must include threshold");
+    }
+
+    @Test
+    void checkFailsWhenContextPackTokensExceedMaximum() throws Exception {
+        Path project = temp.resolve("check-pack-tokens-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("src/test/java/example"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/SearchService.java"),
+                "package example;\npublic class SearchService {}\n");
+        Files.writeString(project.resolve("src/test/java/example/SearchServiceTest.java"),
+                "package example;\nclass SearchServiceTest { @org.junit.jupiter.api.Test void run() {} }\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: search
+                  label: Search Service
+                  packages: [example]
+                  typePatterns: ['*Search*']
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        // Set a very low max token limit to guarantee violation
+        ExtractionOptions options = new ExtractionOptions(
+                project, output,
+                project.resolve("ai-knowledge"), project.resolve("ai-knowledge"),
+                false, 100.0d, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                false, null,
+                false, false, 0, 1);
+
+        assertThrows(IOException.class, () -> new AiKnowledgeRunner().check(options));
+
+        String checkJson = Files.readString(output.resolve("check.json"));
+        assertTrue(checkJson.contains("\"passed\":false"), "check must fail when token limit is exceeded");
+        assertTrue(checkJson.contains("maxContextPackTokens"), "gate name must appear in check.json");
+        assertTrue(checkJson.contains("exceeds maximum 1"), "violation must include the threshold value");
+    }
+
+    @Test
+    void checkIncludesKnowledgeQualityGatesSummaryInCheckJson() throws Exception {
+        Path project = temp.resolve("check-gates-summary-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/App.java"),
+                "package example;\npublic class App {}\n");
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().check(ExtractionOptions.defaults(project, output));
+
+        String checkJson = Files.readString(output.resolve("check.json"));
+        // knowledgeQualityGates section must always be present
+        assertTrue(checkJson.contains("knowledgeQualityGates"), "check.json must contain knowledgeQualityGates");
+        assertTrue(checkJson.contains("\"gates\""), "knowledgeQualityGates must contain gates list");
+        // With defaults no gates are enabled, so gates list is empty but section passes
+        assertTrue(checkJson.contains("\"passed\":true"), "gates must pass when no gates are enabled");
     }
 
     private static String objectContaining(String json, String marker) {

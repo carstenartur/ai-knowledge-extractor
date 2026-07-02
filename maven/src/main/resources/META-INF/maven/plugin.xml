@@ -36,6 +36,10 @@
         <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -49,6 +53,10 @@
         <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
         <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
         <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
+        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
+        <requireClaimVerification implementation="boolean" default-value="false"/>
+        <minContextPackCount implementation="int" default-value="0"/>
+        <maxContextPackTokens implementation="int" default-value="2147483647"/>
       </configuration>
     </mojo>
     <mojo>
@@ -80,6 +88,10 @@
         <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -93,6 +105,10 @@
         <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
         <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
         <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
+        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
+        <requireClaimVerification implementation="boolean" default-value="false"/>
+        <minContextPackCount implementation="int" default-value="0"/>
+        <maxContextPackTokens implementation="int" default-value="2147483647"/>
       </configuration>
     </mojo>
     <mojo>
@@ -124,6 +140,10 @@
         <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -137,6 +157,10 @@
         <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
         <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
         <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
+        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
+        <requireClaimVerification implementation="boolean" default-value="false"/>
+        <minContextPackCount implementation="int" default-value="0"/>
+        <maxContextPackTokens implementation="int" default-value="2147483647"/>
       </configuration>
     </mojo>
     <mojo>
@@ -168,6 +192,10 @@
         <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -181,6 +209,10 @@
         <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
         <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
         <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
+        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
+        <requireClaimVerification implementation="boolean" default-value="false"/>
+        <minContextPackCount implementation="int" default-value="0"/>
+        <maxContextPackTokens implementation="int" default-value="2147483647"/>
       </configuration>
     </mojo>
     <mojo>
@@ -212,6 +244,10 @@
         <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
+        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
       </parameters>
       <configuration>
         <basedir implementation="java.io.File" default-value="${project.basedir}"/>
@@ -225,6 +261,10 @@
         <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
         <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
         <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
+        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
+        <requireClaimVerification implementation="boolean" default-value="false"/>
+        <minContextPackCount implementation="int" default-value="0"/>
+        <maxContextPackTokens implementation="int" default-value="2147483647"/>
       </configuration>
     </mojo>
     <mojo>

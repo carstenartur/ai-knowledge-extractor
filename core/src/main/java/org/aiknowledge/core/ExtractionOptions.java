@@ -16,7 +16,11 @@ public record ExtractionOptions(
         double maxConceptRadiusIncrease,
         double maxContextTokenIncrease,
         boolean empiricalBenchmarkEnabled,
-        Path empiricalBenchmarkFixtureFile) {
+        Path empiricalBenchmarkFixtureFile,
+        boolean requireCapabilityEvidence,
+        boolean requireClaimVerification,
+        int minContextPackCount,
+        int maxContextPackTokens) {
 
     public ExtractionOptions(
             Path repositoryRoot,
@@ -25,7 +29,7 @@ public record ExtractionOptions(
             Path modelProfileDirectory,
             boolean failOnWarnings,
             double maxCognitiveDebt) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, false, null);
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, false, null, false, false, 0, Integer.MAX_VALUE);
     }
 
     public ExtractionOptions(
@@ -38,7 +42,22 @@ public record ExtractionOptions(
             double maxCognitiveDebtIncrease,
             double maxConceptRadiusIncrease,
             double maxContextTokenIncrease) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, false, null);
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, false, null, false, false, 0, Integer.MAX_VALUE);
+    }
+
+    public ExtractionOptions(
+            Path repositoryRoot,
+            Path outputDirectory,
+            Path seedDirectory,
+            Path modelProfileDirectory,
+            boolean failOnWarnings,
+            double maxCognitiveDebt,
+            double maxCognitiveDebtIncrease,
+            double maxConceptRadiusIncrease,
+            double maxContextTokenIncrease,
+            boolean empiricalBenchmarkEnabled,
+            Path empiricalBenchmarkFixtureFile) {
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile, false, false, 0, Integer.MAX_VALUE);
     }
 
     public ExtractionOptions {
@@ -52,6 +71,8 @@ public record ExtractionOptions(
         maxCognitiveDebtIncrease = normalizeThreshold(maxCognitiveDebtIncrease);
         maxConceptRadiusIncrease = normalizeThreshold(maxConceptRadiusIncrease);
         maxContextTokenIncrease = normalizeThreshold(maxContextTokenIncrease);
+        if (minContextPackCount < 0) minContextPackCount = 0;
+        if (maxContextPackTokens < 0) maxContextPackTokens = Integer.MAX_VALUE;
     }
 
     public static ExtractionOptions defaults(Path repositoryRoot, Path outputDirectory) {

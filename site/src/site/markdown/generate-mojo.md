@@ -10,6 +10,14 @@
 
 Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowledge`):
 
+**AI context artifacts** (primary outputs for AI-assisted review):
+
+- `review-context.md` — human and AI readable summary of the repository
+- `context-packs/<capability-id>.json` — one capability-centred context pack per capability
+- `context-packs/index.json` — index of all context packs with token estimates
+
+**Raw knowledge JSON**:
+
 - `index.json`
 - `modules.json`
 - `classes.json`

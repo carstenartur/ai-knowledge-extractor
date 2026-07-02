@@ -376,6 +376,159 @@ class AiKnowledgeRunnerTest {
         assertTrue(((Number) after.get("estimatedTokenSavings")).intValue() > 0);
     }
 
+    @Test
+    void generateWritesReviewContextAndContextPacks() throws Exception {
+        Path project = temp.resolve("review-ctx-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("src/test/java/example"));
+        Files.createDirectories(project.resolve("docs"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/SearchService.java"),
+                "package example;\npublic class SearchService {}\n");
+        Files.writeString(project.resolve("src/test/java/example/SearchServiceTest.java"),
+                "package example;\nclass SearchServiceTest { @org.junit.jupiter.api.Test void run() {} }\n");
+        Files.writeString(project.resolve("docs/search.md"), "# Search\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: search
+                  label: Search Service
+                  packages: [example]
+                  typePatterns: ['*Search*']
+                  testPatterns: ['*SearchServiceTest']
+                  docPatterns: ['docs/search.md']
+                """);
+        Files.writeString(project.resolve("ai-knowledge/claims.seed.yaml"), """
+                - id: search
+                  category: quality
+                  verifiedBy: [example.SearchServiceTest]
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, output));
+
+        // review-context.md exists and has required sections
+        assertTrue(Files.isRegularFile(output.resolve("review-context.md")));
+        String md = Files.readString(output.resolve("review-context.md"));
+        assertTrue(md.contains("## Repository Overview"), "must have Repository Overview section");
+        assertTrue(md.contains("## Module Graph"), "must have Module Graph section");
+        assertTrue(md.contains("## Capability Overview"), "must have Capability Overview section");
+        assertTrue(md.contains("## Architecture Claims"), "must have Architecture Claims section");
+        assertTrue(md.contains("## Risk Areas"), "must have Risk Areas section");
+        assertTrue(md.contains("## Suggested Context Packs"), "must have Suggested Context Packs section");
+        assertTrue(md.contains("## Consumption Guide"), "must have Consumption Guide section");
+        assertTrue(md.contains("search"), "capability id must appear in markdown");
+        assertTrue(md.contains("Search Service"), "capability label must appear in markdown");
+
+        // context-packs/index.json exists
+        assertTrue(Files.isRegularFile(output.resolve("context-packs/index.json")));
+        String packIndex = Files.readString(output.resolve("context-packs/index.json"));
+        assertTrue(packIndex.contains("\"id\":\"search\""), "index must list search pack");
+        assertTrue(packIndex.contains("tokenEstimate"), "index must include token estimate");
+        assertTrue(packIndex.contains("intendedUse"), "index must include intended use");
+        assertTrue(packIndex.contains("context-packs/search.json"), "index must reference pack file");
+
+        // context-packs/search.json exists with expected structure
+        assertTrue(Files.isRegularFile(output.resolve("context-packs/search.json")));
+        String pack = Files.readString(output.resolve("context-packs/search.json"));
+        assertTrue(pack.contains("\"id\":\"search\""), "pack must have id");
+        assertTrue(pack.contains("\"label\":\"Search Service\""), "pack must have label");
+        assertTrue(pack.contains("example.SearchService"), "pack must list matched type");
+        assertTrue(pack.contains("example.SearchServiceTest"), "pack must list matched test");
+        assertTrue(pack.contains("docs/search.md"), "pack must list matched doc");
+        assertTrue(pack.contains("\"claims\""), "pack must have claims field");
+        assertTrue(pack.contains("\"suggestedFiles\""), "pack must have suggestedFiles field");
+    }
+
+    @Test
+    void generateContextPacksAreDeterministic() throws Exception {
+        Path project = temp.resolve("deterministic-packs-fixture");
+        Files.createDirectories(project.resolve("src/main/java/example"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("src/main/java/example/Alpha.java"),
+                "package example;\npublic class Alpha {}\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: alpha-cap
+                  label: Alpha Capability
+                  packages: [example]
+                """);
+
+        Path first = project.resolve("build/ai-knowledge-one");
+        Path second = project.resolve("build/ai-knowledge-two");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, first));
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, second));
+
+        assertEquals(Files.readString(first.resolve("review-context.md")),
+                Files.readString(second.resolve("review-context.md")),
+                "review-context.md must be deterministic");
+        assertEquals(Files.readString(first.resolve("context-packs/index.json")),
+                Files.readString(second.resolve("context-packs/index.json")),
+                "context-packs/index.json must be deterministic");
+        assertEquals(Files.readString(first.resolve("context-packs/alpha-cap.json")),
+                Files.readString(second.resolve("context-packs/alpha-cap.json")),
+                "context-packs/alpha-cap.json must be deterministic");
+    }
+
+    @Test
+    void generateContextPackLinksClaimsAndSuggestsFilesForRegelsucheCapability() throws Exception {
+        Path project = temp.resolve("regelsuche-pack-fixture");
+        Files.createDirectories(project.resolve("search/src/main/java/de/regelsuche/search"));
+        Files.createDirectories(project.resolve("search/src/test/java/de/regelsuche/search"));
+        Files.createDirectories(project.resolve("docs/generated/discovery/complete-square"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.createDirectories(project.resolve(".github/workflows"));
+
+        Files.writeString(project.resolve("search/build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("search/src/main/java/de/regelsuche/search/RewriteSearch.java"),
+                "package de.regelsuche.search;\npublic class RewriteSearch {}\n");
+        Files.writeString(project.resolve("search/src/test/java/de/regelsuche/search/RewriteSearchTest.java"),
+                "package de.regelsuche.search;\nclass RewriteSearchTest { @org.junit.jupiter.api.Test void run() {} }\n");
+        Files.writeString(project.resolve("docs/generated/discovery/complete-square/evidence.json"), """
+                {"scenarioId":"complete-square","success":true,"oracleStatus":"PROVED"}
+                """);
+        Files.writeString(project.resolve(".github/workflows/ci.yml"),
+                "name: CI\non: [push]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n");
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: rewrite-search
+                  label: Rewrite Search
+                  modules: [search]
+                  packages: [de.regelsuche.search]
+                  typePatterns: ['*Search*']
+                  testPatterns: ['*SearchTest']
+                  evidenceTypes: [discovery-evidence]
+                """);
+        Files.writeString(project.resolve("ai-knowledge/claims.seed.yaml"), """
+                - id: search-correctness
+                  category: quality
+                  scopeModules: [search]
+                  requiredEvidenceTypes: [discovery-evidence]
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, output));
+
+        // Context pack for rewrite-search exists and is capability-centred
+        assertTrue(Files.isRegularFile(output.resolve("context-packs/rewrite-search.json")));
+        String pack = Files.readString(output.resolve("context-packs/rewrite-search.json"));
+        assertTrue(pack.contains("de.regelsuche.search.RewriteSearch"), "matched type must be in pack");
+        assertTrue(pack.contains("de.regelsuche.search.RewriteSearchTest"), "matched test must be in pack");
+        assertTrue(pack.contains("complete-square/evidence.json"), "matched evidence path must be in pack");
+        assertTrue(pack.contains("evidence-backed"), "status must be evidence-backed");
+
+        // Claims relevant to the capability must be linked
+        assertTrue(pack.contains("search-correctness"), "relevant claim must appear in pack");
+
+        // suggestedFiles must be derived from matched types
+        assertTrue(pack.contains("suggestedFiles"), "pack must list suggestedFiles");
+        assertTrue(pack.contains("RewriteSearch.java"), "source file must be suggested");
+
+        // review-context.md must mention the capability and its status
+        String md = Files.readString(output.resolve("review-context.md"));
+        assertTrue(md.contains("rewrite-search"), "capability id must appear in markdown");
+        assertTrue(md.contains("evidence-backed"), "status must appear in markdown");
+        assertTrue(md.contains("context-packs/rewrite-search.json"), "pack file reference must appear in markdown");
+    }
+
     private static String objectContaining(String json, String marker) {
         int markerIndex = json.indexOf(marker);
         assertTrue(markerIndex >= 0, "Missing marker " + marker + " in " + json);

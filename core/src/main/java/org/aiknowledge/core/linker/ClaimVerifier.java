@@ -45,7 +45,7 @@ public final class ClaimVerifier {
         for (Object obj : snapshot.claims) {
             if (obj instanceof Map claim) {
                 verifyClaim(claim, snapshot);
-                if ("failed".equals(claim.get("status")) && "error".equals(claim.getOrDefault("severity", ""))) {
+                if ("failed".equals(claim.get("status")) && "error".equals(claim.getOrDefault("severity", "error"))) {
                     errorFailures++;
                 }
             }
@@ -58,7 +58,7 @@ public final class ClaimVerifier {
         int count = 0;
         for (Object obj : claims) {
             if (obj instanceof Map claim) {
-                if ("failed".equals(claim.get("status")) && "error".equals(claim.getOrDefault("severity", ""))) {
+                if ("failed".equals(claim.get("status")) && "error".equals(claim.getOrDefault("severity", "error"))) {
                     count++;
                 }
             }
@@ -77,11 +77,13 @@ public final class ClaimVerifier {
         List<String> requiredEvidenceTypes = asList(claim.get("requiredEvidenceTypes"));
         List<String> requiredDocs = asList(claim.get("requiredDocs"));
         boolean mustBeAcyclic = "true".equalsIgnoreCase(String.valueOf(claim.getOrDefault("mustBeAcyclic", "false")));
+        List<String> verifiedBy = asList(claim.get("verifiedBy"));
+        List<String> scopeModules = asList(claim.get("scopeModules"));
 
         boolean hasStructuralRules = !forbiddenRefs.isEmpty() || !forbiddenImps.isEmpty()
                 || !forbiddenDeps.isEmpty() || allowedDeps != null || allowedTargets != null
                 || !requiredTests.isEmpty() || !requiredEvidenceTypes.isEmpty()
-                || !requiredDocs.isEmpty() || mustBeAcyclic;
+                || !requiredDocs.isEmpty() || mustBeAcyclic || !verifiedBy.isEmpty();
 
         if (!hasStructuralRules) {
             if (!claim.containsKey("status")) {
@@ -89,10 +91,6 @@ public final class ClaimVerifier {
             }
             return;
         }
-
-        // Also treat verifiedBy as a rule when structural rules are present
-        List<String> verifiedBy = asList(claim.get("verifiedBy"));
-        List<String> scopeModules = asList(claim.get("scopeModules"));
 
         List<String> violations = new ArrayList<>();
         List<String> verificationEvidence = new ArrayList<>();

@@ -392,6 +392,70 @@ class ClaimVerifierTest {
         assertTrue(claims.contains("missing-evidence-type:discovery-evidence"), "must report missing evidence type");
     }
 
+    // ---------- verifiedBy-only rule field ----------
+
+    @Test
+    void verifiedByOnly_isVerifiedNotUnverified() throws Exception {
+        Path project = temp.resolve("verified-by-only");
+        Files.createDirectories(project.resolve("core/src/test/java/de/regelsuche/core"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+
+        Files.writeString(project.resolve("build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("core/src/test/java/de/regelsuche/core/ArchTest.java"), """
+                package de.regelsuche.core;
+                class ArchTest { @org.junit.jupiter.api.Test void run() {} }
+                """);
+        Files.writeString(project.resolve("ai-knowledge/claims.seed.yaml"), """
+                - id: verifiedby-only-claim
+                  verifiedBy: [de.regelsuche.core.ArchTest]
+                  severity: error
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().generate(ExtractionOptions.defaults(project, output));
+
+        String claims = Files.readString(output.resolve("claims.json"));
+        assertTrue(claims.contains("\"id\":\"verifiedby-only-claim\""), "claim id must be present");
+        assertFalse(claims.contains("\"status\":\"unverified\""), "claim with verifiedBy must not be unverified");
+        assertTrue(claims.contains("\"status\":\"passed\""), "claim must be passed when test exists");
+        assertTrue(claims.contains("matchedVerifiedBy"), "matchedVerifiedBy must be present");
+    }
+
+    // ---------- severity default (error) ----------
+
+    @Test
+    void checkFailsWhenClaimFailsWithNoExplicitSeverity() throws Exception {
+        Path project = temp.resolve("check-fail-default-severity");
+        Files.createDirectories(project.resolve("core/src/main/java/de/regelsuche/core"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+
+        Files.writeString(project.resolve("core/build.gradle"), "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("core/src/main/java/de/regelsuche/core/BadClass.java"), """
+                package de.regelsuche.core;
+                import org.hibernate.Session;
+                public class BadClass {}
+                """);
+        // No severity field: should default to error
+        Files.writeString(project.resolve("ai-knowledge/claims.seed.yaml"), """
+                - id: no-hibernate-default-severity
+                  scopeModules: [core]
+                  forbiddenReferences: [org.hibernate]
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        boolean threw = false;
+        try {
+            new AiKnowledgeRunner().check(ExtractionOptions.defaults(project, output));
+        } catch (Exception ex) {
+            threw = true;
+            assertTrue(ex.getMessage().contains("claimFailures=1"), "error message must include claimFailures count");
+        }
+        assertTrue(threw, "check must throw when claim fails and severity defaults to error");
+
+        String checkJson = Files.readString(output.resolve("check.json"));
+        assertTrue(checkJson.contains("\"claimFailureCount\":1"), "check.json must include claimFailureCount:1");
+    }
+
     // ---------- verificationEvidence ----------
 
     @Test

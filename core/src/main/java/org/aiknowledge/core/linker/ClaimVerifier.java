@@ -32,6 +32,8 @@ import org.aiknowledge.core.RepositorySnapshot;
  */
 public final class ClaimVerifier {
 
+    private static final String PROJECT_DEP_PREFIX = "project(";
+    private static final String[] PROJECT_DEP_QUOTE_PREFIXES = {"':", "\":"};
     /**
      * Verifies all claims in the snapshot and tags each with a computed {@code status},
      * {@code violations}, {@code verificationEvidence} and {@code matchedVerifiedBy} as applicable.
@@ -247,6 +249,8 @@ public final class ClaimVerifier {
             if (obj instanceof Map test) {
                 String testClass = String.valueOf(test.getOrDefault("testClass", ""));
                 if (!testClass.isBlank()) {
+                    // Add both the fully-qualified name and the simple name so that
+                    // verifiedBy/requiredTests entries may be written either way.
                     result.add(testClass);
                     int dot = testClass.lastIndexOf('.');
                     if (dot >= 0) result.add(testClass.substring(dot + 1));
@@ -344,10 +348,10 @@ public final class ClaimVerifier {
     }
 
     private static String extractProjectName(String notation) {
-        for (String quote : new String[]{"':", "\":"}) {
-            int start = notation.indexOf("project(" + quote);
+        for (String quote : PROJECT_DEP_QUOTE_PREFIXES) {
+            int start = notation.indexOf(PROJECT_DEP_PREFIX + quote);
             if (start >= 0) {
-                int nameStart = start + "project(".length() + quote.length();
+                int nameStart = start + PROJECT_DEP_PREFIX.length() + quote.length();
                 char closingQuote = quote.charAt(0);
                 int end = notation.indexOf(closingQuote + ")", nameStart);
                 if (end >= 0) return notation.substring(nameStart, end);

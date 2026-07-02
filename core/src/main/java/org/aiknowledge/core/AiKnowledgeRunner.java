@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.aiknowledge.core.linker.ClaimVerifier;
 
 /** Public facade used by Gradle, Maven and future CLI integrations. */
 public final class AiKnowledgeRunner {
@@ -45,12 +46,16 @@ public final class AiKnowledgeRunner {
     }
 
     public Map check(ExtractionOptions options) throws IOException {
-        Map complexity = analyze(options);
+        RepositorySnapshot snapshot = generate(options);
+        ReportAnalyzer analyzer = new ReportAnalyzer();
+        Map complexity = analyzer.complexity(options, snapshot);
+        writeAnalysisReports(options, complexity);
         Map trend = TrendAnalyzer.trend(options, complexity);
         double debt = ((Number) complexity.getOrDefault("aiCognitiveDebt", 0.0d)).doubleValue();
         int warnings = ((Number) complexity.getOrDefault("warningCount", 0)).intValue();
         int trendViolations = ((Number) trend.getOrDefault("violationCount", 0)).intValue();
-        boolean passed = debt <= options.maxCognitiveDebt() && trendViolations == 0 && (!options.failOnWarnings() || warnings == 0);
+        int claimFailures = ClaimVerifier.countErrorFailures(snapshot.claims);
+        boolean passed = debt <= options.maxCognitiveDebt() && trendViolations == 0 && claimFailures == 0 && (!options.failOnWarnings() || warnings == 0);
         Map check = new LinkedHashMap();
         check.put("passed", passed);
         check.put("aiCognitiveDebt", debt);
@@ -60,9 +65,10 @@ public final class AiKnowledgeRunner {
         check.put("trendViolationCount", trendViolations);
         check.put("trendPassed", trend.get("passed"));
         check.put("trendThresholds", trend.get("thresholds"));
+        check.put("claimFailureCount", claimFailures);
         StableIo.writeJson(options.outputDirectory().resolve("check.json"), check);
         if (!passed) {
-            throw new IOException("AI knowledge quality gate failed: debt=" + debt + ", warnings=" + warnings + ", trendViolations=" + trendViolations);
+            throw new IOException("AI knowledge quality gate failed: debt=" + debt + ", warnings=" + warnings + ", trendViolations=" + trendViolations + ", claimFailures=" + claimFailures);
         }
         return check;
     }

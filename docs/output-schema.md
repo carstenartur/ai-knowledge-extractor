@@ -97,6 +97,55 @@ Capabilities and claims are evidence-based. The generator combines static eviden
 
 Seed files are optional. Seed entries are merged by `id`. List values are merged additively so generated evidence is not lost when a seed adds curated context.
 
+### Claim verifier
+
+Claims that include at least one rule field are automatically verified against the repository snapshot. The verifier sets `status`, `violations`, `verificationEvidence` and `matchedVerifiedBy` on each claim.
+
+#### Claim rule fields (seed-only)
+
+| Field | Type | Description |
+|---|---|---|
+| `scopeModules` | string list | Module names whose classes and dependencies are checked. When absent, all modules and classes are in scope. |
+| `forbiddenReferences` | string list | Package or class prefixes that must not appear in any import statement of scoped classes. |
+| `forbiddenImports` | string list | Alias for `forbiddenReferences`. |
+| `forbiddenDependencies` | string list | Substrings that must not appear in external dependency notations of scoped modules. |
+| `allowedDependencies` | string list | If present, every external dependency of scoped modules must match at least one entry (substring). An empty list forbids all external dependencies. |
+| `allowedTargetModules` | string list | Project dependency targets not in this list are violations. |
+| `verifiedBy` | string list | Fully-qualified test class names that must exist in `tests.json` to prove the claim. Matched tests are written to `matchedVerifiedBy`. |
+| `requiredTests` | string list | Fully-qualified test class names that must exist (without being recorded as verifiers). |
+| `requiredEvidenceTypes` | string list | Evidence `type` values from `evidence.json` that must be present. |
+| `requiredDocs` | string list | Glob patterns that must match at least one document path in `docs.json`. |
+| `mustBeAcyclic` | boolean | When `true`, import cycles among scoped classes are violations. |
+| `severity` | string | `error` (default gate), `warning` or `info`. Claims with `severity=error` that fail will cause `checkAiKnowledgeIndex` to fail the build. |
+
+#### Claim output fields added by the verifier
+
+| Field | Type | Description |
+|---|---|---|
+| `status` | string | `passed`, `failed`, or `unverified` (no rule fields). Claims set by keyword inference keep their pre-existing status. |
+| `violations` | string list | Present when `status=failed`. Each entry describes one violation with its kind, forbidden value, class or module name and source file. |
+| `verificationEvidence` | string list | References to the modules, tests and evidence used during verification (e.g. `module:core`, `test:de.example.ArchTest`). |
+| `matchedVerifiedBy` | string list | Subset of `verifiedBy` entries that were found in `tests.json`. |
+
+#### Example claim seed (Regelsuche-style)
+
+```yaml
+- id: no-infrastructure-in-core
+  category: architecture
+  description: Core must not reference infrastructure frameworks
+  scopeModules: [regelsuche-core]
+  forbiddenReferences: [org.hibernate, jakarta.persistence, org.springframework]
+  verifiedBy: [de.regelsuche.arch.ArchitectureBoundariesTest]
+  severity: error
+
+- id: hibernate-isolated
+  category: architecture
+  description: Hibernate must only appear in infrastructure modules
+  scopeModules: [regelsuche-core, regelsuche-api]
+  forbiddenDependencies: [org.hibernate]
+  severity: error
+```
+
 ### Capability selector fields (seed-only)
 
 Seeds may declare optional selector fields to instruct the `CapabilityLinker` which repository facts prove the capability:
@@ -227,6 +276,7 @@ The quality gate output includes:
 - `trendViolationCount`
 - `trendPassed`
 - `trendThresholds`
+- `claimFailureCount`: number of claims with `status=failed` and `severity=error`. Non-zero causes the quality gate to fail.
 
 ## benchmark.json
 

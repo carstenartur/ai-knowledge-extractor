@@ -15,6 +15,7 @@ import org.aiknowledge.core.javaspi.JavaKnowledgeRequest;
 import org.aiknowledge.core.javaspi.JavaKnowledgeProvider;
 import org.aiknowledge.core.javaspi.JavaKnowledgeResult;
 import org.aiknowledge.core.linker.CapabilityLinker;
+import org.aiknowledge.core.linker.ClaimVerifier;
 import org.aiknowledge.core.model.RepositoryFacts;
 import org.aiknowledge.core.repositoryscan.BuildModuleScanner;
 import org.aiknowledge.core.repositoryscan.MarkdownDocumentScanner;
@@ -28,6 +29,7 @@ final class KnowledgeExtractionPipeline {
     private final RepositoryEvidenceScanner evidenceScanner;
     private final JavaKnowledgeProvider javaKnowledgeProvider;
     private final CapabilityLinker capabilityLinker;
+    private final ClaimVerifier claimVerifier;
     private final SeedContextGenerator seedContextGenerator;
 
     KnowledgeExtractionPipeline() {
@@ -42,6 +44,7 @@ final class KnowledgeExtractionPipeline {
                 new RepositoryEvidenceScanner(),
                 javaKnowledgeProvider,
                 new CapabilityLinker(),
+                new ClaimVerifier(),
                 new SeedContextGenerator());
     }
 
@@ -52,6 +55,7 @@ final class KnowledgeExtractionPipeline {
             RepositoryEvidenceScanner evidenceScanner,
             JavaKnowledgeProvider javaKnowledgeProvider,
             CapabilityLinker capabilityLinker,
+            ClaimVerifier claimVerifier,
             SeedContextGenerator seedContextGenerator) {
         this.inventoryScanner = inventoryScanner;
         this.moduleScanner = moduleScanner;
@@ -59,6 +63,7 @@ final class KnowledgeExtractionPipeline {
         this.evidenceScanner = evidenceScanner;
         this.javaKnowledgeProvider = Objects.requireNonNull(javaKnowledgeProvider, "javaKnowledgeProvider");
         this.capabilityLinker = capabilityLinker;
+        this.claimVerifier = claimVerifier;
         this.seedContextGenerator = seedContextGenerator;
     }
 
@@ -116,6 +121,7 @@ final class KnowledgeExtractionPipeline {
         BuildMetadata.enrichModules(root, snapshot);
         seedContextGenerator.generate(options, snapshot);
         capabilityLinker.link(snapshot);
+        claimVerifier.verify(snapshot);
         RepositoryFacts.populateIndex(root, snapshot);
         return snapshot;
     }

@@ -133,10 +133,10 @@ final class ReviewContextGenerator {
     private static String intendedUse(String status) {
         return switch (status) {
             case "evidence-backed" -> "Review evidence and assertions for this capability";
-            case "implemented-and-tested" -> "Code review with full test coverage";
+            case "implemented-and-tested" -> "Code review with implementation and test evidence";
             case "implemented" -> "Review implementation – tests may be missing";
             case "partial" -> "Tests exist but implementation may be incomplete";
-            case "documented" -> "Implementation missing or undocumented";
+            case "documented" -> "Documentation-focused review; implementation evidence may be missing";
             case "unknown" -> "No evidence found – investigate this capability";
             default -> "General capability review";
         };

@@ -102,7 +102,7 @@ When `-Daiknowledge.javaProvider=jdt` is active, the provider emits two addition
 | `offset` / `length` | Character position in source file |
 | `line` | 1-based line number |
 | `provider` | Always `jdt-ast` |
-| `confidence` | `syntactic` (AST) or `binding` (with full classpath) |
+| `confidence` | Currently always `syntactic` for JDT-emitted field facts |
 
 **`relationFacts`** — one entry per structural relationship, with `kind` values:
 
@@ -126,7 +126,7 @@ The Gradle plugin automatically resolves the `compileClasspath` configuration an
 ```groovy
 aiKnowledge {
     javaProvider = "jdt"   // basic | jdt
-    jdtMode      = "ast"   // ast (headless default; workspace-backed search planned)
+    jdtMode      = "ast"   // reserved for future JDT modes; current core always uses AST extraction
 }
 ```
 

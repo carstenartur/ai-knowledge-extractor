@@ -47,9 +47,6 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     protected List<String> compileClasspathElements;
 
     protected final ExtractionOptions options() {
-        if (javaProvider != null && !javaProvider.isBlank()) System.setProperty("aiknowledge.javaProvider", javaProvider);
-        if (jdtMode != null && !jdtMode.isBlank()) System.setProperty("aiknowledge.jdt.mode", jdtMode);
-
         ExtractionOptions base = new ExtractionOptions(
                 basedir.toPath(),
                 outputDirectory.toPath(),
@@ -74,6 +71,10 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
         return new AiKnowledgeRunner();
     }
 
+    protected final ScopedSystemProperties configureSystemProperties() {
+        return new ScopedSystemProperties(javaProvider, jdtMode);
+    }
+
     private List<Path> resolveClasspath() {
         if (compileClasspathElements == null) return List.of();
         List<Path> paths = new ArrayList<>();
@@ -93,6 +94,30 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
         } catch (NumberFormatException ignored) {
             getLog().warn("Ignoring invalid numeric value for -D" + key + ": " + value);
             return fallback;
+        }
+    }
+
+    protected static final class ScopedSystemProperties implements AutoCloseable {
+        private final String previousJavaProvider = System.getProperty("aiknowledge.javaProvider");
+        private final String previousJdtMode = System.getProperty("aiknowledge.jdt.mode");
+
+        private ScopedSystemProperties(String javaProvider, String jdtMode) {
+            if (javaProvider != null && !javaProvider.isBlank()) System.setProperty("aiknowledge.javaProvider", javaProvider);
+            if (jdtMode != null && !jdtMode.isBlank()) System.setProperty("aiknowledge.jdt.mode", jdtMode);
+        }
+
+        @Override
+        public void close() {
+            restore("aiknowledge.javaProvider", previousJavaProvider);
+            restore("aiknowledge.jdt.mode", previousJdtMode);
+        }
+
+        private static void restore(String key, String previousValue) {
+            if (previousValue == null) {
+                System.clearProperty(key);
+            } else {
+                System.setProperty(key, previousValue);
+            }
         }
     }
 }

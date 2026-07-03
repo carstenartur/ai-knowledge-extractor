@@ -599,7 +599,7 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
 
         // METHOD_RETURNS_TYPE and METHOD_PARAMETER_HAS_TYPE
         for (MethodDeclaration method : methodDeclarations(declaration)) {
-            String methodRef = typeName + "#" + method.getName().getIdentifier();
+            String methodRef = typeName + "#" + signature(method);
             if (!method.isConstructor() && method.getReturnType2() != null) {
                 Type returnType = method.getReturnType2();
                 int offset = returnType.getStartPosition();

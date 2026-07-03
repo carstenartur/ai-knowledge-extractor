@@ -49,6 +49,8 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
     }
 
     private static void run(Project project, AiKnowledgeExtension extension, String mode) {
+        String previousJavaProvider = System.getProperty("aiknowledge.javaProvider");
+        String previousJdtMode = System.getProperty("aiknowledge.jdt.mode");
         try {
             String javaProvider = extension.getJavaProvider().get();
             String jdtMode = extension.getJdtMode().get();
@@ -84,6 +86,9 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
             }
         } catch (Exception ex) {
             throw new RuntimeException("AI knowledge task failed", ex);
+        } finally {
+            restoreProperty("aiknowledge.javaProvider", previousJavaProvider);
+            restoreProperty("aiknowledge.jdt.mode", previousJdtMode);
         }
     }
 
@@ -113,6 +118,14 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
             }
         } catch (Exception ex) {
             throw new RuntimeException("Could not publish AI knowledge index", ex);
+        }
+    }
+
+    private static void restoreProperty(String key, String previousValue) {
+        if (previousValue == null) {
+            System.clearProperty(key);
+        } else {
+            System.setProperty(key, previousValue);
         }
     }
 }

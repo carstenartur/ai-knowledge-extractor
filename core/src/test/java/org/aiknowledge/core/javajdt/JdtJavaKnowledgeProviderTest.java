@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.aiknowledge.core.javaspi.JavaKnowledgeRequest;
@@ -37,7 +38,7 @@ class JdtJavaKnowledgeProviderTest {
 
         JdtJavaKnowledgeProvider provider = new JdtJavaKnowledgeProvider();
         JavaKnowledgeResult serviceResult = provider.extract(request(root, service));
-        JavaKnowledgeResult implResult = provider.extract(request(root, impl));
+        provider.extract(request(root, impl));
         JavaKnowledgeResult appResult = provider.extract(request(root, app));
         JavaKnowledgeResult testResult = provider.extract(request(root, appTest));
 
@@ -217,6 +218,34 @@ class JdtJavaKnowledgeProviderTest {
                     && String.valueOf(m.get("source")).contains("process");
         });
         assertTrue(hasParamType, "relationFacts must contain METHOD_PARAMETER_HAS_TYPE");
+    }
+
+    @Test
+    void relationFactsUseDistinctMethodSourcesForOverloads() throws Exception {
+        Path root = temp.resolve("overload-fixture");
+        Files.createDirectories(root.resolve("src/main/java/example"));
+
+        Path service = root.resolve("src/main/java/example/Processor.java");
+        Files.writeString(service,
+                "package example;\n" +
+                "import java.util.List;\n" +
+                "public class Processor {\n" +
+                "    public String process(List<String> items) { return null; }\n" +
+                "    public String process(String item) { return item; }\n" +
+                "}\n");
+
+        JdtJavaKnowledgeProvider provider = new JdtJavaKnowledgeProvider();
+        JavaKnowledgeResult result = provider.extract(request(root, service));
+
+        LinkedHashSet<String> methodSources = new LinkedHashSet<>();
+        for (Object factObj : result.relationFacts()) {
+            Map<?, ?> fact = (Map<?, ?>) factObj;
+            if (!"METHOD_RETURNS_TYPE".equals(fact.get("kind"))) continue;
+            String source = String.valueOf(fact.get("source"));
+            if (source.contains("process(")) methodSources.add(source);
+        }
+
+        assertEquals(2, methodSources.size(), "overloaded methods must have distinct relation sources");
     }
 
     private static JavaKnowledgeRequest request(Path root, Path file) {

@@ -39,5 +39,6 @@ jobs:
           RELEASED_VERSION: ${{ inputs.released_version }}
           NEXT_DEVELOPMENT_VERSION: ${{ inputs.next_development_version }}
           DRY_RUN: ${{ inputs.dry_run }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash .github/scripts/prepare-next.sh

@@ -3,7 +3,6 @@ set -euo pipefail
 
 : "${RELEASED_VERSION:?RELEASED_VERSION is required}"
 : "${NEXT_DEVELOPMENT_VERSION:?NEXT_DEVELOPMENT_VERSION is required}"
-: "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 
 trim() {
   local value=${1-}

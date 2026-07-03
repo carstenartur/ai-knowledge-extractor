@@ -121,12 +121,17 @@ Each relation fact includes `source`, `target`, `sourceFile`, `offset`/`length` 
 
 ### Classpath configuration for the JDT provider
 
-The Gradle plugin automatically resolves the `compileClasspath` configuration and passes it to the JDT provider. You can also set `javaProvider` and `jdtMode` in the extension block:
+The Gradle plugin automatically resolves the `compileClasspath` configuration and passes it to the JDT provider. You can configure JDT search/workspace mode directly in the extension block:
 
 ```groovy
 aiKnowledge {
-    javaProvider = "jdt"   // basic | jdt
-    jdtMode      = "ast"   // reserved for future JDT modes; current core always uses AST extraction
+    javaProvider            = "jdt"      // basic | jdt
+    jdtMode                 = "search"   // ast | search
+    jdtSearchExecutionMode  = "forked"   // embedded | forked (recommended for Gradle/Maven daemons)
+    jdtSearchFallbackToAst  = true
+    jdtWorkspaceMode        = "create"   // create | existing | off
+    jdtWorkspaceDirectory   = "$buildDir/ai-knowledge/jdt-workspace"
+    keepJdtWorkspace        = false
 }
 ```
 
@@ -135,7 +140,10 @@ Or via system properties:
 ```bash
 ./gradlew generateAiKnowledgeIndex \
   -Daiknowledge.javaProvider=jdt \
-  -Daiknowledge.jdt.mode=ast
+  -Daiknowledge.jdt.mode=search \
+  -Daiknowledge.jdt.search.execution.mode=forked \
+  -Daiknowledge.jdt.workspace.mode=create \
+  -Daiknowledge.jdt.workspace.directory="$PWD/build/ai-knowledge/jdt-workspace"
 ```
 
 The Maven plugin accepts the same parameters:
@@ -143,7 +151,12 @@ The Maven plugin accepts the same parameters:
 ```xml
 <configuration>
     <javaProvider>jdt</javaProvider>
-    <jdtMode>ast</jdtMode>
+    <jdtMode>search</jdtMode>
+    <jdtSearchExecutionMode>forked</jdtSearchExecutionMode>
+    <jdtSearchFallbackToAst>true</jdtSearchFallbackToAst>
+    <jdtWorkspaceMode>create</jdtWorkspaceMode>
+    <jdtWorkspaceDirectory>${project.build.directory}/ai-knowledge/jdt-workspace</jdtWorkspaceDirectory>
+    <keepJdtWorkspace>false</keepJdtWorkspace>
 </configuration>
 ```
 

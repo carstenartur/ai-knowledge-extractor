@@ -50,6 +50,13 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Dgoal=benchmark -D
 | `requireClaimVerification` | `boolean` | `false` | no |
 | `minContextPackCount` | `int` | `0` | no |
 | `maxContextPackTokens` | `int` | `2147483647` | no |
+| `javaProvider` | `String` | `basic` | no |
+| `jdtMode` | `String` | `ast` | no |
+| `jdtSearchExecutionMode` | `String` | `forked` | no |
+| `jdtSearchFallbackToAst` | `boolean` | `true` | no |
+| `jdtWorkspaceMode` | `String` | `create` | no |
+| `jdtWorkspaceDirectory` | `File` | `${project.build.directory}/ai-knowledge/jdt-workspace` | no |
+| `keepJdtWorkspace` | `boolean` | `false` | no |
 
 Threshold overrides can also be passed as JVM properties:
 - `-DaiKnowledge.maxCognitiveDebt=...`
@@ -57,6 +64,12 @@ Threshold overrides can also be passed as JVM properties:
 - `-DaiKnowledge.maxConceptRadiusIncrease=...`
 - `-DaiKnowledge.maxContextTokenIncrease=...`
 - `-Daiknowledge.javaProvider=jdt` (selects the JDT Java provider for stronger type/reference extraction)
+- `-Daiknowledge.jdt.mode=search`
+- `-Daiknowledge.jdt.search.execution.mode=forked` (recommended for Maven/Gradle daemons)
+- `-Daiknowledge.jdt.search.fallback.to.ast=true|false`
+- `-Daiknowledge.jdt.workspace.mode=create`
+- `-Daiknowledge.jdt.workspace.directory=...`
+- `-Daiknowledge.jdt.workspace.keep=true|false`
 
 ## Goal reference
 

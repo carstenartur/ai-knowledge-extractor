@@ -137,7 +137,11 @@ aiKnowledge {
 To use the JDT Java provider for stronger type/reference extraction, run Gradle with:
 
 ```bash
-./gradlew generateAiKnowledgeIndex -Daiknowledge.javaProvider=jdt
+./gradlew generateAiKnowledgeIndex \
+  -Daiknowledge.javaProvider=jdt \
+  -Daiknowledge.jdt.mode=search \
+  -Daiknowledge.jdt.search.execution.mode=forked \
+  -Daiknowledge.jdt.workspace.mode=create
 ```
 
 ### Local development configuration

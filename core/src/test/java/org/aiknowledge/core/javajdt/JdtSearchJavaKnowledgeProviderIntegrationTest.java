@@ -2,7 +2,9 @@ package org.aiknowledge.core.javajdt;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -55,6 +57,60 @@ class JdtSearchJavaKnowledgeProviderIntegrationTest {
         }
     }
 
+    @Test
+    void forkedSearchModeWritesWorkerRequestAndFactsJson() throws Exception {
+        Assumptions.assumeFalse(Platform.isRunning(), "This assertion verifies plain JVM forked worker path");
+        Path root = temp.resolve("forked-worker-fixture");
+        Path app = writeFixture(root);
+        Path workspace = temp.resolve("jdt-worker-workspace");
+
+        String previousExecutionMode = System.getProperty("aiknowledge.jdt.search.execution.mode");
+        String previousWorkspaceDirectory = System.getProperty("aiknowledge.jdt.workspace.directory");
+        String previousKeepWorkspace = System.getProperty("aiknowledge.jdt.workspace.keep");
+        try {
+            System.setProperty("aiknowledge.jdt.search.execution.mode", "forked");
+            System.setProperty("aiknowledge.jdt.workspace.directory", workspace.toString());
+            System.setProperty("aiknowledge.jdt.workspace.keep", "true");
+
+            JavaKnowledgeResult result = new JdtSearchJavaKnowledgeProvider().extract(request(root, app));
+
+            Path requestJson = workspace.resolve("jdt-search-request.json");
+            Path factsJson = workspace.resolve("jdt-search-facts.json");
+            assertTrue(Files.exists(requestJson));
+            assertTrue(Files.exists(factsJson));
+            assertTrue(Files.readString(requestJson).contains("\"sourcePath\":\"app/src/main/java/example/app/App.java\""));
+            assertTrue(Files.readString(factsJson).contains("\"warnings\""));
+            assertFalse(result.warnings().toString().contains("jdt-search-worker-failed"));
+            assertTrue(result.relationFacts().stream().anyMatch(f -> {
+                Map<?, ?> relation = (Map<?, ?>) f;
+                return "jdt-search".equals(relation.get("provider"))
+                        && relation.containsKey("accuracy")
+                        && relation.containsKey("offset")
+                        && relation.containsKey("length")
+                        && relation.containsKey("sourceFile");
+            }));
+        } finally {
+            restore("aiknowledge.jdt.search.execution.mode", previousExecutionMode);
+            restore("aiknowledge.jdt.workspace.directory", previousWorkspaceDirectory);
+            restore("aiknowledge.jdt.workspace.keep", previousKeepWorkspace);
+        }
+    }
+
+    @Test
+    void searchModeCanDisableAstFallbackOnFailure() throws Exception {
+        Assumptions.assumeFalse(Platform.isRunning(), "This assertion verifies plain JVM failure behavior");
+        Path root = temp.resolve("fallback-disabled-fixture");
+        Path app = writeFixture(root);
+
+        String previousFallback = System.getProperty("aiknowledge.jdt.search.fallback.to.ast");
+        try {
+            System.setProperty("aiknowledge.jdt.search.fallback.to.ast", "false");
+            assertThrows(IOException.class, () -> new JdtSearchJavaKnowledgeProvider().extract(request(root, app)));
+        } finally {
+            restore("aiknowledge.jdt.search.fallback.to.ast", previousFallback);
+        }
+    }
+
     private static Path writeFixture(Path root) throws Exception {
         Files.createDirectories(root.resolve("api/src/main/java/example/api"));
         Files.createDirectories(root.resolve("impl/src/main/java/example/impl"));
@@ -83,5 +139,10 @@ class JdtSearchJavaKnowledgeProviderIntegrationTest {
                 Map.of("buildSystem", "gradle"),
                 List.of(),
                 Map.of("javaProvider", "jdt", "jdtMode", "search", "jdtWorkspaceMode", "create"));
+    }
+
+    private static void restore(String key, String previousValue) {
+        if (previousValue == null) System.clearProperty(key);
+        else System.setProperty(key, previousValue);
     }
 }

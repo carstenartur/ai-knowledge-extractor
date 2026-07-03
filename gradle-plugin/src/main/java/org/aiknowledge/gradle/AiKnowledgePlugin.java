@@ -52,13 +52,22 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         String previousJavaProvider = System.getProperty("aiknowledge.javaProvider");
         String previousJdtMode = System.getProperty("aiknowledge.jdt.mode");
         String previousJdtWorkspaceMode = System.getProperty("aiknowledge.jdt.workspace.mode");
+        String previousJdtSearchExecutionMode = System.getProperty("aiknowledge.jdt.search.execution.mode");
+        String previousJdtWorkspaceDirectory = System.getProperty("aiknowledge.jdt.workspace.directory");
+        String previousKeepJdtWorkspace = System.getProperty("aiknowledge.jdt.workspace.keep");
         try {
             String javaProvider = extension.getJavaProvider().get();
             String jdtMode = extension.getJdtMode().get();
             String jdtWorkspaceMode = extension.getJdtWorkspaceMode().get();
+            String jdtSearchExecutionMode = extension.getJdtSearchExecutionMode().get();
+            String jdtWorkspaceDirectory = extension.getJdtWorkspaceDirectory().get();
+            boolean keepJdtWorkspace = extension.getKeepJdtWorkspace().get();
             if (!javaProvider.isBlank()) System.setProperty("aiknowledge.javaProvider", javaProvider);
             if (!jdtMode.isBlank()) System.setProperty("aiknowledge.jdt.mode", jdtMode);
             if (!jdtWorkspaceMode.isBlank()) System.setProperty("aiknowledge.jdt.workspace.mode", jdtWorkspaceMode);
+            if (!jdtSearchExecutionMode.isBlank()) System.setProperty("aiknowledge.jdt.search.execution.mode", jdtSearchExecutionMode);
+            if (!jdtWorkspaceDirectory.isBlank()) System.setProperty("aiknowledge.jdt.workspace.directory", jdtWorkspaceDirectory);
+            System.setProperty("aiknowledge.jdt.workspace.keep", String.valueOf(keepJdtWorkspace));
 
             AiKnowledgeRunner runner = new AiKnowledgeRunner();
             ExtractionOptions options = new ExtractionOptions(
@@ -93,6 +102,9 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
             restoreProperty("aiknowledge.javaProvider", previousJavaProvider);
             restoreProperty("aiknowledge.jdt.mode", previousJdtMode);
             restoreProperty("aiknowledge.jdt.workspace.mode", previousJdtWorkspaceMode);
+            restoreProperty("aiknowledge.jdt.search.execution.mode", previousJdtSearchExecutionMode);
+            restoreProperty("aiknowledge.jdt.workspace.directory", previousJdtWorkspaceDirectory);
+            restoreProperty("aiknowledge.jdt.workspace.keep", previousKeepJdtWorkspace);
         }
     }
 

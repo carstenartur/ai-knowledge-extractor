@@ -69,7 +69,13 @@ final class KnowledgeExtractionPipeline {
 
     private static JavaKnowledgeProvider loadJavaKnowledgeProvider() {
         String configuredProvider = System.getProperty("aiknowledge.javaProvider", "basic").trim();
+        String jdtMode = System.getProperty("aiknowledge.jdt.mode", "ast").trim();
         if (configuredProvider.isBlank() || "basic".equalsIgnoreCase(configuredProvider)) return new BasicJavaKnowledgeProvider();
+        if (("jdt".equalsIgnoreCase(configuredProvider) && "search".equalsIgnoreCase(jdtMode))
+                || "jdt-search".equalsIgnoreCase(configuredProvider)
+                || "jdtsearch".equalsIgnoreCase(configuredProvider)) {
+            return new org.aiknowledge.core.javajdt.JdtSearchJavaKnowledgeProvider();
+        }
         List<ServiceLoader.Provider<JavaKnowledgeProvider>> providers = ServiceLoader.load(JavaKnowledgeProvider.class).stream()
                 .sorted(Comparator.comparing(provider -> provider.type().getName()))
                 .toList();

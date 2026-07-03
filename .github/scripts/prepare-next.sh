@@ -24,6 +24,8 @@ if ! [[ "$NEXT_DEVELOPMENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; the
   echo "::error::next_development_version must use X.Y.Z-SNAPSHOT; got '${NEXT_DEVELOPMENT_VERSION}'"
   exit 1
 fi
+IFS='.' read -r NEXT_MAJOR NEXT_MINOR NEXT_PATCH <<< "$NEXT_RELEASE_VERSION"
+AFTER_NEXT_VERSION="${NEXT_MAJOR}.${NEXT_MINOR}.$((NEXT_PATCH + 1))-SNAPSHOT"
 
 CURRENT_VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
 EXPECTED_CURRENT="${RELEASED_VERSION}-SNAPSHOT"
@@ -37,7 +39,7 @@ if ! gh release view "$TAG_NAME" --json isDraft --jq '.isDraft == false' | grep 
   exit 1
 fi
 
-python3 - "$NEXT_DEVELOPMENT_VERSION" "$NEXT_RELEASE_VERSION" <<'PY'
+python3 - "$NEXT_DEVELOPMENT_VERSION" "$NEXT_RELEASE_VERSION" "$AFTER_NEXT_VERSION" <<'PY'
 from pathlib import Path
 import json
 import re
@@ -45,6 +47,7 @@ import sys
 
 next_snapshot = sys.argv[1]
 next_release = sys.argv[2]
+after_next = sys.argv[3]
 
 
 def rewrite(path, callback):
@@ -70,7 +73,13 @@ rewrite("maven/src/main/resources/META-INF/maven/plugin.xml", lambda text: re.su
 rewrite("site/pom.xml", lambda text: re.sub(r"(<revision>)[^<]+(</revision>)", rf"\g<1>{next_snapshot}\g<2>", text, count=1))
 for path in ("examples/maven-consumer/pom.xml", "examples/fixtures/maven-consumer/pom.xml"):
     rewrite(path, lambda text: re.sub(r"(<aiKnowledge\.version>)[^<]+(</aiKnowledge\.version>)", rf"\g<1>{next_snapshot}\g<2>", text, count=1))
-rewrite(".github/workflows/publish.yml", lambda text: text.replace(f"e.g. {next_release}", f"e.g. {next_release}").replace(f"default: {next_release}", f"default: {next_release}", 1))
+
+def update_publish(text):
+    text = re.sub(r"Release version to publish, without leading v, e\.g\. [0-9]+\.[0-9]+\.[0-9]+", f"Release version to publish, without leading v, e.g. {next_release}", text, count=1)
+    text = re.sub(r"default: [0-9]+\.[0-9]+\.[0-9]+", f"default: {next_release}", text, count=1)
+    text = re.sub(r"Optional next development version, e\.g\. [0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT", f"Optional next development version, e.g. {after_next}", text, count=1)
+    return text
+rewrite(".github/workflows/publish.yml", update_publish)
 PY
 
 python3 .github/scripts/verify-version-consistency.py
@@ -78,7 +87,8 @@ python3 .github/scripts/verify-version-consistency.py
 git switch -C "$NEXT_BRANCH"
 git add gradle.properties release.properties build.gradle CITATION.cff .zenodo.json \
   maven/src/main/resources/META-INF/maven/plugin.xml site/pom.xml \
-  examples/maven-consumer/pom.xml examples/fixtures/maven-consumer/pom.xml
+  examples/maven-consumer/pom.xml examples/fixtures/maven-consumer/pom.xml \
+  .github/workflows/publish.yml
 
 git commit -m "Prepare next development version ${NEXT_DEVELOPMENT_VERSION}"
 

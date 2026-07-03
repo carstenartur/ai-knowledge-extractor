@@ -1,9 +1,11 @@
 package org.aiknowledge.core.javajdt;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,13 +62,40 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
         try {
             List<TypeSource> types = discoverTypes(request);
             if (types.isEmpty()) return SearchIndex.empty();
-            if (!Platform.isRunning()) return SearchIndex.warning("jdt-search-workspace-unavailable", "jdtMode=search requires an Eclipse workspace; emitted jdt-ast facts only.");
+            if (!Platform.isRunning() && !startWorkspaceRuntime(request)) {
+                return SearchIndex.warning("jdt-search-workspace-unavailable", "Could not start Eclipse workspace runtime; emitted jdt-ast facts only.");
+            }
             IJavaProject[] projects = projectsForMode(request);
             if (projects.length == 0) return SearchIndex.warning("jdt-search-no-java-project", "No workspace Java project maps to the repository root; emitted jdt-ast facts only.");
             return search(request.repositoryRoot(), projects, types);
         } catch (Exception | LinkageError ex) {
             return SearchIndex.warning("jdt-search-failed", ex.getClass().getSimpleName() + ": " + String.valueOf(ex.getMessage()));
         }
+    }
+
+    private static boolean startWorkspaceRuntime(JavaKnowledgeRequest request) {
+        try {
+            Path workspace = workspaceDirectory(request);
+            Files.createDirectories(workspace);
+            Map<String, String> properties = new HashMap<>();
+            properties.put("osgi.instance.area", workspace.toUri().toString());
+            properties.put("eclipse.application", "org.eclipse.equinox.app.error");
+            Class<?> starter = Class.forName("org.eclipse.core.runtime.adaptor.EclipseStarter");
+            Method setInitialProperties = starter.getMethod("setInitialProperties", Map.class);
+            setInitialProperties.invoke(null, properties);
+            Method startup = starter.getMethod("startup", String[].class, Runnable.class);
+            String[] args = new String[] {"-data", workspace.toString(), "-consoleLog", "-nosplash"};
+            startup.invoke(null, args, null);
+            return Platform.isRunning();
+        } catch (ReflectiveOperationException | IOException | RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
+    private static Path workspaceDirectory(JavaKnowledgeRequest request) {
+        String configured = option(request, "jdtWorkspaceDirectory", "aiknowledge.jdt.workspace.directory", "");
+        if (!configured.isBlank()) return Path.of(configured).toAbsolutePath().normalize();
+        return request.repositoryRoot().resolve("build/ai-knowledge/jdt-workspace").toAbsolutePath().normalize();
     }
 
     private static IJavaProject[] projectsForMode(JavaKnowledgeRequest request) throws CoreException {

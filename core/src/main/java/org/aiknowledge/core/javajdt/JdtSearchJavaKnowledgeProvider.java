@@ -65,7 +65,7 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
         boolean fallbackToAst = fallbackToAst(request);
         JavaKnowledgeResult base = astProvider.extract(request);
         if (!request.sourcePath().endsWith(".java")) return base;
-        SearchIndex index = SEARCH_INDEX_CACHE.computeIfAbsent(cacheKey(request), ignored -> build(request));
+        SearchIndex index = SEARCH_INDEX_CACHE.compute(cacheKey(request), (ignored, cached) -> cached != null && !cached.failed() ? cached : build(request));
         if (!fallbackToAst && index.failed()) {
             String message = index.warnings().isEmpty() ? "JDT search failed and AST fallback is disabled." : String.valueOf(index.warnings().get(0).get("message"));
             throw new IOException(message);

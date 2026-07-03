@@ -2,10 +2,13 @@ package org.aiknowledge.gradle;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.aiknowledge.core.AiKnowledgeRunner;
 import org.aiknowledge.core.ExtractionOptions;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
 
 public final class AiKnowledgePlugin implements Plugin<Project> {
     @Override
@@ -47,6 +50,11 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
 
     private static void run(Project project, AiKnowledgeExtension extension, String mode) {
         try {
+            String javaProvider = extension.getJavaProvider().get();
+            String jdtMode = extension.getJdtMode().get();
+            if (!javaProvider.isBlank()) System.setProperty("aiknowledge.javaProvider", javaProvider);
+            if (!jdtMode.isBlank()) System.setProperty("aiknowledge.jdt.mode", jdtMode);
+
             AiKnowledgeRunner runner = new AiKnowledgeRunner();
             ExtractionOptions options = new ExtractionOptions(
                     project.getRootDir().toPath(),
@@ -64,6 +72,8 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                     extension.getRequireClaimVerification().get(),
                     extension.getMinContextPackCount().get(),
                     extension.getMaxContextPackTokens().get());
+            List<Path> classpathEntries = resolveClasspath(project);
+            if (!classpathEntries.isEmpty()) options = options.withClasspathEntries(classpathEntries);
             switch (mode) {
                 case "generate" -> runner.generate(options);
                 case "analyze" -> runner.analyze(options);
@@ -75,6 +85,20 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         } catch (Exception ex) {
             throw new RuntimeException("AI knowledge task failed", ex);
         }
+    }
+
+    private static List<Path> resolveClasspath(Project project) {
+        List<Path> entries = new ArrayList<>();
+        Configuration config = project.getConfigurations().findByName("compileClasspath");
+        if (config == null || !config.isCanBeResolved()) return List.of();
+        try {
+            config.forEach(file -> {
+                if (file.exists()) entries.add(file.toPath());
+            });
+        } catch (Exception e) {
+            project.getLogger().debug("ai-knowledge: could not resolve compileClasspath; classpath will be empty", e);
+        }
+        return List.copyOf(entries);
     }
 
     private static void copy(Path source, Path target) {

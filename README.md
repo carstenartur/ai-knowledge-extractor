@@ -86,6 +86,69 @@ The core extractor is organized as package-level modules (within `core`) so resp
 - JDT runs best with complete compile classpaths. If classpath data is incomplete, the provider records warnings in extracted facts (for example `jdt-classpath-incomplete` / `jdt-bindings-incomplete`).
 - `BasicJavaKnowledgeProvider` preserves current `classes.json` and `tests.json` fields and adds structured Java facts, but it is still heuristic line-based parsing and may miss complex Java syntax.
 
+### JDT provider: fieldFacts and relationFacts
+
+When `-Daiknowledge.javaProvider=jdt` is active, the provider emits two additional fact collections per source file:
+
+**`fieldFacts`** — one entry per field declaration, including:
+
+| Field | Description |
+|---|---|
+| `declaringType` | Fully qualified name of the declaring class |
+| `name` | Field name |
+| `fieldType` | Declared type (syntactic name) |
+| `modifiers` | Modifier keywords (e.g. `private`, `final`) |
+| `sourceFile` | Repository-relative path |
+| `offset` / `length` | Character position in source file |
+| `line` | 1-based line number |
+| `provider` | Always `jdt-ast` |
+| `confidence` | `syntactic` (AST) or `binding` (with full classpath) |
+
+**`relationFacts`** — one entry per structural relationship, with `kind` values:
+
+| Kind | Description |
+|---|---|
+| `PACKAGE_CONTAINS_TYPE` | Package → type |
+| `TYPE_EXTENDS_TYPE` | Class superclass |
+| `TYPE_IMPLEMENTS_TYPE` | Interface implementation |
+| `FIELD_HAS_TYPE` | Field → declared type |
+| `METHOD_RETURNS_TYPE` | Method → return type |
+| `METHOD_PARAMETER_HAS_TYPE` | Method parameter → type |
+| `TYPE_REFERENCES_TYPE` | Any resolved cross-file reference |
+| `TEST_REFERENCES_PRODUCTION_TYPE` | Test class → referenced production type |
+
+Each relation fact includes `source`, `target`, `sourceFile`, `offset`/`length` (when available), `line`, `provider`, and `confidence`.
+
+### Classpath configuration for the JDT provider
+
+The Gradle plugin automatically resolves the `compileClasspath` configuration and passes it to the JDT provider. You can also set `javaProvider` and `jdtMode` in the extension block:
+
+```groovy
+aiKnowledge {
+    javaProvider = "jdt"   // basic | jdt
+    jdtMode      = "ast"   // ast (headless default; workspace-backed search planned)
+}
+```
+
+Or via system properties:
+
+```bash
+./gradlew generateAiKnowledgeIndex \
+  -Daiknowledge.javaProvider=jdt \
+  -Daiknowledge.jdt.mode=ast
+```
+
+The Maven plugin accepts the same parameters:
+
+```xml
+<configuration>
+    <javaProvider>jdt</javaProvider>
+    <jdtMode>ast</jdtMode>
+</configuration>
+```
+
+The Maven plugin also automatically injects `${project.compileClasspathElements}` so bindings resolve correctly when the project has been compiled.
+
 ## Model profiles
 
 Default model profiles and project-specific `ai-knowledge/model-profiles.yaml` configuration are documented in [`docs/model-profiles.md`](docs/model-profiles.md).

@@ -1,6 +1,9 @@
 package org.aiknowledge.maven;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.aiknowledge.core.AiKnowledgeRunner;
 import org.aiknowledge.core.ExtractionOptions;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -36,9 +39,18 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     protected int minContextPackCount;
     @Parameter(defaultValue = "2147483647")
     protected int maxContextPackTokens;
+    @Parameter(defaultValue = "basic")
+    protected String javaProvider;
+    @Parameter(defaultValue = "ast")
+    protected String jdtMode;
+    @Parameter(defaultValue = "${project.compileClasspathElements}", readonly = true)
+    protected List<String> compileClasspathElements;
 
     protected final ExtractionOptions options() {
-        return new ExtractionOptions(
+        if (javaProvider != null && !javaProvider.isBlank()) System.setProperty("aiknowledge.javaProvider", javaProvider);
+        if (jdtMode != null && !jdtMode.isBlank()) System.setProperty("aiknowledge.jdt.mode", jdtMode);
+
+        ExtractionOptions base = new ExtractionOptions(
                 basedir.toPath(),
                 outputDirectory.toPath(),
                 seedDirectory.toPath(),
@@ -54,10 +66,23 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
                 requireClaimVerification,
                 minContextPackCount,
                 maxContextPackTokens);
+        List<Path> classpathPaths = resolveClasspath();
+        return classpathPaths.isEmpty() ? base : base.withClasspathEntries(classpathPaths);
     }
 
     protected final AiKnowledgeRunner runner() {
         return new AiKnowledgeRunner();
+    }
+
+    private List<Path> resolveClasspath() {
+        if (compileClasspathElements == null) return List.of();
+        List<Path> paths = new ArrayList<>();
+        for (String element : compileClasspathElements) {
+            if (element == null || element.isBlank()) continue;
+            File file = new File(element);
+            if (file.exists()) paths.add(file.toPath());
+        }
+        return List.copyOf(paths);
     }
 
     private double systemDouble(String key, double fallback) {

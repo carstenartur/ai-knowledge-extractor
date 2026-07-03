@@ -113,7 +113,7 @@ final class KnowledgeExtractionPipeline {
                     sourceRoots,
                     testSourceRoots,
                     buildMetadata,
-                    List.of(),
+                    options.classpathEntries(),
                     Map.of("javaProvider", System.getProperty("aiknowledge.javaProvider", "basic"))));
             snapshot.classes.addAll(enrichFacts(result.classFacts(), result));
             snapshot.tests.addAll(enrichFacts(result.testFacts(), result));

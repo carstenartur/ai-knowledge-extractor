@@ -14,12 +14,16 @@ import java.util.stream.Stream;
 import org.aiknowledge.core.javaspi.JavaKnowledgeProvider;
 import org.aiknowledge.core.javaspi.JavaKnowledgeRequest;
 import org.aiknowledge.core.javaspi.JavaKnowledgeResult;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
@@ -57,12 +61,64 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
             List<TypeSource> types = discoverTypes(request);
             if (types.isEmpty()) return SearchIndex.empty();
             if (!Platform.isRunning()) return SearchIndex.warning("jdt-search-workspace-unavailable", "jdtMode=search requires an Eclipse workspace; emitted jdt-ast facts only.");
-            IJavaProject[] projects = javaProjects(request.repositoryRoot());
+            IJavaProject[] projects = projectsForMode(request);
             if (projects.length == 0) return SearchIndex.warning("jdt-search-no-java-project", "No workspace Java project maps to the repository root; emitted jdt-ast facts only.");
             return search(request.repositoryRoot(), projects, types);
         } catch (Exception | LinkageError ex) {
             return SearchIndex.warning("jdt-search-failed", ex.getClass().getSimpleName() + ": " + String.valueOf(ex.getMessage()));
         }
+    }
+
+    private static IJavaProject[] projectsForMode(JavaKnowledgeRequest request) throws CoreException {
+        String mode = option(request, "jdtWorkspaceMode", "aiknowledge.jdt.workspace.mode", "create").trim().toLowerCase();
+        if ("off".equals(mode)) return javaProjects(request.repositoryRoot());
+        if ("existing".equals(mode)) return javaProjects(request.repositoryRoot());
+        return new IJavaProject[] {createOrUpdateWorkspaceProject(request)};
+    }
+
+    private static IJavaProject createOrUpdateWorkspaceProject(JavaKnowledgeRequest request) throws CoreException {
+        NullProgressMonitor monitor = new NullProgressMonitor();
+        String projectName = workspaceProjectName(request.repositoryRoot());
+        IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
+        if (!project.exists()) project.create(monitor);
+        if (!project.isOpen()) project.open(monitor);
+
+        IProjectDescription description = project.getDescription();
+        if (!hasNature(description, JavaCore.NATURE_ID)) description.setNatureIds(new String[] {JavaCore.NATURE_ID});
+        project.setDescription(description, monitor);
+
+        IJavaProject javaProject = JavaCore.create(project);
+        List<IClasspathEntry> classpath = new ArrayList<>();
+        int sourceIndex = 0;
+        for (Path sourceRoot : roots(request)) {
+            if (!Files.isDirectory(sourceRoot)) continue;
+            IFolder sourceFolder = project.getFolder("source" + sourceIndex++);
+            if (!sourceFolder.exists()) {
+                sourceFolder.createLink(new org.eclipse.core.runtime.Path(sourceRoot.toAbsolutePath().normalize().toString()), IResource.REPLACE, monitor);
+            }
+            classpath.add(JavaCore.newSourceEntry(sourceFolder.getFullPath()));
+        }
+        for (Object entry : request.classpathEntries()) {
+            if (!(entry instanceof Path path) || !Files.exists(path)) continue;
+            classpath.add(JavaCore.newLibraryEntry(new org.eclipse.core.runtime.Path(path.toAbsolutePath().normalize().toString()), null, null));
+        }
+        IFolder output = project.getFolder("bin");
+        if (!output.exists()) output.create(true, true, monitor);
+        javaProject.setRawClasspath(classpath.toArray(IClasspathEntry[]::new), output.getFullPath(), monitor);
+        project.refreshLocal(IResource.DEPTH_INFINITE, monitor);
+        project.build(IncrementalProjectBuilder.FULL_BUILD, monitor);
+        return javaProject;
+    }
+
+    private static boolean hasNature(IProjectDescription description, String natureId) {
+        for (String nature : description.getNatureIds()) if (natureId.equals(nature)) return true;
+        return false;
+    }
+
+    private static String workspaceProjectName(Path root) {
+        String base = root.getFileName() == null ? "repository" : root.getFileName().toString();
+        String safe = base.replaceAll("[^A-Za-z0-9_.-]", "-");
+        return "ai-knowledge-" + safe + "-" + Integer.toHexString(root.toAbsolutePath().normalize().toString().hashCode());
     }
 
     private static SearchIndex search(Path root, IJavaProject[] projects, List<TypeSource> types) throws CoreException {
@@ -189,6 +245,12 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
         for (Object root : request.sourceRoots()) if (root instanceof Path path) roots.add(path);
         for (Object root : request.testSourceRoots()) if (root instanceof Path path) roots.add(path);
         return roots;
+    }
+
+    private static String option(JavaKnowledgeRequest request, String configKey, String propertyKey, String fallback) {
+        Object configured = request.providerConfiguration().get(configKey);
+        if (configured != null && !String.valueOf(configured).isBlank()) return String.valueOf(configured);
+        return System.getProperty(propertyKey, fallback);
     }
 
     private static Map<String, Object> warning(String code, String message) {

@@ -12,8 +12,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,7 +54,10 @@ import org.eclipse.jdt.core.search.SearchPattern;
 import org.eclipse.jdt.core.search.SearchRequestor;
 
 public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvider {
-    private static final Map<String, SearchIndex> CACHE = new ConcurrentHashMap<>();
+    private static final int WORKER_TIMEOUT_SECONDS = Integer.getInteger("aiknowledge.jdt.search.worker.timeout.seconds", 20);
+    private static final int STARTUP_TIMEOUT_SECONDS = Integer.getInteger("aiknowledge.jdt.search.startup.timeout.seconds", 5);
+    private static final int MAX_LOG_LENGTH = Integer.getInteger("aiknowledge.jdt.search.max.log.length", 4000);
+    private static final Map<String, SearchIndex> SEARCH_INDEX_CACHE = new ConcurrentHashMap<>();
     private final JdtJavaKnowledgeProvider astProvider = new JdtJavaKnowledgeProvider();
 
     @Override
@@ -62,7 +65,7 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
         boolean fallbackToAst = fallbackToAst(request);
         JavaKnowledgeResult base = fallbackToAst ? astProvider.extract(request) : JavaKnowledgeResult.empty();
         if (!request.sourcePath().endsWith(".java")) return base;
-        SearchIndex index = CACHE.compute(cacheKey(request), (k, old) -> build(request));
+        SearchIndex index = SEARCH_INDEX_CACHE.compute(cacheKey(request), (k, old) -> build(request));
         if (!fallbackToAst && index.failed()) {
             String message = index.warnings().isEmpty() ? "JDT search failed and AST fallback is disabled." : String.valueOf(index.warnings().get(0).get("message"));
             throw new IOException(message);
@@ -186,9 +189,9 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
             processBuilder.redirectOutput(stdoutLog.toFile());
             processBuilder.redirectError(stderrLog.toFile());
             Process process = processBuilder.start();
-            if (!process.waitFor(20, TimeUnit.SECONDS)) {
+            if (!process.waitFor(WORKER_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
-                return SearchIndex.warning("jdt-search-worker-timeout", "Forked JDT worker did not finish within 20 seconds.");
+                return SearchIndex.warning("jdt-search-worker-timeout", "Forked JDT worker did not finish within " + WORKER_TIMEOUT_SECONDS + " seconds.");
             }
             int exitCode = process.exitValue();
             String stdout = readText(stdoutLog);
@@ -233,8 +236,8 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
     private static String truncate(String text) {
         if (text == null) return "";
         String trimmed = text.trim();
-        if (trimmed.length() <= 4000) return trimmed;
-        return trimmed.substring(0, 4000) + "...";
+        if (trimmed.length() <= MAX_LOG_LENGTH) return trimmed;
+        return trimmed.substring(0, MAX_LOG_LENGTH) + "...";
     }
 
     private static String javaExecutable() {
@@ -255,13 +258,13 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
         });
         try {
             Future<RuntimeStart> startup = executor.submit(() -> startWorkspaceRuntimeBlocking(request));
-            return startup.get(5, TimeUnit.SECONDS);
+            return startup.get(STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException ex) {
             return RuntimeStart.failure("Timed out while starting Eclipse workspace runtime.");
         } catch (Exception ex) {
             return RuntimeStart.failure(ex.getClass().getSimpleName() + ": " + String.valueOf(ex.getMessage()));
         } finally {
-            executor.shutdownNow();
+            executor.shutdown();
         }
     }
 
@@ -604,7 +607,7 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
         public static void main(String[] args) {
             if (args.length < 3) {
                 System.err.println("Usage: WorkerMain <request-bin> <facts-bin> <facts-json>");
-                System.exit(64);
+                System.exit(2);
             }
             Path requestBin = Path.of(args[0]);
             Path factsBin = Path.of(args[1]);

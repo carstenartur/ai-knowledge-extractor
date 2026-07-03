@@ -35,74 +35,53 @@
   </issueManagement>
 
   <properties>
-    <revision>0.1.0-SNAPSHOT</revision>
+    <revision>0.1.1-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
-
-  <!--
-    No compile dependencies needed: this project does not compile sources.
-    It uses the hand-written plugin descriptor from the maven/ module resources
-    to generate Maven Site documentation via maven-plugin-plugin:report.
-    The plugin.xml is copied into target/classes via the resources phase.
-  -->
 
   <build>
     <resources>
       <resource>
-        <!-- Pull in the hand-written plugin descriptor from the maven/ module -->
         <directory>../maven/src/main/resources</directory>
+        <includes>
+          <include>META-INF/maven/plugin.xml</include>
+        </includes>
       </resource>
     </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>3.6.4</version>
+        <configuration>
+          <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
         <version>3.21.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>3.9.0</version>
       </plugin>
     </plugins>
   </build>
 
   <reporting>
     <plugins>
-      <!--
-        maven-plugin-plugin:report reads META-INF/maven/plugin.xml from
-        target/classes (populated by process-resources) and generates the
-        standard Maven plugin reference pages (plugin-info.html, goal pages).
-        The report goal is present in 3.6.4 but was removed in 3.9+.
-      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
         <version>3.6.4</version>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>report</report>
-            </reports>
-          </reportSet>
-        </reportSets>
       </plugin>
-      <!--
-        maven-project-info-reports-plugin generates project metadata pages
-        (coordinates, license, SCM, issue management).
-      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-project-info-reports-plugin</artifactId>
         <version>3.9.0</version>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>index</report>
-              <report>summary</report>
-              <report>licenses</report>
-              <report>scm</report>
-              <report>issue-management</report>
-            </reports>
-          </reportSet>
-        </reportSets>
       </plugin>
     </plugins>
   </reporting>
-
 </project>

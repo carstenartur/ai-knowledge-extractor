@@ -108,6 +108,13 @@ aiKnowledge {
 | `requireClaimVerification` | `Property<Boolean>` | `false` |
 | `minContextPackCount` | `Property<Integer>` | `0` |
 | `maxContextPackTokens` | `Property<Integer>` | `Integer.MAX_VALUE` |
+| `javaProvider` | `Property<String>` | `basic` |
+| `jdtMode` | `Property<String>` | `ast` |
+| `jdtWorkspaceMode` | `Property<String>` | `create` |
+| `jdtSearchExecutionMode` | `Property<String>` | `forked` |
+| `jdtSearchFallbackToAst` | `Property<Boolean>` | `true` |
+| `jdtWorkspaceDirectory` | `Property<String>` | `` |
+| `keepJdtWorkspace` | `Property<Boolean>` | `false` |
 
 ## Example configurations
 
@@ -123,6 +130,11 @@ tasks.named('check') {
 }
 
 aiKnowledge {
+    javaProvider = "jdt"
+    jdtMode = "search"
+    jdtSearchExecutionMode = "forked"
+    jdtSearchFallbackToAst = true
+    jdtWorkspaceMode = "create"
     failOnWarnings = true
     maxCognitiveDebt = 80.0d
     maxCognitiveDebtIncrease = 5.0d
@@ -141,6 +153,7 @@ To use the JDT Java provider for stronger type/reference extraction, run Gradle 
   -Daiknowledge.javaProvider=jdt \
   -Daiknowledge.jdt.mode=search \
   -Daiknowledge.jdt.search.execution.mode=forked \
+  -Daiknowledge.jdt.search.fallback.to.ast=true \
   -Daiknowledge.jdt.workspace.mode=create
 ```
 

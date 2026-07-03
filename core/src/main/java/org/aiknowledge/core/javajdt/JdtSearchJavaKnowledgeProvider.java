@@ -63,9 +63,9 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
     @Override
     public JavaKnowledgeResult extract(JavaKnowledgeRequest request) throws IOException {
         boolean fallbackToAst = fallbackToAst(request);
-        JavaKnowledgeResult base = fallbackToAst ? astProvider.extract(request) : JavaKnowledgeResult.empty();
+        JavaKnowledgeResult base = astProvider.extract(request);
         if (!request.sourcePath().endsWith(".java")) return base;
-        SearchIndex index = SEARCH_INDEX_CACHE.compute(cacheKey(request), (k, old) -> build(request));
+        SearchIndex index = SEARCH_INDEX_CACHE.computeIfAbsent(cacheKey(request), ignored -> build(request));
         if (!fallbackToAst && index.failed()) {
             String message = index.warnings().isEmpty() ? "JDT search failed and AST fallback is disabled." : String.valueOf(index.warnings().get(0).get("message"));
             throw new IOException(message);
@@ -256,15 +256,18 @@ public final class JdtSearchJavaKnowledgeProvider implements JavaKnowledgeProvid
             thread.setDaemon(true);
             return thread;
         });
+        Future<RuntimeStart> startup = null;
         try {
-            Future<RuntimeStart> startup = executor.submit(() -> startWorkspaceRuntimeBlocking(request));
+            startup = executor.submit(() -> startWorkspaceRuntimeBlocking(request));
             return startup.get(STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException ex) {
+            if (startup != null) startup.cancel(true);
             return RuntimeStart.failure("Timed out while starting Eclipse workspace runtime.");
         } catch (Exception ex) {
+            if (startup != null) startup.cancel(true);
             return RuntimeStart.failure(ex.getClass().getSimpleName() + ": " + String.valueOf(ex.getMessage()));
         } finally {
-            executor.shutdown();
+            executor.shutdownNow();
         }
     }
 

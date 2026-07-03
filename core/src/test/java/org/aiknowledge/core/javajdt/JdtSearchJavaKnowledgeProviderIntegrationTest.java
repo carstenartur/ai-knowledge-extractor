@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -97,6 +100,33 @@ class JdtSearchJavaKnowledgeProviderIntegrationTest {
     }
 
     @Test
+    void forkedSearchModeKeepsAstFactsWhenFallbackDisabled() throws Exception {
+        Assumptions.assumeFalse(Platform.isRunning(), "This assertion verifies plain JVM forked worker path");
+        Path root = temp.resolve("forked-worker-no-fallback-fixture");
+        Path app = writeFixture(root);
+        JavaKnowledgeRequest request = request(root, app);
+
+        String previousFallback = System.getProperty("aiknowledge.jdt.search.fallback.to.ast");
+        String cacheKey = cacheKey(request);
+        try {
+            System.setProperty("aiknowledge.jdt.search.fallback.to.ast", "false");
+            searchIndexCache().put(cacheKey, successfulSearchIndex(request.sourcePath()));
+
+            JavaKnowledgeResult result = new JdtSearchJavaKnowledgeProvider().extract(request);
+
+            assertFalse(result.typeFacts().isEmpty());
+            assertFalse(result.methodFacts().isEmpty());
+            assertTrue(result.relationFacts().stream().anyMatch(f -> {
+                Map<?, ?> relation = (Map<?, ?>) f;
+                return "jdt-search".equals(relation.get("provider"));
+            }));
+        } finally {
+            searchIndexCache().remove(cacheKey);
+            restore("aiknowledge.jdt.search.fallback.to.ast", previousFallback);
+        }
+    }
+
+    @Test
     void searchModeCanDisableAstFallbackOnFailure() throws Exception {
         Assumptions.assumeFalse(Platform.isRunning(), "This assertion verifies plain JVM failure behavior");
         Path root = temp.resolve("fallback-disabled-fixture");
@@ -144,5 +174,37 @@ class JdtSearchJavaKnowledgeProviderIntegrationTest {
     private static void restore(String key, String previousValue) {
         if (previousValue == null) System.clearProperty(key);
         else System.setProperty(key, previousValue);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> searchIndexCache() throws Exception {
+        Field field = JdtSearchJavaKnowledgeProvider.class.getDeclaredField("SEARCH_INDEX_CACHE");
+        field.setAccessible(true);
+        return (Map<String, Object>) field.get(null);
+    }
+
+    private static String cacheKey(JavaKnowledgeRequest request) throws Exception {
+        Method method = JdtSearchJavaKnowledgeProvider.class.getDeclaredMethod("cacheKey", JavaKnowledgeRequest.class);
+        method.setAccessible(true);
+        return (String) method.invoke(null, request);
+    }
+
+    private static Object successfulSearchIndex(String sourcePath) throws Exception {
+        Class<?> type = Class.forName("org.aiknowledge.core.javajdt.JdtSearchJavaKnowledgeProvider$SearchIndex");
+        Constructor<?> constructor = type.getDeclaredConstructor(Map.class, List.class, boolean.class);
+        constructor.setAccessible(true);
+        return constructor.newInstance(
+                Map.of(sourcePath, List.of(Map.of(
+                        "kind", "TYPE_REFERENCES_TYPE",
+                        "source", "example.app.App",
+                        "target", "example.api.Service",
+                        "sourceFile", sourcePath,
+                        "offset", 0,
+                        "length", 1,
+                        "provider", "jdt-search",
+                        "confidence", "search",
+                        "accuracy", "A_ACCURATE"))),
+                List.of(),
+                false);
     }
 }

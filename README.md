@@ -128,6 +128,7 @@ aiKnowledge {
     javaProvider            = "jdt"      // basic | jdt
     jdtMode                 = "search"   // ast | search
     jdtSearchExecutionMode  = "forked"   // embedded | forked (recommended for Gradle/Maven daemons)
+    jdtSearchFallbackToAst  = true
     jdtWorkspaceMode        = "create"   // create | existing | off
     jdtWorkspaceDirectory   = "$buildDir/ai-knowledge/jdt-workspace"
     keepJdtWorkspace        = false
@@ -152,6 +153,7 @@ The Maven plugin accepts the same parameters:
     <javaProvider>jdt</javaProvider>
     <jdtMode>search</jdtMode>
     <jdtSearchExecutionMode>forked</jdtSearchExecutionMode>
+    <jdtSearchFallbackToAst>true</jdtSearchFallbackToAst>
     <jdtWorkspaceMode>create</jdtWorkspaceMode>
     <jdtWorkspaceDirectory>${project.build.directory}/ai-knowledge/jdt-workspace</jdtWorkspaceDirectory>
     <keepJdtWorkspace>false</keepJdtWorkspace>

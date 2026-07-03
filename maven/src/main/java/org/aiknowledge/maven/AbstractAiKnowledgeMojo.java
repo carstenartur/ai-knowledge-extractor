@@ -45,6 +45,8 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     protected String jdtMode;
     @Parameter(defaultValue = "forked")
     protected String jdtSearchExecutionMode;
+    @Parameter(defaultValue = "true")
+    protected boolean jdtSearchFallbackToAst;
     @Parameter(defaultValue = "create")
     protected String jdtWorkspaceMode;
     @Parameter(defaultValue = "${project.build.directory}/ai-knowledge/jdt-workspace")
@@ -80,7 +82,7 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     }
 
     protected final ScopedSystemProperties configureSystemProperties() {
-        return new ScopedSystemProperties(javaProvider, jdtMode, jdtSearchExecutionMode, jdtWorkspaceMode, jdtWorkspaceDirectory, keepJdtWorkspace);
+        return new ScopedSystemProperties(javaProvider, jdtMode, jdtSearchExecutionMode, jdtSearchFallbackToAst, jdtWorkspaceMode, jdtWorkspaceDirectory, keepJdtWorkspace);
     }
 
     private List<Path> resolveClasspath() {
@@ -109,6 +111,7 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
         private final String previousJavaProvider = System.getProperty("aiknowledge.javaProvider");
         private final String previousJdtMode = System.getProperty("aiknowledge.jdt.mode");
         private final String previousJdtSearchExecutionMode = System.getProperty("aiknowledge.jdt.search.execution.mode");
+        private final String previousJdtSearchFallbackToAst = System.getProperty("aiknowledge.jdt.search.fallback.to.ast");
         private final String previousJdtWorkspaceMode = System.getProperty("aiknowledge.jdt.workspace.mode");
         private final String previousJdtWorkspaceDirectory = System.getProperty("aiknowledge.jdt.workspace.directory");
         private final String previousKeepJdtWorkspace = System.getProperty("aiknowledge.jdt.workspace.keep");
@@ -117,6 +120,7 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
                 String javaProvider,
                 String jdtMode,
                 String jdtSearchExecutionMode,
+                boolean jdtSearchFallbackToAst,
                 String jdtWorkspaceMode,
                 File jdtWorkspaceDirectory,
                 boolean keepJdtWorkspace) {
@@ -125,6 +129,7 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
             if (jdtSearchExecutionMode != null && !jdtSearchExecutionMode.isBlank()) {
                 System.setProperty("aiknowledge.jdt.search.execution.mode", jdtSearchExecutionMode);
             }
+            System.setProperty("aiknowledge.jdt.search.fallback.to.ast", String.valueOf(jdtSearchFallbackToAst));
             if (jdtWorkspaceMode != null && !jdtWorkspaceMode.isBlank()) System.setProperty("aiknowledge.jdt.workspace.mode", jdtWorkspaceMode);
             if (jdtWorkspaceDirectory != null) System.setProperty("aiknowledge.jdt.workspace.directory", jdtWorkspaceDirectory.getAbsolutePath());
             System.setProperty("aiknowledge.jdt.workspace.keep", String.valueOf(keepJdtWorkspace));
@@ -135,6 +140,7 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
             restore("aiknowledge.javaProvider", previousJavaProvider);
             restore("aiknowledge.jdt.mode", previousJdtMode);
             restore("aiknowledge.jdt.search.execution.mode", previousJdtSearchExecutionMode);
+            restore("aiknowledge.jdt.search.fallback.to.ast", previousJdtSearchFallbackToAst);
             restore("aiknowledge.jdt.workspace.mode", previousJdtWorkspaceMode);
             restore("aiknowledge.jdt.workspace.directory", previousJdtWorkspaceDirectory);
             restore("aiknowledge.jdt.workspace.keep", previousKeepJdtWorkspace);

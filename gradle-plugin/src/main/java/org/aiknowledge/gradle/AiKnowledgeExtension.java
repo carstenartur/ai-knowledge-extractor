@@ -27,6 +27,7 @@ public abstract class AiKnowledgeExtension {
     private final Property<String> jdtMode;
     private final Property<String> jdtWorkspaceMode;
     private final Property<String> jdtSearchExecutionMode;
+    private final Property<Boolean> jdtSearchFallbackToAst;
     private final Property<String> jdtWorkspaceDirectory;
     private final Property<Boolean> keepJdtWorkspace;
 
@@ -52,6 +53,7 @@ public abstract class AiKnowledgeExtension {
         this.jdtMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.mode", "ast"));
         this.jdtWorkspaceMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.workspace.mode", "create"));
         this.jdtSearchExecutionMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.search.execution.mode", "forked"));
+        this.jdtSearchFallbackToAst = objects.property(Boolean.class).convention(Boolean.parseBoolean(System.getProperty("aiknowledge.jdt.search.fallback.to.ast", "true")));
         this.jdtWorkspaceDirectory = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.workspace.directory", ""));
         this.keepJdtWorkspace = objects.property(Boolean.class).convention(Boolean.parseBoolean(System.getProperty("aiknowledge.jdt.workspace.keep", "false")));
     }
@@ -75,6 +77,7 @@ public abstract class AiKnowledgeExtension {
     public Property<String> getJdtMode() { return jdtMode; }
     public Property<String> getJdtWorkspaceMode() { return jdtWorkspaceMode; }
     public Property<String> getJdtSearchExecutionMode() { return jdtSearchExecutionMode; }
+    public Property<Boolean> getJdtSearchFallbackToAst() { return jdtSearchFallbackToAst; }
     public Property<String> getJdtWorkspaceDirectory() { return jdtWorkspaceDirectory; }
     public Property<Boolean> getKeepJdtWorkspace() { return keepJdtWorkspace; }
 }

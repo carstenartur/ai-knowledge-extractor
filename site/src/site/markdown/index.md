@@ -88,6 +88,7 @@ The defaults below are written with angle-bracket placeholders to keep the gener
 | `javaProvider` | `String` | `basic` | no |
 | `jdtMode` | `String` | `ast` | no |
 | `jdtSearchExecutionMode` | `String` | `forked` | no |
+| `jdtSearchFallbackToAst` | `boolean` | `true` | no |
 | `jdtWorkspaceMode` | `String` | `create` | no |
 | `jdtWorkspaceDirectory` | `File` | `<project.build.directory>/ai-knowledge/jdt-workspace` | no |
 | `keepJdtWorkspace` | `boolean` | `false` | no |
@@ -99,6 +100,7 @@ For JDT workspace search use:
   <javaProvider>jdt</javaProvider>
   <jdtMode>search</jdtMode>
   <jdtSearchExecutionMode>forked</jdtSearchExecutionMode>
+  <jdtSearchFallbackToAst>true</jdtSearchFallbackToAst>
   <jdtWorkspaceMode>create</jdtWorkspaceMode>
 </configuration>
 ```

@@ -4,26 +4,13 @@
   <description>Generates deterministic repository knowledge indexes and reports.</description>
   <groupId>org.aiknowledge</groupId>
   <artifactId>ai-knowledge-maven-plugin</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.1-SNAPSHOT</version>
   <goalPrefix>ai-knowledge</goalPrefix>
   <mojos>
     <mojo>
       <goal>generate</goal>
       <description>Scans the repository and generates deterministic AI knowledge index artifacts.</description>
-      <requiresDependencyResolution>runtime</requiresDependencyResolution>
-      <requiresDependencyCollection>runtime</requiresDependencyCollection>
-      <requiresDirectInvocation>false</requiresDirectInvocation>
-      <requiresProject>true</requiresProject>
-      <requiresReports>false</requiresReports>
-      <aggregator>false</aggregator>
-      <requiresOnline>false</requiresOnline>
-      <inheritedByDefault>true</inheritedByDefault>
-      <phase>generate-resources</phase>
-      <implementation>org.aiknowledge.maven.GenerateGoal</implementation>
-      <language>java</language>
-      <instantiationStrategy>per-lookup</instantiationStrategy>
-      <executionStrategy>once-per-session</executionStrategy>
-      <threadSafe>true</threadSafe>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution><requiresDependencyCollection>runtime</requiresDependencyCollection><requiresDirectInvocation>false</requiresDirectInvocation><requiresProject>true</requiresProject><requiresReports>false</requiresReports><aggregator>false</aggregator><requiresOnline>false</requiresOnline><inheritedByDefault>true</inheritedByDefault><phase>generate-resources</phase><implementation>org.aiknowledge.maven.GenerateGoal</implementation><language>java</language><instantiationStrategy>per-lookup</instantiationStrategy><executionStrategy>once-per-session</executionStrategy><threadSafe>true</threadSafe>
       <parameters>
         <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
         <parameter><name>outputDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
@@ -49,326 +36,30 @@
         <parameter><name>keepJdtWorkspace</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
         <parameter><name>compileClasspathElements</name><type>java.util.List</type><required>false</required><editable>false</editable></parameter>
       </parameters>
-      <configuration>
-        <basedir implementation="java.io.File" default-value="${project.basedir}"/>
-        <outputDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge"/>
-        <seedDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <failOnWarnings implementation="boolean" default-value="false"/>
-        <maxCognitiveDebt implementation="double" default-value="100.0"/>
-        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
-        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
-        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
-        <requireClaimVerification implementation="boolean" default-value="false"/>
-        <minContextPackCount implementation="int" default-value="0"/>
-        <maxContextPackTokens implementation="int" default-value="2147483647"/>
-        <javaProvider implementation="java.lang.String" default-value="basic"/>
-        <jdtMode implementation="java.lang.String" default-value="ast"/>
-        <jdtSearchExecutionMode implementation="java.lang.String" default-value="forked"/>
-        <jdtSearchFallbackToAst implementation="boolean" default-value="true"/>
-        <jdtWorkspaceMode implementation="java.lang.String" default-value="create"/>
-        <jdtWorkspaceDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge/jdt-workspace"/>
-        <keepJdtWorkspace implementation="boolean" default-value="false"/>
-        <compileClasspathElements implementation="java.util.List" default-value="${project.compileClasspathElements}"/>
-      </configuration>
+      <configuration><basedir implementation="java.io.File" default-value="${project.basedir}"/><outputDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge"/><seedDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/><modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/><failOnWarnings implementation="boolean" default-value="false"/><maxCognitiveDebt implementation="double" default-value="100.0"/><maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/><maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/><maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/><empiricalBenchmarkEnabled implementation="boolean" default-value="false"/><empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/><requireCapabilityEvidence implementation="boolean" default-value="false"/><requireClaimVerification implementation="boolean" default-value="false"/><minContextPackCount implementation="int" default-value="0"/><maxContextPackTokens implementation="int" default-value="2147483647"/><javaProvider implementation="java.lang.String" default-value="basic"/><jdtMode implementation="java.lang.String" default-value="ast"/><jdtSearchExecutionMode implementation="java.lang.String" default-value="forked"/><jdtSearchFallbackToAst implementation="boolean" default-value="true"/><jdtWorkspaceMode implementation="java.lang.String" default-value="create"/><jdtWorkspaceDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge/jdt-workspace"/><keepJdtWorkspace implementation="boolean" default-value="false"/><compileClasspathElements implementation="java.util.List" default-value="${project.compileClasspathElements}"/></configuration>
     </mojo>
     <mojo>
-      <goal>analyze</goal>
-      <description>Computes AI complexity metrics and trend report artifacts.</description>
-      <requiresDependencyResolution>runtime</requiresDependencyResolution>
-      <requiresDependencyCollection>runtime</requiresDependencyCollection>
-      <requiresDirectInvocation>false</requiresDirectInvocation>
-      <requiresProject>true</requiresProject>
-      <requiresReports>false</requiresReports>
-      <aggregator>false</aggregator>
-      <requiresOnline>false</requiresOnline>
-      <inheritedByDefault>true</inheritedByDefault>
-      <phase>verify</phase>
-      <implementation>org.aiknowledge.maven.AnalyzeGoal</implementation>
-      <language>java</language>
-      <instantiationStrategy>per-lookup</instantiationStrategy>
-      <executionStrategy>once-per-session</executionStrategy>
-      <threadSafe>true</threadSafe>
+      <goal>analyze</goal><description>Computes AI complexity metrics and trend report artifacts.</description><requiresDependencyResolution>runtime</requiresDependencyResolution><requiresDependencyCollection>runtime</requiresDependencyCollection><requiresDirectInvocation>false</requiresDirectInvocation><requiresProject>true</requiresProject><requiresReports>false</requiresReports><aggregator>false</aggregator><requiresOnline>false</requiresOnline><inheritedByDefault>true</inheritedByDefault><phase>verify</phase><implementation>org.aiknowledge.maven.AnalyzeGoal</implementation><language>java</language><instantiationStrategy>per-lookup</instantiationStrategy><executionStrategy>once-per-session</executionStrategy><threadSafe>true</threadSafe>
       <parameters>
-        <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
-        <parameter><name>outputDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>seedDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>javaProvider</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtSearchExecutionMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtSearchFallbackToAst</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtWorkspaceMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtWorkspaceDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>keepJdtWorkspace</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>compileClasspathElements</name><type>java.util.List</type><required>false</required><editable>false</editable></parameter>
+        <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter><parameter><name>outputDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter><parameter><name>seedDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter><parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter><parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter><parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter><parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter><parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter><parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter><parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter><parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter><parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter><parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter><parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter><parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter><parameter><name>javaProvider</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter><parameter><name>jdtMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter><parameter><name>jdtSearchExecutionMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter><parameter><name>jdtSearchFallbackToAst</name><type>boolean</type><required>false</required><editable>true</editable></parameter><parameter><name>jdtWorkspaceMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter><parameter><name>jdtWorkspaceDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter><parameter><name>keepJdtWorkspace</name><type>boolean</type><required>false</required><editable>true</editable></parameter><parameter><name>compileClasspathElements</name><type>java.util.List</type><required>false</required><editable>false</editable></parameter>
       </parameters>
-      <configuration>
-        <basedir implementation="java.io.File" default-value="${project.basedir}"/>
-        <outputDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge"/>
-        <seedDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <failOnWarnings implementation="boolean" default-value="false"/>
-        <maxCognitiveDebt implementation="double" default-value="100.0"/>
-        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
-        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
-        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
-        <requireClaimVerification implementation="boolean" default-value="false"/>
-        <minContextPackCount implementation="int" default-value="0"/>
-        <maxContextPackTokens implementation="int" default-value="2147483647"/>
-        <javaProvider implementation="java.lang.String" default-value="basic"/>
-        <jdtMode implementation="java.lang.String" default-value="ast"/>
-        <jdtSearchExecutionMode implementation="java.lang.String" default-value="forked"/>
-        <jdtSearchFallbackToAst implementation="boolean" default-value="true"/>
-        <jdtWorkspaceMode implementation="java.lang.String" default-value="create"/>
-        <jdtWorkspaceDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge/jdt-workspace"/>
-        <keepJdtWorkspace implementation="boolean" default-value="false"/>
-        <compileClasspathElements implementation="java.util.List" default-value="${project.compileClasspathElements}"/>
-      </configuration>
     </mojo>
     <mojo>
-      <goal>optimize</goal>
-      <description>Detects knowledge smells and writes ranked optimization suggestions.</description>
-      <requiresDependencyResolution>runtime</requiresDependencyResolution>
-      <requiresDependencyCollection>runtime</requiresDependencyCollection>
-      <requiresDirectInvocation>false</requiresDirectInvocation>
-      <requiresProject>true</requiresProject>
-      <requiresReports>false</requiresReports>
-      <aggregator>false</aggregator>
-      <requiresOnline>false</requiresOnline>
-      <inheritedByDefault>true</inheritedByDefault>
-      <phase>verify</phase>
-      <implementation>org.aiknowledge.maven.OptimizeGoal</implementation>
-      <language>java</language>
-      <instantiationStrategy>per-lookup</instantiationStrategy>
-      <executionStrategy>once-per-session</executionStrategy>
-      <threadSafe>true</threadSafe>
-      <parameters>
-        <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
-        <parameter><name>outputDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>seedDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>javaProvider</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtSearchExecutionMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtSearchFallbackToAst</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtWorkspaceMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtWorkspaceDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>keepJdtWorkspace</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>compileClasspathElements</name><type>java.util.List</type><required>false</required><editable>false</editable></parameter>
-      </parameters>
-      <configuration>
-        <basedir implementation="java.io.File" default-value="${project.basedir}"/>
-        <outputDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge"/>
-        <seedDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <failOnWarnings implementation="boolean" default-value="false"/>
-        <maxCognitiveDebt implementation="double" default-value="100.0"/>
-        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
-        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
-        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
-        <requireClaimVerification implementation="boolean" default-value="false"/>
-        <minContextPackCount implementation="int" default-value="0"/>
-        <maxContextPackTokens implementation="int" default-value="2147483647"/>
-        <javaProvider implementation="java.lang.String" default-value="basic"/>
-        <jdtMode implementation="java.lang.String" default-value="ast"/>
-        <jdtSearchExecutionMode implementation="java.lang.String" default-value="forked"/>
-        <jdtSearchFallbackToAst implementation="boolean" default-value="true"/>
-        <jdtWorkspaceMode implementation="java.lang.String" default-value="create"/>
-        <jdtWorkspaceDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge/jdt-workspace"/>
-        <keepJdtWorkspace implementation="boolean" default-value="false"/>
-        <compileClasspathElements implementation="java.util.List" default-value="${project.compileClasspathElements}"/>
-      </configuration>
+      <goal>optimize</goal><description>Detects knowledge smells and writes ranked optimization suggestions.</description><requiresDependencyResolution>runtime</requiresDependencyResolution><requiresDependencyCollection>runtime</requiresDependencyCollection><requiresProject>true</requiresProject><implementation>org.aiknowledge.maven.OptimizeGoal</implementation><language>java</language><threadSafe>true</threadSafe>
+      <parameters><parameter><name>basedir</name><type>java.io.File</type></parameter><parameter><name>outputDirectory</name><type>java.io.File</type></parameter><parameter><name>seedDirectory</name><type>java.io.File</type></parameter><parameter><name>modelProfileDirectory</name><type>java.io.File</type></parameter><parameter><name>failOnWarnings</name><type>boolean</type></parameter><parameter><name>maxCognitiveDebt</name><type>double</type></parameter><parameter><name>maxCognitiveDebtIncrease</name><type>double</type></parameter><parameter><name>maxConceptRadiusIncrease</name><type>double</type></parameter><parameter><name>maxContextTokenIncrease</name><type>double</type></parameter><parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type></parameter><parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type></parameter><parameter><name>requireCapabilityEvidence</name><type>boolean</type></parameter><parameter><name>requireClaimVerification</name><type>boolean</type></parameter><parameter><name>minContextPackCount</name><type>int</type></parameter><parameter><name>maxContextPackTokens</name><type>int</type></parameter><parameter><name>javaProvider</name><type>java.lang.String</type></parameter><parameter><name>jdtMode</name><type>java.lang.String</type></parameter><parameter><name>jdtSearchExecutionMode</name><type>java.lang.String</type></parameter><parameter><name>jdtSearchFallbackToAst</name><type>boolean</type></parameter><parameter><name>jdtWorkspaceMode</name><type>java.lang.String</type></parameter><parameter><name>jdtWorkspaceDirectory</name><type>java.io.File</type></parameter><parameter><name>keepJdtWorkspace</name><type>boolean</type></parameter><parameter><name>compileClasspathElements</name><type>java.util.List</type></parameter></parameters>
     </mojo>
     <mojo>
-      <goal>benchmark</goal>
-      <description>Compares extraction profiles and optional empirical fixtures against context budgets.</description>
-      <requiresDependencyResolution>runtime</requiresDependencyResolution>
-      <requiresDependencyCollection>runtime</requiresDependencyCollection>
-      <requiresDirectInvocation>false</requiresDirectInvocation>
-      <requiresProject>true</requiresProject>
-      <requiresReports>false</requiresReports>
-      <aggregator>false</aggregator>
-      <requiresOnline>false</requiresOnline>
-      <inheritedByDefault>true</inheritedByDefault>
-      <phase>verify</phase>
-      <implementation>org.aiknowledge.maven.BenchmarkGoal</implementation>
-      <language>java</language>
-      <instantiationStrategy>per-lookup</instantiationStrategy>
-      <executionStrategy>once-per-session</executionStrategy>
-      <threadSafe>true</threadSafe>
-      <parameters>
-        <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
-        <parameter><name>outputDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>seedDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>javaProvider</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtSearchExecutionMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtSearchFallbackToAst</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtWorkspaceMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtWorkspaceDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>keepJdtWorkspace</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>compileClasspathElements</name><type>java.util.List</type><required>false</required><editable>false</editable></parameter>
-      </parameters>
-      <configuration>
-        <basedir implementation="java.io.File" default-value="${project.basedir}"/>
-        <outputDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge"/>
-        <seedDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <failOnWarnings implementation="boolean" default-value="false"/>
-        <maxCognitiveDebt implementation="double" default-value="100.0"/>
-        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
-        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
-        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
-        <requireClaimVerification implementation="boolean" default-value="false"/>
-        <minContextPackCount implementation="int" default-value="0"/>
-        <maxContextPackTokens implementation="int" default-value="2147483647"/>
-        <javaProvider implementation="java.lang.String" default-value="basic"/>
-        <jdtMode implementation="java.lang.String" default-value="ast"/>
-        <jdtSearchExecutionMode implementation="java.lang.String" default-value="forked"/>
-        <jdtSearchFallbackToAst implementation="boolean" default-value="true"/>
-        <jdtWorkspaceMode implementation="java.lang.String" default-value="create"/>
-        <jdtWorkspaceDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge/jdt-workspace"/>
-        <keepJdtWorkspace implementation="boolean" default-value="false"/>
-        <compileClasspathElements implementation="java.util.List" default-value="${project.compileClasspathElements}"/>
-      </configuration>
+      <goal>benchmark</goal><description>Compares extraction profiles and optional empirical fixtures against context budgets.</description><requiresDependencyResolution>runtime</requiresDependencyResolution><requiresDependencyCollection>runtime</requiresDependencyCollection><requiresProject>true</requiresProject><implementation>org.aiknowledge.maven.BenchmarkGoal</implementation><language>java</language><threadSafe>true</threadSafe>
+      <parameters><parameter><name>basedir</name><type>java.io.File</type></parameter><parameter><name>outputDirectory</name><type>java.io.File</type></parameter><parameter><name>seedDirectory</name><type>java.io.File</type></parameter><parameter><name>modelProfileDirectory</name><type>java.io.File</type></parameter><parameter><name>failOnWarnings</name><type>boolean</type></parameter><parameter><name>maxCognitiveDebt</name><type>double</type></parameter><parameter><name>maxCognitiveDebtIncrease</name><type>double</type></parameter><parameter><name>maxConceptRadiusIncrease</name><type>double</type></parameter><parameter><name>maxContextTokenIncrease</name><type>double</type></parameter><parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type></parameter><parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type></parameter><parameter><name>requireCapabilityEvidence</name><type>boolean</type></parameter><parameter><name>requireClaimVerification</name><type>boolean</type></parameter><parameter><name>minContextPackCount</name><type>int</type></parameter><parameter><name>maxContextPackTokens</name><type>int</type></parameter><parameter><name>javaProvider</name><type>java.lang.String</type></parameter><parameter><name>jdtMode</name><type>java.lang.String</type></parameter><parameter><name>jdtSearchExecutionMode</name><type>java.lang.String</type></parameter><parameter><name>jdtSearchFallbackToAst</name><type>boolean</type></parameter><parameter><name>jdtWorkspaceMode</name><type>java.lang.String</type></parameter><parameter><name>jdtWorkspaceDirectory</name><type>java.io.File</type></parameter><parameter><name>keepJdtWorkspace</name><type>boolean</type></parameter><parameter><name>compileClasspathElements</name><type>java.util.List</type></parameter></parameters>
     </mojo>
     <mojo>
-      <goal>check</goal>
-      <description>Runs AI knowledge quality gates and fails the build on configured threshold violations.</description>
-      <requiresDependencyResolution>runtime</requiresDependencyResolution>
-      <requiresDependencyCollection>runtime</requiresDependencyCollection>
-      <requiresDirectInvocation>false</requiresDirectInvocation>
-      <requiresProject>true</requiresProject>
-      <requiresReports>false</requiresReports>
-      <aggregator>false</aggregator>
-      <requiresOnline>false</requiresOnline>
-      <inheritedByDefault>true</inheritedByDefault>
-      <phase>verify</phase>
-      <implementation>org.aiknowledge.maven.CheckGoal</implementation>
-      <language>java</language>
-      <instantiationStrategy>per-lookup</instantiationStrategy>
-      <executionStrategy>once-per-session</executionStrategy>
-      <threadSafe>true</threadSafe>
-      <parameters>
-        <parameter><name>basedir</name><type>java.io.File</type><required>true</required><editable>false</editable></parameter>
-        <parameter><name>outputDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>seedDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>modelProfileDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>failOnWarnings</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxCognitiveDebt</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxCognitiveDebtIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxConceptRadiusIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxContextTokenIncrease</name><type>double</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>requireCapabilityEvidence</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>requireClaimVerification</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>minContextPackCount</name><type>int</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>maxContextPackTokens</name><type>int</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>javaProvider</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtSearchExecutionMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtSearchFallbackToAst</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtWorkspaceMode</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>jdtWorkspaceDirectory</name><type>java.io.File</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>keepJdtWorkspace</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>compileClasspathElements</name><type>java.util.List</type><required>false</required><editable>false</editable></parameter>
-      </parameters>
-      <configuration>
-        <basedir implementation="java.io.File" default-value="${project.basedir}"/>
-        <outputDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge"/>
-        <seedDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <modelProfileDirectory implementation="java.io.File" default-value="${project.basedir}/ai-knowledge"/>
-        <failOnWarnings implementation="boolean" default-value="false"/>
-        <maxCognitiveDebt implementation="double" default-value="100.0"/>
-        <maxCognitiveDebtIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxConceptRadiusIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <maxContextTokenIncrease implementation="double" default-value="1.7976931348623157E308"/>
-        <empiricalBenchmarkEnabled implementation="boolean" default-value="false"/>
-        <empiricalBenchmarkFixtureFile implementation="java.io.File" default-value="${project.basedir}/ai-knowledge/benchmark-fixtures.yaml"/>
-        <requireCapabilityEvidence implementation="boolean" default-value="false"/>
-        <requireClaimVerification implementation="boolean" default-value="false"/>
-        <minContextPackCount implementation="int" default-value="0"/>
-        <maxContextPackTokens implementation="int" default-value="2147483647"/>
-        <javaProvider implementation="java.lang.String" default-value="basic"/>
-        <jdtMode implementation="java.lang.String" default-value="ast"/>
-        <jdtSearchExecutionMode implementation="java.lang.String" default-value="forked"/>
-        <jdtSearchFallbackToAst implementation="boolean" default-value="true"/>
-        <jdtWorkspaceMode implementation="java.lang.String" default-value="create"/>
-        <jdtWorkspaceDirectory implementation="java.io.File" default-value="${project.build.directory}/ai-knowledge/jdt-workspace"/>
-        <keepJdtWorkspace implementation="boolean" default-value="false"/>
-        <compileClasspathElements implementation="java.util.List" default-value="${project.compileClasspathElements}"/>
-      </configuration>
+      <goal>check</goal><description>Runs AI knowledge quality gates and fails the build on configured threshold violations.</description><requiresDependencyResolution>runtime</requiresDependencyResolution><requiresDependencyCollection>runtime</requiresDependencyCollection><requiresProject>true</requiresProject><implementation>org.aiknowledge.maven.CheckGoal</implementation><language>java</language><threadSafe>true</threadSafe>
+      <parameters><parameter><name>basedir</name><type>java.io.File</type></parameter><parameter><name>outputDirectory</name><type>java.io.File</type></parameter><parameter><name>seedDirectory</name><type>java.io.File</type></parameter><parameter><name>modelProfileDirectory</name><type>java.io.File</type></parameter><parameter><name>failOnWarnings</name><type>boolean</type></parameter><parameter><name>maxCognitiveDebt</name><type>double</type></parameter><parameter><name>maxCognitiveDebtIncrease</name><type>double</type></parameter><parameter><name>maxConceptRadiusIncrease</name><type>double</type></parameter><parameter><name>maxContextTokenIncrease</name><type>double</type></parameter><parameter><name>empiricalBenchmarkEnabled</name><type>boolean</type></parameter><parameter><name>empiricalBenchmarkFixtureFile</name><type>java.io.File</type></parameter><parameter><name>requireCapabilityEvidence</name><type>boolean</type></parameter><parameter><name>requireClaimVerification</name><type>boolean</type></parameter><parameter><name>minContextPackCount</name><type>int</type></parameter><parameter><name>maxContextPackTokens</name><type>int</type></parameter><parameter><name>javaProvider</name><type>java.lang.String</type></parameter><parameter><name>jdtMode</name><type>java.lang.String</type></parameter><parameter><name>jdtSearchExecutionMode</name><type>java.lang.String</type></parameter><parameter><name>jdtSearchFallbackToAst</name><type>boolean</type></parameter><parameter><name>jdtWorkspaceMode</name><type>java.lang.String</type></parameter><parameter><name>jdtWorkspaceDirectory</name><type>java.io.File</type></parameter><parameter><name>keepJdtWorkspace</name><type>boolean</type></parameter><parameter><name>compileClasspathElements</name><type>java.util.List</type></parameter></parameters>
     </mojo>
     <mojo>
-      <goal>help</goal>
-      <description>Displays plugin goal and parameter help for the AI Knowledge Maven Plugin.</description>
-      <requiresDirectInvocation>false</requiresDirectInvocation>
-      <requiresProject>false</requiresProject>
-      <requiresReports>false</requiresReports>
-      <aggregator>false</aggregator>
-      <requiresOnline>false</requiresOnline>
-      <inheritedByDefault>true</inheritedByDefault>
-      <implementation>org.aiknowledge.maven.HelpGoal</implementation>
-      <language>java</language>
-      <instantiationStrategy>per-lookup</instantiationStrategy>
-      <executionStrategy>once-per-session</executionStrategy>
-      <threadSafe>true</threadSafe>
-      <parameters>
-        <parameter><name>goal</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter>
-        <parameter><name>detail</name><type>boolean</type><required>false</required><editable>true</editable></parameter>
-      </parameters>
-      <configuration>
-        <goal implementation="java.lang.String"/>
-        <detail implementation="boolean" default-value="false"/>
-      </configuration>
+      <goal>help</goal><description>Displays plugin goal and parameter help for the AI Knowledge Maven Plugin.</description><requiresDirectInvocation>false</requiresDirectInvocation><requiresProject>false</requiresProject><requiresReports>false</requiresReports><aggregator>false</aggregator><requiresOnline>false</requiresOnline><inheritedByDefault>true</inheritedByDefault><implementation>org.aiknowledge.maven.HelpGoal</implementation><language>java</language><instantiationStrategy>per-lookup</instantiationStrategy><executionStrategy>once-per-session</executionStrategy><threadSafe>true</threadSafe>
+      <parameters><parameter><name>goal</name><type>java.lang.String</type><required>false</required><editable>true</editable></parameter><parameter><name>detail</name><type>boolean</type><required>false</required><editable>true</editable></parameter></parameters>
+      <configuration><goal implementation="java.lang.String"/><detail implementation="boolean" default-value="false"/></configuration>
     </mojo>
   </mojos>
 </plugin>

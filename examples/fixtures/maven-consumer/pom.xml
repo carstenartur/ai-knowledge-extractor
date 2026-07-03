@@ -1,18 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
-
   <groupId>example.consumer</groupId>
   <artifactId>ai-knowledge-maven-consumer-fixture</artifactId>
   <version>1.0.0</version>
-
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
-    <aiKnowledge.version>0.1.1-SNAPSHOT</aiKnowledge.version>
+    <aiKnowledge.version>0.1.2-SNAPSHOT</aiKnowledge.version>
   </properties>
-
   <build>
     <plugins>
       <plugin>

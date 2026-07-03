@@ -11,7 +11,7 @@ authors:
 repository-code: "https://github.com/carstenartur/ai-knowledge-extractor"
 url: "https://github.com/carstenartur/ai-knowledge-extractor"
 license: "Apache-2.0"
-version: "0.1.2-SNAPSHOT"
+version: "0.1.2"
 keywords:
   - ai
   - knowledge-extraction
@@ -20,3 +20,4 @@ keywords:
   - gradle-plugin
   - maven-plugin
   - code-understanding
+date-released: "2026-07-03"

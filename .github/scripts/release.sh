@@ -5,10 +5,16 @@ set -euo pipefail
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 : "${METADATA_HELPER:?METADATA_HELPER is required}"
 
-NEXT_VERSION_INPUT=${NEXT_VERSION_INPUT:-}
-SKIP_TESTS=${SKIP_TESTS:-false}
-DRY_RUN=${DRY_RUN:-false}
-SOURCE_BRANCH=${SOURCE_BRANCH:-main}
+trim() {
+  local value=${1-}
+  printf '%s' "$value" | tr -d '\r' | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//'
+}
+
+RELEASE_VERSION=$(trim "$RELEASE_VERSION")
+NEXT_VERSION_INPUT=$(trim "${NEXT_VERSION_INPUT:-}")
+SKIP_TESTS=$(trim "${SKIP_TESTS:-false}")
+DRY_RUN=$(trim "${DRY_RUN:-false}")
+SOURCE_BRANCH=$(trim "${SOURCE_BRANCH:-main}")
 
 TAG_NAME="v${RELEASE_VERSION}"
 RELEASE_BRANCH="release/${TAG_NAME}"
@@ -28,7 +34,7 @@ VERSIONED_METADATA_FILES=(
 )
 
 if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "::error::release_version must use X.Y.Z without a leading v"
+  echo "::error::release_version must use X.Y.Z without a leading v; got '${RELEASE_VERSION}'"
   exit 1
 fi
 
@@ -172,8 +178,9 @@ else
   IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE_VERSION"
   NEXT_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))-SNAPSHOT"
 fi
+NEXT_VERSION=$(trim "$NEXT_VERSION")
 if ! [[ "$NEXT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
-  echo "::error::next_development_version must use X.Y.Z-SNAPSHOT"
+  echo "::error::next_development_version must use X.Y.Z-SNAPSHOT; got '${NEXT_VERSION}'"
   exit 1
 fi
 

@@ -1,5 +1,5 @@
 group = 'org.aiknowledge'
-version = findProperty('releaseVersion') ?: findProperty('projectVersion') ?: '0.1.0-SNAPSHOT'
+version = findProperty('releaseVersion') ?: findProperty('projectVersion') ?: '0.1.1-SNAPSHOT'
 
 subprojects {
     group = rootProject.group

@@ -83,9 +83,14 @@ final class KnowledgeExtractionPipeline {
     private static boolean matchesProvider(String configuredProvider, String candidate) {
         String normalizedConfigured = configuredProvider.toLowerCase();
         String normalizedCandidate = candidate.toLowerCase();
+        String jdtMode = System.getProperty("aiknowledge.jdt.mode", "ast").trim().toLowerCase();
         if (normalizedConfigured.equals(normalizedCandidate)) return true;
         if (normalizedConfigured.equals("basic")) return normalizedCandidate.contains("basicjavaknowledgeprovider");
-        if (normalizedConfigured.equals("jdt")) return normalizedCandidate.contains("jdtjavaknowledgeprovider");
+        if (normalizedConfigured.equals("jdt-search") || normalizedConfigured.equals("jdtsearch")) return normalizedCandidate.contains("jdtsearchjavaknowledgeprovider");
+        if (normalizedConfigured.equals("jdt")) {
+            if ("search".equals(jdtMode)) return normalizedCandidate.contains("jdtsearchjavaknowledgeprovider");
+            return normalizedCandidate.contains("jdtjavaknowledgeprovider") && !normalizedCandidate.contains("jdtsearchjavaknowledgeprovider");
+        }
         return false;
     }
 
@@ -114,7 +119,9 @@ final class KnowledgeExtractionPipeline {
                     testSourceRoots,
                     buildMetadata,
                     options.classpathEntries(),
-                    Map.of("javaProvider", System.getProperty("aiknowledge.javaProvider", "basic"))));
+                    Map.of(
+                            "javaProvider", System.getProperty("aiknowledge.javaProvider", "basic"),
+                            "jdtMode", System.getProperty("aiknowledge.jdt.mode", "ast"))));
             snapshot.classes.addAll(enrichFacts(result.classFacts(), result));
             snapshot.tests.addAll(enrichFacts(result.testFacts(), result));
         }
@@ -161,8 +168,10 @@ final class KnowledgeExtractionPipeline {
             }
             if (!result.typeFacts().isEmpty()) fact.put("typeFacts", result.typeFacts());
             if (!result.methodFacts().isEmpty()) fact.put("methodFacts", result.methodFacts());
+            if (!result.fieldFacts().isEmpty()) fact.put("fieldFacts", result.fieldFacts());
             if (!result.packageFacts().isEmpty()) fact.put("packageFacts", result.packageFacts());
             if (!result.referenceFacts().isEmpty()) fact.put("referenceFacts", result.referenceFacts());
+            if (!result.relationFacts().isEmpty()) fact.put("relationFacts", result.relationFacts());
             if (!result.warnings().isEmpty()) fact.put("warnings", result.warnings());
             enriched.add(fact);
         }

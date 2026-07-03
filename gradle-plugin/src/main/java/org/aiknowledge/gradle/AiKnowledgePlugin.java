@@ -51,11 +51,14 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
     private static void run(Project project, AiKnowledgeExtension extension, String mode) {
         String previousJavaProvider = System.getProperty("aiknowledge.javaProvider");
         String previousJdtMode = System.getProperty("aiknowledge.jdt.mode");
+        String previousJdtWorkspaceMode = System.getProperty("aiknowledge.jdt.workspace.mode");
         try {
             String javaProvider = extension.getJavaProvider().get();
             String jdtMode = extension.getJdtMode().get();
+            String jdtWorkspaceMode = extension.getJdtWorkspaceMode().get();
             if (!javaProvider.isBlank()) System.setProperty("aiknowledge.javaProvider", javaProvider);
             if (!jdtMode.isBlank()) System.setProperty("aiknowledge.jdt.mode", jdtMode);
+            if (!jdtWorkspaceMode.isBlank()) System.setProperty("aiknowledge.jdt.workspace.mode", jdtWorkspaceMode);
 
             AiKnowledgeRunner runner = new AiKnowledgeRunner();
             ExtractionOptions options = new ExtractionOptions(
@@ -89,6 +92,7 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         } finally {
             restoreProperty("aiknowledge.javaProvider", previousJavaProvider);
             restoreProperty("aiknowledge.jdt.mode", previousJdtMode);
+            restoreProperty("aiknowledge.jdt.workspace.mode", previousJdtWorkspaceMode);
         }
     }
 
@@ -110,7 +114,7 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         try {
             Files.createDirectories(target);
             try (var stream = Files.walk(source)) {
-                for (Path path : stream.filter(Files::isRegularFile).toList()) {
+                for (Path path : stream.filter(Files::RegularFile).toList()) {
                     Path dest = target.resolve(source.relativize(path).toString());
                     Files.createDirectories(dest.getParent());
                     Files.copy(path, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);

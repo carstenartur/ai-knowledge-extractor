@@ -114,7 +114,7 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         try {
             Files.createDirectories(target);
             try (var stream = Files.walk(source)) {
-                for (Path path : stream.filter(Files::RegularFile).toList()) {
+                for (Path path : stream.filter(Files::isRegularFile).toList()) {
                     Path dest = target.resolve(source.relativize(path).toString());
                     Files.createDirectories(dest.getParent());
                     Files.copy(path, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);

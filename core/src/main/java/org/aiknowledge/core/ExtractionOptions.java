@@ -2,6 +2,7 @@ package org.aiknowledge.core;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 
 /** Options shared by all deterministic AI knowledge tasks. */
@@ -20,7 +21,8 @@ public record ExtractionOptions(
         boolean requireCapabilityEvidence,
         boolean requireClaimVerification,
         int minContextPackCount,
-        int maxContextPackTokens) {
+        int maxContextPackTokens,
+        List<Path> classpathEntries) {
 
     public ExtractionOptions(
             Path repositoryRoot,
@@ -29,7 +31,7 @@ public record ExtractionOptions(
             Path modelProfileDirectory,
             boolean failOnWarnings,
             double maxCognitiveDebt) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, false, null, false, false, 0, Integer.MAX_VALUE);
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, false, null, false, false, 0, Integer.MAX_VALUE, List.of());
     }
 
     public ExtractionOptions(
@@ -42,7 +44,7 @@ public record ExtractionOptions(
             double maxCognitiveDebtIncrease,
             double maxConceptRadiusIncrease,
             double maxContextTokenIncrease) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, false, null, false, false, 0, Integer.MAX_VALUE);
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, false, null, false, false, 0, Integer.MAX_VALUE, List.of());
     }
 
     public ExtractionOptions(
@@ -57,7 +59,26 @@ public record ExtractionOptions(
             double maxContextTokenIncrease,
             boolean empiricalBenchmarkEnabled,
             Path empiricalBenchmarkFixtureFile) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile, false, false, 0, Integer.MAX_VALUE);
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile, false, false, 0, Integer.MAX_VALUE, List.of());
+    }
+
+    public ExtractionOptions(
+            Path repositoryRoot,
+            Path outputDirectory,
+            Path seedDirectory,
+            Path modelProfileDirectory,
+            boolean failOnWarnings,
+            double maxCognitiveDebt,
+            double maxCognitiveDebtIncrease,
+            double maxConceptRadiusIncrease,
+            double maxContextTokenIncrease,
+            boolean empiricalBenchmarkEnabled,
+            Path empiricalBenchmarkFixtureFile,
+            boolean requireCapabilityEvidence,
+            boolean requireClaimVerification,
+            int minContextPackCount,
+            int maxContextPackTokens) {
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile, requireCapabilityEvidence, requireClaimVerification, minContextPackCount, maxContextPackTokens, List.of());
     }
 
     public ExtractionOptions {
@@ -73,6 +94,18 @@ public record ExtractionOptions(
         maxContextTokenIncrease = normalizeThreshold(maxContextTokenIncrease);
         if (minContextPackCount < 0) minContextPackCount = 0;
         if (maxContextPackTokens < 0) maxContextPackTokens = Integer.MAX_VALUE;
+        classpathEntries = List.copyOf(classpathEntries == null ? List.of() : classpathEntries);
+    }
+
+    public ExtractionOptions withClasspathEntries(List<Path> newClasspathEntries) {
+        return new ExtractionOptions(
+                repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory,
+                failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease,
+                maxConceptRadiusIncrease, maxContextTokenIncrease,
+                empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile,
+                requireCapabilityEvidence, requireClaimVerification,
+                minContextPackCount, maxContextPackTokens,
+                newClasspathEntries);
     }
 
     public static ExtractionOptions defaults(Path repositoryRoot, Path outputDirectory) {

@@ -23,14 +23,17 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AnnotationTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.NameQualifiedType;
 import org.eclipse.jdt.core.dom.QualifiedType;
 import org.eclipse.jdt.core.dom.RecordDeclaration;
 import org.eclipse.jdt.core.dom.SimpleType;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.search.IJavaSearchConstants;
 import org.eclipse.jdt.core.search.SearchPattern;
 
@@ -96,7 +99,22 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         if (request.classpathEntries().isEmpty()) warnings.add(warning(
                 "jdt-classpath-incomplete",
                 "JDT provider was configured without explicit classpath entries; bindings may be incomplete."));
-        return new JavaKnowledgeResult(typeFacts, methodFacts, List.of(), testFacts, packageFacts, referenceFacts, List.of(), classFacts, warnings);
+
+        // Cross-file relation facts built from resolved index
+        List<Map<String, Object>> relationFacts = new ArrayList<>(sourceFacts.relationFacts());
+        for (String target : references) {
+            relationFacts.add(relation("TYPE_REFERENCES_TYPE", typeName, target, request.sourcePath(), -1, 0, -1));
+        }
+        if (test) {
+            List<String> referencedProductionTypes = references.stream()
+                    .filter(reference -> !Boolean.TRUE.equals(index.testTypes().get(reference)))
+                    .toList();
+            for (String target : referencedProductionTypes) {
+                relationFacts.add(relation("TEST_REFERENCES_PRODUCTION_TYPE", typeName, target, request.sourcePath(), -1, 0, -1));
+            }
+        }
+
+        return new JavaKnowledgeResult(typeFacts, methodFacts, sourceFacts.fieldFacts(), testFacts, packageFacts, referenceFacts, List.copyOf(relationFacts), classFacts, warnings);
     }
 
     private static ProjectIndex buildIndex(JavaKnowledgeRequest request) throws IOException {
@@ -205,7 +223,8 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         parser.setCompilerOptions(compilerOptions());
         parser.setEnvironment(
                 stringArray(request.classpathEntries()),
-                stringArray(mergeRoots(request.sourceRoots(), request.testSourceRoots())),
+                stringArray(mergeRoots(request.sourceRoots(), request.testSourceRoots())
+                        .stream().filter(Files::isDirectory).toList()),
                 null,
                 true);
         CompilationUnit unit = (CompilationUnit) parser.createAST(null);
@@ -226,8 +245,11 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         List<Map<String, Object>> warnings = new ArrayList<>();
         if (hasBindingProblems(unit)) warnings.add(warning("jdt-bindings-incomplete", "JDT reported unresolved bindings in this source file."));
         boolean test = isTestSource(request, file, simpleName);
+        String sourcePath = request.repositoryRoot().relativize(file).toString().replace('\\', '/');
+        List<Map<String, Object>> fieldFacts = collectFieldFacts(unit, firstType, typeName, sourcePath);
+        List<Map<String, Object>> relationFacts = collectRelationFacts(unit, firstType, typeName, sourcePath, packageName);
         return new SourceFacts(
-                request.repositoryRoot().relativize(file).toString().replace('\\', '/'),
+                sourcePath,
                 typeName,
                 simpleName,
                 packageName,
@@ -241,7 +263,9 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
                 source.split("\\R", -1).length,
                 test,
                 tags(source),
-                List.copyOf(warnings));
+                List.copyOf(warnings),
+                fieldFacts,
+                relationFacts);
     }
 
     private static Map<String, String> compilerOptions() {
@@ -315,15 +339,18 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
 
     private static List<MethodDeclaration> methodDeclarations(Object declaration) {
         List<MethodDeclaration> methods = new ArrayList<>();
-        List<?> body = declaration instanceof TypeDeclaration type ? type.bodyDeclarations()
-                : declaration instanceof RecordDeclaration record ? record.bodyDeclarations()
-                : declaration instanceof EnumDeclaration enumDeclaration ? enumDeclaration.bodyDeclarations()
-                : declaration instanceof AnnotationTypeDeclaration annotation ? annotation.bodyDeclarations()
-                : List.of();
-        for (Object object : body) {
+        for (Object object : bodyDeclarations(declaration)) {
             if (object instanceof MethodDeclaration method) methods.add(method);
         }
         return methods;
+    }
+
+    private static List<?> bodyDeclarations(Object declaration) {
+        if (declaration instanceof TypeDeclaration type) return type.bodyDeclarations();
+        if (declaration instanceof RecordDeclaration record) return record.bodyDeclarations();
+        if (declaration instanceof EnumDeclaration enumDeclaration) return enumDeclaration.bodyDeclarations();
+        if (declaration instanceof AnnotationTypeDeclaration annotation) return annotation.bodyDeclarations();
+        return List.of();
     }
 
     private static String signature(MethodDeclaration method) {
@@ -489,6 +516,125 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
         return facts;
     }
 
+    private static List<Map<String, Object>> collectFieldFacts(
+            CompilationUnit unit, Object declaration, String typeName, String sourcePath) {
+        List<Map<String, Object>> facts = new ArrayList<>();
+        for (Object bodyDecl : bodyDeclarations(declaration)) {
+            if (!(bodyDecl instanceof FieldDeclaration field)) continue;
+            String fieldType = field.getType().toString();
+            List<String> modifiers = new ArrayList<>();
+            for (Object mod : field.modifiers()) {
+                String modStr = String.valueOf(mod).trim();
+                if (!modStr.isEmpty() && !modStr.startsWith("@")) modifiers.add(modStr);
+            }
+            for (Object fragObj : field.fragments()) {
+                if (!(fragObj instanceof VariableDeclarationFragment frag)) continue;
+                String name = frag.getName().getIdentifier();
+                int offset = frag.getStartPosition();
+                int length = frag.getLength();
+                int line = unit.getLineNumber(offset);
+                Map<String, Object> fact = new LinkedHashMap<>();
+                fact.put("declaringType", typeName);
+                fact.put("name", name);
+                fact.put("fieldType", fieldType);
+                if (!modifiers.isEmpty()) fact.put("modifiers", List.copyOf(modifiers));
+                fact.put("sourceFile", sourcePath);
+                if (offset >= 0) {
+                    fact.put("offset", offset);
+                    fact.put("length", length);
+                }
+                if (line > 0) fact.put("line", line);
+                fact.put("provider", "jdt-ast");
+                fact.put("confidence", "syntactic");
+                facts.add(fact);
+            }
+        }
+        return List.copyOf(facts);
+    }
+
+    private static List<Map<String, Object>> collectRelationFacts(
+            CompilationUnit unit, Object declaration, String typeName, String sourcePath, String packageName) {
+        List<Map<String, Object>> facts = new ArrayList<>();
+
+        // PACKAGE_CONTAINS_TYPE
+        if (!packageName.isBlank()) {
+            facts.add(relation("PACKAGE_CONTAINS_TYPE", packageName, typeName, sourcePath, -1, 0, -1));
+        }
+
+        // TYPE_EXTENDS_TYPE (classes only, not interfaces)
+        if (declaration instanceof TypeDeclaration type && !type.isInterface()) {
+            Type superclassType = type.getSuperclassType();
+            if (superclassType != null) {
+                int offset = superclassType.getStartPosition();
+                facts.add(relation("TYPE_EXTENDS_TYPE", typeName, superclassType.toString(),
+                        sourcePath, offset, superclassType.getLength(), unit.getLineNumber(offset)));
+            }
+        }
+
+        // TYPE_IMPLEMENTS_TYPE
+        List<?> superIfaceTypes = declaration instanceof TypeDeclaration td ? td.superInterfaceTypes()
+                : declaration instanceof RecordDeclaration rec ? rec.superInterfaceTypes()
+                : List.of();
+        for (Object ifaceObj : superIfaceTypes) {
+            if (!(ifaceObj instanceof Type iface)) continue;
+            int offset = iface.getStartPosition();
+            facts.add(relation("TYPE_IMPLEMENTS_TYPE", typeName, iface.toString(),
+                    sourcePath, offset, iface.getLength(), unit.getLineNumber(offset)));
+        }
+
+        // FIELD_HAS_TYPE
+        for (Object bodyDecl : bodyDeclarations(declaration)) {
+            if (!(bodyDecl instanceof FieldDeclaration field)) continue;
+            Type fieldType = field.getType();
+            String fieldTypeName = fieldType.toString();
+            int typeOffset = fieldType.getStartPosition();
+            int typeLine = unit.getLineNumber(typeOffset);
+            for (Object fragObj : field.fragments()) {
+                if (!(fragObj instanceof VariableDeclarationFragment frag)) continue;
+                String fieldRef = typeName + "." + frag.getName().getIdentifier();
+                facts.add(relation("FIELD_HAS_TYPE", fieldRef, fieldTypeName,
+                        sourcePath, typeOffset, fieldType.getLength(), typeLine));
+            }
+        }
+
+        // METHOD_RETURNS_TYPE and METHOD_PARAMETER_HAS_TYPE
+        for (MethodDeclaration method : methodDeclarations(declaration)) {
+            String methodRef = typeName + "#" + signature(method);
+            if (!method.isConstructor() && method.getReturnType2() != null) {
+                Type returnType = method.getReturnType2();
+                int offset = returnType.getStartPosition();
+                facts.add(relation("METHOD_RETURNS_TYPE", methodRef, returnType.toString(),
+                        sourcePath, offset, returnType.getLength(), unit.getLineNumber(offset)));
+            }
+            for (Object paramObj : method.parameters()) {
+                if (!(paramObj instanceof SingleVariableDeclaration param)) continue;
+                Type paramType = param.getType();
+                int offset = paramType.getStartPosition();
+                facts.add(relation("METHOD_PARAMETER_HAS_TYPE", methodRef, paramType.toString(),
+                        sourcePath, offset, paramType.getLength(), unit.getLineNumber(offset)));
+            }
+        }
+
+        return List.copyOf(facts);
+    }
+
+    private static Map<String, Object> relation(String kind, String source, String target,
+            String sourceFile, int offset, int length, int line) {
+        Map<String, Object> fact = new LinkedHashMap<>();
+        fact.put("kind", kind);
+        fact.put("source", source);
+        fact.put("target", target);
+        fact.put("sourceFile", sourceFile);
+        if (offset >= 0) {
+            fact.put("offset", offset);
+            fact.put("length", length);
+        }
+        if (line > 0) fact.put("line", line);
+        fact.put("provider", "jdt-ast");
+        fact.put("confidence", "syntactic");
+        return fact;
+    }
+
     private static Map<String, Object> warning(String code, String message) {
         Map<String, Object> warning = new LinkedHashMap<>();
         warning.put("code", code);
@@ -511,7 +657,9 @@ public final class JdtJavaKnowledgeProvider implements JavaKnowledgeProvider {
             int lineCount,
             boolean test,
             List<String> tags,
-            List<Map<String, Object>> warnings) {
+            List<Map<String, Object>> warnings,
+            List<Map<String, Object>> fieldFacts,
+            List<Map<String, Object>> relationFacts) {
     }
 
     private record ProjectIndex(

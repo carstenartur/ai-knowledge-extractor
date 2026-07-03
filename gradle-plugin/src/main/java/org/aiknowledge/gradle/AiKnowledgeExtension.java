@@ -23,6 +23,9 @@ public abstract class AiKnowledgeExtension {
     private final Property<Boolean> requireClaimVerification;
     private final Property<Integer> minContextPackCount;
     private final Property<Integer> maxContextPackTokens;
+    private final Property<String> javaProvider;
+    private final Property<String> jdtMode;
+    private final Property<String> jdtWorkspaceMode;
 
     @Inject
     public AiKnowledgeExtension(Project project) {
@@ -42,6 +45,9 @@ public abstract class AiKnowledgeExtension {
         this.requireClaimVerification = objects.property(Boolean.class).convention(false);
         this.minContextPackCount = objects.property(Integer.class).convention(0);
         this.maxContextPackTokens = objects.property(Integer.class).convention(Integer.MAX_VALUE);
+        this.javaProvider = objects.property(String.class).convention(System.getProperty("aiknowledge.javaProvider", "basic"));
+        this.jdtMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.mode", "ast"));
+        this.jdtWorkspaceMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.workspace.mode", "create"));
     }
 
     public DirectoryProperty getOutputDirectory() { return outputDirectory; }
@@ -59,4 +65,7 @@ public abstract class AiKnowledgeExtension {
     public Property<Boolean> getRequireClaimVerification() { return requireClaimVerification; }
     public Property<Integer> getMinContextPackCount() { return minContextPackCount; }
     public Property<Integer> getMaxContextPackTokens() { return maxContextPackTokens; }
+    public Property<String> getJavaProvider() { return javaProvider; }
+    public Property<String> getJdtMode() { return jdtMode; }
+    public Property<String> getJdtWorkspaceMode() { return jdtWorkspaceMode; }
 }

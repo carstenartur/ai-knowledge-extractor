@@ -1,5 +1,14 @@
 description = 'Maven plugin module.'
 
+processResources {
+    filesMatching('META-INF/maven/plugin.xml') {
+        filter { line ->
+            def replacement = java.util.regex.Matcher.quoteReplacement('<version>' + project.version + '</version>')
+            line.replaceFirst('<version>[^<]+</version>', replacement)
+        }
+    }
+}
+
 jar {
     archiveBaseName = 'ai-knowledge-maven-plugin'
 }

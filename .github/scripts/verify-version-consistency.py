@@ -45,12 +45,6 @@ def main() -> None:
     require_equal(".zenodo.json", str(zenodo.get("version")), project_version)
 
     require_equal(
-        "Maven plugin descriptor",
-        first_match("maven/src/main/resources/META-INF/maven/plugin.xml", r"<version>([^<]+)</version>"),
-        project_version,
-    )
-
-    require_equal(
         "Maven site revision",
         first_match("site/pom.xml", r"<revision>([^<]+)</revision>"),
         project_version,
@@ -65,6 +59,15 @@ def main() -> None:
             first_match(path, r"<aiKnowledge\.version>([^<]+)</aiKnowledge\.version>"),
             project_version,
         )
+
+    require_equal(
+        "Maven plugin descriptor",
+        first_match(
+            "maven/src/main/resources/META-INF/maven/plugin.xml",
+            r"<version>([^<]+)</version>",
+        ),
+        project_version,
+    )
 
     require_equal(
         "release.properties next.release.version",

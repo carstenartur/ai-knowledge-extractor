@@ -3,7 +3,8 @@ description = 'Maven plugin module.'
 processResources {
     filesMatching('META-INF/maven/plugin.xml') {
         filter { line ->
-            line.replaceFirst('<version>[^<]+</version>', '<version>' + project.version + '</version>')
+            def replacement = java.util.regex.Matcher.quoteReplacement('<version>' + project.version + '</version>')
+            line.replaceFirst('<version>[^<]+</version>', replacement)
         }
     }
 }

@@ -55,7 +55,7 @@ jobs:
 
           results = sorted(Path('.').glob('*/build/test-results/test/TEST-*.xml'))
           if not results:
-              raise SystemExit('No JUnit XML test result files found under */build/test-results/test/.')
+              raise SystemExit('No JUnit XML test result files found under */build/test-results/test/')
 
           tests = failures = errors = skipped = 0
           for result in results:

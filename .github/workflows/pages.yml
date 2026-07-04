@@ -53,8 +53,12 @@ jobs:
           import shutil
           import xml.etree.ElementTree as ET
 
+          results = sorted(Path('.').glob('*/build/test-results/test/TEST-*.xml'))
+          if not results:
+              raise SystemExit('No JUnit XML test result files found under */build/test-results/test/.')
+
           tests = failures = errors = skipped = 0
-          for result in Path('.').glob('*/build/test-results/test/TEST-*.xml'):
+          for result in results:
               root = ET.parse(result).getroot()
               tests += int(root.attrib.get('tests', 0))
               failures += int(root.attrib.get('failures', 0))

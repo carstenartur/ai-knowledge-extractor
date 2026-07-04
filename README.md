@@ -118,3 +118,68 @@ When `-Daiknowledge.javaProvider=jdt` is active, the provider emits two addition
 | `TEST_REFERENCES_PRODUCTION_TYPE` | Test class → referenced production type |
 
 Each relation fact includes `source`, `target`, `sourceFile`, `offset`/`length` (when available), `line`, `provider`, and `confidence`.
+
+### Classpath configuration for the JDT provider
+
+The Gradle plugin automatically resolves the `compileClasspath` configuration and passes it to the JDT provider. You can configure JDT search/workspace mode directly in the extension block:
+
+```groovy
+aiKnowledge {
+    javaProvider            = "jdt"      // basic | jdt
+    jdtMode                 = "search"   // ast | search
+    jdtSearchExecutionMode  = "forked"   // embedded | forked (recommended for Gradle/Maven daemons)
+    jdtSearchFallbackToAst  = true
+    jdtWorkspaceMode        = "create"   // create | existing | off
+    jdtWorkspaceDirectory   = "$buildDir/ai-knowledge/jdt-workspace"
+    keepJdtWorkspace        = false
+}
+```
+
+Or via system properties:
+
+```bash
+./gradlew generateAiKnowledgeIndex \
+  -Daiknowledge.javaProvider=jdt \
+  -Daiknowledge.jdt.mode=search \
+  -Daiknowledge.jdt.search.execution.mode=forked \
+  -Daiknowledge.jdt.workspace.mode=create \
+  -Daiknowledge.jdt.workspace.directory="$PWD/build/ai-knowledge/jdt-workspace"
+```
+
+The Maven plugin accepts the same parameters:
+
+```xml
+<configuration>
+    <javaProvider>jdt</javaProvider>
+    <jdtMode>search</jdtMode>
+    <jdtSearchExecutionMode>forked</jdtSearchExecutionMode>
+    <jdtSearchFallbackToAst>true</jdtSearchFallbackToAst>
+    <jdtWorkspaceMode>create</jdtWorkspaceMode>
+    <jdtWorkspaceDirectory>${project.build.directory}/ai-knowledge/jdt-workspace</jdtWorkspaceDirectory>
+    <keepJdtWorkspace>false</keepJdtWorkspace>
+</configuration>
+```
+
+The Maven plugin also automatically injects `${project.compileClasspathElements}` so bindings resolve correctly when the project has been compiled.
+
+## Model profiles
+
+Default model profiles and project-specific `ai-knowledge/model-profiles.yaml` configuration are documented in [`docs/model-profiles.md`](docs/model-profiles.md).
+
+## Trend gates
+
+Trend baselines, `metrics-snapshot.json`, `trend.json` and CI threshold configuration are documented in [`docs/trend-gates.md`](docs/trend-gates.md).
+
+## Publishing and consumption
+
+Artifact IDs, local development consumption, GitHub Packages repository configuration and release-version handling are documented in [`docs/publishing.md`](docs/publishing.md). Plugin-specific canonical usage docs: [`docs/gradle-plugin.md`](docs/gradle-plugin.md) and [`docs/maven-plugin.md`](docs/maven-plugin.md).
+
+## Release process
+
+Release execution, `dry_run`, metadata updates, tagging and the follow-up PR flow are documented in [`docs/release.md`](docs/release.md).
+
+## Citation
+
+Citation metadata is maintained in `CITATION.cff`. Release metadata is maintained in `.zenodo.json`. See `docs/release.md` for the release checklist.
+
+License: Apache-2.0

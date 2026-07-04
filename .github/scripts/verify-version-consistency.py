@@ -61,6 +61,15 @@ def main() -> None:
         )
 
     require_equal(
+        "Maven plugin descriptor",
+        first_match(
+            "maven/src/main/resources/META-INF/maven/plugin.xml",
+            r"<version>([^<]+)</version>",
+        ),
+        project_version,
+    )
+
+    require_equal(
         "release.properties next.release.version",
         first_match("release.properties", r"^next\.release\.version=(.+)$"),
         expected_release,

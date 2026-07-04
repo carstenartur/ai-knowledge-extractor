@@ -53,8 +53,12 @@ jobs:
           import shutil
           import xml.etree.ElementTree as ET
 
+          results = sorted(Path('.').glob('*/build/test-results/test/TEST-*.xml'))
+          if not results:
+              raise SystemExit('No JUnit XML test result files found under */build/test-results/test/')
+
           tests = failures = errors = skipped = 0
-          for result in Path('.').glob('*/build/test-results/test/TEST-*.xml'):
+          for result in results:
               root = ET.parse(result).getroot()
               tests += int(root.attrib.get('tests', 0))
               failures += int(root.attrib.get('failures', 0))
@@ -130,16 +134,13 @@ jobs:
           fi
 
       - name: Setup Pages
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-pages-artifact@v3
         with:
           path: site/target/site
 
       - name: Deploy to GitHub Pages
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         id: deployment
         uses: actions/deploy-pages@v4

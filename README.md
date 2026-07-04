@@ -8,7 +8,7 @@
 [![GitHub Packages](https://img.shields.io/badge/packages-GitHub%20Packages-blue)](docs/publishing.md)
 [![Citation](https://img.shields.io/badge/citation-CFF-informational)](CITATION.cff)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://carstenartur.github.io/ai-knowledge-extractor/)
-
+https://doi.org/10.5281/zenodo.21180224
 Deterministic build-integrated knowledge extraction for AI-assisted code understanding.
 
 This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` for modules, classes, tests, docs, dependencies, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.

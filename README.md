@@ -1,10 +1,10 @@
 # AI Knowledge Extractor
 
-[![CI](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml/badge.svg)](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml)
-[![Release](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml/badge.svg)](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml)
+[![CI](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/endpoint?url=https://carstenartur.github.io/ai-knowledge-extractor/tests/badge.json)](https://carstenartur.github.io/ai-knowledge-extractor/tests/)
 [![License](https://img.shields.io/github/license/carstenartur/ai-knowledge-extractor)](LICENSE)
 ![Java 17](https://img.shields.io/badge/Java-17-blue)
-[![Release version](https://img.shields.io/github/v/release/carstenartur/ai-knowledge-extractor?sort=semver)](https://github.com/carstenartur/ai-knowledge-extractor/releases)
+[![Latest release](https://img.shields.io/github/v/release/carstenartur/ai-knowledge-extractor?sort=semver)](https://github.com/carstenartur/ai-knowledge-extractor/releases)
 [![GitHub Packages](https://img.shields.io/badge/packages-GitHub%20Packages-blue)](docs/publishing.md)
 [![Citation](https://img.shields.io/badge/citation-CFF-informational)](CITATION.cff)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://carstenartur.github.io/ai-knowledge-extractor/)

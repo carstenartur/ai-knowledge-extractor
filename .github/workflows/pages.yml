@@ -44,6 +44,62 @@ jobs:
           VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
           mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
 
+      - name: Generate test badge
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import html
+          import json
+          import shutil
+          import xml.etree.ElementTree as ET
+
+          tests = failures = errors = skipped = 0
+          for result in Path('.').glob('*/build/test-results/test/TEST-*.xml'):
+              root = ET.parse(result).getroot()
+              tests += int(root.attrib.get('tests', 0))
+              failures += int(root.attrib.get('failures', 0))
+              errors += int(root.attrib.get('errors', 0))
+              skipped += int(root.attrib.get('skipped', 0))
+
+          problems = failures + errors
+          passed = max(tests - problems - skipped, 0)
+          message = f"{passed}/{tests} passing" if tests else "0 tests"
+          color = "brightgreen" if tests and problems == 0 else "red"
+
+          tests_dir = Path('site/target/site/tests')
+          tests_dir.mkdir(parents=True, exist_ok=True)
+          (tests_dir / 'badge.json').write_text(json.dumps({
+              "schemaVersion": 1,
+              "label": "tests",
+              "message": message,
+              "color": color,
+          }, ensure_ascii=False) + "\n", encoding='utf-8')
+
+          report_root = tests_dir / 'reports'
+          for report in Path('.').glob('*/build/reports/tests/test'):
+              module = report.parts[0]
+              destination = report_root / module
+              if destination.exists():
+                  shutil.rmtree(destination)
+              shutil.copytree(report, destination)
+
+          (tests_dir / 'index.html').write_text(f"""<!doctype html>
+          <html lang=\"en\"><head><meta charset=\"utf-8\"><title>AI Knowledge Extractor tests</title></head>
+          <body>
+          <h1>AI Knowledge Extractor tests</h1>
+          <p>{html.escape(message)}</p>
+          <ul>
+            <li>Total: {tests}</li>
+            <li>Passed: {passed}</li>
+            <li>Skipped: {skipped}</li>
+            <li>Failures: {failures}</li>
+            <li>Errors: {errors}</li>
+          </ul>
+          <p>Module reports are available under <code>reports/</code>.</p>
+          </body></html>
+          """, encoding='utf-8')
+          PY
+
       - name: Verify site content
         run: |
           test -f site/target/site/index.html
@@ -54,6 +110,7 @@ jobs:
           test -f site/target/site/benchmark-mojo.html
           test -f site/target/site/check-mojo.html
           test -f site/target/site/help-mojo.html
+          test -f site/target/site/tests/badge.json
           grep -rl "generate" site/target/site/
           grep -rl "analyze" site/target/site/
           grep -rl "optimize" site/target/site/

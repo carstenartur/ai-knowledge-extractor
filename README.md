@@ -1,14 +1,15 @@
 # AI Knowledge Extractor
 
 [![CI](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/endpoint?url=https://carstenartur.github.io/ai-knowledge-extractor/tests/badge.json)](https://carstenartur.github.io/ai-knowledge-extractor/tests/)
+[![Tests](https://img.shields.io/endpoint?url=https://carstenartur.github.io/ai-knowledge-extractor/site/badges/tests.json)](https://carstenartur.github.io/ai-knowledge-extractor/site/tests/)
 [![License](https://img.shields.io/github/license/carstenartur/ai-knowledge-extractor)](LICENSE)
 ![Java 17](https://img.shields.io/badge/Java-17-blue)
 [![Latest release](https://img.shields.io/github/v/release/carstenartur/ai-knowledge-extractor?sort=semver)](https://github.com/carstenartur/ai-knowledge-extractor/releases)
 [![GitHub Packages](https://img.shields.io/badge/packages-GitHub%20Packages-blue)](docs/publishing.md)
 [![Citation](https://img.shields.io/badge/citation-CFF-informational)](CITATION.cff)
-[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://carstenartur.github.io/ai-knowledge-extractor/)
-https://doi.org/10.5281/zenodo.21180224
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://carstenartur.github.io/ai-knowledge-extractor/site/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21180224.svg)](https://doi.org/10.5281/zenodo.21180224)
+
 Deterministic build-integrated knowledge extraction for AI-assisted code understanding.
 
 This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` for modules, classes, tests, docs, dependencies, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.
@@ -52,7 +53,7 @@ Optional empirical benchmark layer parameters:
 - `empiricalBenchmarkEnabled` (default `false`)
 - `empiricalBenchmarkFixtureFile` (default `${project.basedir}/ai-knowledge/benchmark-fixtures.yaml`)
 
-Canonical Maven goal, parameter and help usage reference: [`docs/maven-plugin.md`](docs/maven-plugin.md). For the generated Maven plugin reference with full parameter tables for all goals, see the [GitHub Pages documentation site](https://carstenartur.github.io/ai-knowledge-extractor/).
+Canonical Maven goal, parameter and help usage reference: [`docs/maven-plugin.md`](docs/maven-plugin.md). For the generated Maven plugin reference with full parameter tables for all goals, see the [GitHub Pages documentation site](https://carstenartur.github.io/ai-knowledge-extractor/site/).
 
 ## Scope
 

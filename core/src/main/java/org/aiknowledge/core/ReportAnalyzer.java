@@ -2,6 +2,7 @@ package org.aiknowledge.core;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -16,6 +17,7 @@ final class ReportAnalyzer {
         int capabilities = snapshot.capabilities.size();
         int estimatedTokens = classes * 260 + tests * 140 + docs * 180 + dependencies * 35 + capabilities * 80;
         double density = capabilities == 0 ? 0.0d : (classes + tests + docs) / (double) capabilities;
+        double contextDebt = Math.max(0.0d, estimatedTokens / 1000.0d + density - tests / 10.0d);
         List profileMetrics = ModelProfileSupport.profileMetrics(options, estimatedTokens);
         List warnings = new ArrayList();
         for (Object item : profileMetrics) {
@@ -34,7 +36,9 @@ final class ReportAnalyzer {
         report.put("contextLocality", Math.max(0.0d, 1.0d - density / 100.0d));
         report.put("compressionRatio", estimatedTokens == 0 ? 1.0d : Math.min(1.0d, 12000.0d / estimatedTokens));
         report.put("aiCognitiveComplexity", estimatedTokens / 1000.0d + dependencies * 0.5d);
-        report.put("aiCognitiveDebt", Math.max(0.0d, estimatedTokens / 1000.0d + density - tests / 10.0d));
+        report.put("aiContextDebt", contextDebt);
+        report.put("aiCognitiveDebt", contextDebt);
+        report.put("codeComplexity", codeComplexity(snapshot));
         report.put("warningCount", warnings.size());
         report.put("warnings", warnings);
         report.put("modelProfiles", profileMetrics);
@@ -174,6 +178,87 @@ final class ReportAnalyzer {
         report.put("recommendedProfile", recommended(results));
         report.put("empirical", EmpiricalBenchmarkSupport.report(options));
         return report;
+    }
+
+    private static Map codeComplexity(RepositorySnapshot snapshot) {
+        List<Map> methods = complexityMethodFacts(snapshot);
+        int totalCyclomatic = sum(methods, "cyclomaticComplexity");
+        int totalCognitive = sum(methods, "cognitiveComplexity");
+        Map report = new LinkedHashMap();
+        report.put("methodCount", methods.size());
+        report.put("totalCyclomaticComplexity", totalCyclomatic);
+        report.put("maxMethodCyclomaticComplexity", max(methods, "cyclomaticComplexity"));
+        report.put("averageMethodCyclomaticComplexity", average(totalCyclomatic, methods.size()));
+        report.put("totalCognitiveComplexity", totalCognitive);
+        report.put("maxMethodCognitiveComplexity", max(methods, "cognitiveComplexity"));
+        report.put("averageMethodCognitiveComplexity", average(totalCognitive, methods.size()));
+        report.put("methodsAboveCyclomaticThreshold", countAbove(methods, "cyclomaticComplexity", 10));
+        report.put("methodsAboveCognitiveThreshold", countAbove(methods, "cognitiveComplexity", 15));
+        report.put("topCyclomaticMethods", topMethods(methods, "cyclomaticComplexity"));
+        report.put("topCognitiveMethods", topMethods(methods, "cognitiveComplexity"));
+        return report;
+    }
+
+    private static List<Map> complexityMethodFacts(RepositorySnapshot snapshot) {
+        List<Map> methods = new ArrayList();
+        collectComplexityMethodFacts(methods, snapshot.classes);
+        collectComplexityMethodFacts(methods, snapshot.tests);
+        return methods;
+    }
+
+    private static void collectComplexityMethodFacts(List<Map> methods, List facts) {
+        for (Object item : facts) {
+            if (!(item instanceof Map fact)) continue;
+            Object methodFacts = fact.get("methodFacts");
+            if (!(methodFacts instanceof List list)) continue;
+            for (Object method : list) {
+                if (method instanceof Map methodFact && methodFact.containsKey("cognitiveComplexity")) methods.add(methodFact);
+            }
+        }
+    }
+
+    private static List<Map> topMethods(List<Map> methods, String metric) {
+        return methods.stream()
+                .sorted(Comparator.comparingInt((Map method) -> number(method, metric)).reversed()
+                        .thenComparing(method -> String.valueOf(method.get("type")))
+                        .thenComparing(method -> String.valueOf(method.get("signature"))))
+                .limit(10)
+                .map(ReportAnalyzer::compactMethod)
+                .toList();
+    }
+
+    private static Map compactMethod(Map method) {
+        Map compact = new LinkedHashMap();
+        compact.put("type", method.get("type"));
+        compact.put("signature", method.get("signature"));
+        compact.put("sourceFile", method.get("sourceFile"));
+        if (method.containsKey("startLine")) compact.put("startLine", method.get("startLine"));
+        if (method.containsKey("endLine")) compact.put("endLine", method.get("endLine"));
+        compact.put("cyclomaticComplexity", method.get("cyclomaticComplexity"));
+        compact.put("cognitiveComplexity", method.get("cognitiveComplexity"));
+        compact.put("maxNestingDepth", method.get("maxNestingDepth"));
+        return compact;
+    }
+
+    private static int sum(List<Map> methods, String metric) {
+        return methods.stream().mapToInt(method -> number(method, metric)).sum();
+    }
+
+    private static int max(List<Map> methods, String metric) {
+        return methods.stream().mapToInt(method -> number(method, metric)).max().orElse(0);
+    }
+
+    private static int countAbove(List<Map> methods, String metric, int threshold) {
+        return (int) methods.stream().filter(method -> number(method, metric) > threshold).count();
+    }
+
+    private static double average(int total, int count) {
+        return count == 0 ? 0.0d : Math.round((total / (double) count) * 100.0d) / 100.0d;
+    }
+
+    private static int number(Map method, String metric) {
+        Object value = method.get(metric);
+        return value instanceof Number number ? number.intValue() : 0;
     }
 
     private static Map thresholds(ExtractionOptions options) {

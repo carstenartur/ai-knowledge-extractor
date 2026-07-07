@@ -111,11 +111,13 @@ class CodeComplexityAnalyzerTest {
     }
 
     private static Map<?, ?> firstMethod(JavaKnowledgeResult result, String name) {
-        return result.methodFacts().stream()
-                .map(Map.class::cast)
-                .filter(method -> String.valueOf(method.get("signature")).contains(name + "("))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Missing method " + name + " in " + result.methodFacts()));
+        for (Object item : result.methodFacts()) {
+            Map<?, ?> method = (Map<?, ?>) item;
+            if (String.valueOf(method.get("signature")).contains(name + "(")) {
+                return method;
+            }
+        }
+        throw new AssertionError("Missing method " + name + " in " + result.methodFacts());
     }
 
     private static int number(Map<?, ?> map, String key) {

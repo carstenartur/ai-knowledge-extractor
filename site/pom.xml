@@ -35,7 +35,7 @@
   </issueManagement>
 
   <properties>
-    <revision>0.1.4-SNAPSHOT</revision>
+    <revision>0.1.4</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 

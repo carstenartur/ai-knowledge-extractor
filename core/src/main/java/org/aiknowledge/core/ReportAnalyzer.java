@@ -9,15 +9,26 @@ import java.util.Locale;
 import java.util.Map;
 
 final class ReportAnalyzer {
+    private static final int CLASS_TOKEN_WEIGHT = 260;
+    private static final int TEST_TOKEN_WEIGHT = 140;
+    private static final int DOC_TOKEN_WEIGHT = 180;
+    private static final int DEPENDENCY_TOKEN_WEIGHT = 35;
+    private static final int CAPABILITY_TOKEN_WEIGHT = 80;
+
     Map complexity(ExtractionOptions options, RepositorySnapshot snapshot) throws IOException {
         int classes = snapshot.classes.size();
         int tests = snapshot.tests.size();
         int docs = snapshot.docs.size();
         int dependencies = snapshot.dependencies.size();
         int capabilities = snapshot.capabilities.size();
-        int estimatedTokens = classes * 260 + tests * 140 + docs * 180 + dependencies * 35 + capabilities * 80;
+        int estimatedTokens = classes * CLASS_TOKEN_WEIGHT
+                + tests * TEST_TOKEN_WEIGHT
+                + docs * DOC_TOKEN_WEIGHT
+                + dependencies * DEPENDENCY_TOKEN_WEIGHT
+                + capabilities * CAPABILITY_TOKEN_WEIGHT;
         double density = capabilities == 0 ? 0.0d : (classes + tests + docs) / (double) capabilities;
         double contextDebt = Math.max(0.0d, estimatedTokens / 1000.0d + density - tests / 10.0d);
+        Map codeComplexity = codeComplexity(snapshot);
         List profileMetrics = ModelProfileSupport.profileMetrics(options, estimatedTokens);
         List warnings = new ArrayList();
         for (Object item : profileMetrics) {
@@ -38,7 +49,8 @@ final class ReportAnalyzer {
         report.put("aiCognitiveComplexity", estimatedTokens / 1000.0d + dependencies * 0.5d);
         report.put("aiContextDebt", contextDebt);
         report.put("aiCognitiveDebt", contextDebt);
-        report.put("codeComplexity", codeComplexity(snapshot));
+        report.put("codeComplexity", codeComplexity);
+        report.put("aiCostDrivers", aiCostDrivers(snapshot, estimatedTokens, codeComplexity, classes, tests, docs, dependencies, capabilities));
         report.put("warningCount", warnings.size());
         report.put("warnings", warnings);
         report.put("modelProfiles", profileMetrics);
@@ -180,6 +192,104 @@ final class ReportAnalyzer {
         report.put("topCyclomaticMethods", topMethods(methods, "cyclomaticComplexity"));
         report.put("topCognitiveMethods", topMethods(methods, "cognitiveComplexity"));
         return report;
+    }
+
+    private static Map aiCostDrivers(
+            RepositorySnapshot snapshot,
+            int estimatedTokens,
+            Map codeComplexity,
+            int classes,
+            int tests,
+            int docs,
+            int dependencies,
+            int capabilities) {
+        Map report = new LinkedHashMap();
+        report.put("description", "Estimated AI cost drivers split context-token cost from local reasoning complexity.");
+        report.put("estimatedContextTokens", estimatedTokens);
+        report.put("tokenCostDrivers", tokenCostDrivers(classes, tests, docs, dependencies, capabilities));
+        report.put("largestContextContributors", largestContextContributors(snapshot));
+        report.put("reasoningCostDrivers", reasoningCostDrivers(codeComplexity));
+        report.put("recommendations", aiCostRecommendations(snapshot, codeComplexity, estimatedTokens));
+        return report;
+    }
+
+    private static Map tokenCostDrivers(int classes, int tests, int docs, int dependencies, int capabilities) {
+        Map drivers = new LinkedHashMap();
+        drivers.put("classes", tokenCostDriver(classes, CLASS_TOKEN_WEIGHT));
+        drivers.put("tests", tokenCostDriver(tests, TEST_TOKEN_WEIGHT));
+        drivers.put("docs", tokenCostDriver(docs, DOC_TOKEN_WEIGHT));
+        drivers.put("dependencies", tokenCostDriver(dependencies, DEPENDENCY_TOKEN_WEIGHT));
+        drivers.put("capabilities", tokenCostDriver(capabilities, CAPABILITY_TOKEN_WEIGHT));
+        return drivers;
+    }
+
+    private static Map tokenCostDriver(int count, int tokenWeight) {
+        Map driver = new LinkedHashMap();
+        driver.put("count", count);
+        driver.put("tokenWeight", tokenWeight);
+        driver.put("estimatedTokens", count * tokenWeight);
+        return driver;
+    }
+
+    private static List<Map> largestContextContributors(RepositorySnapshot snapshot) {
+        List<Map> contributors = new ArrayList();
+        appendContextContributors(contributors, snapshot.classes, "class", CLASS_TOKEN_WEIGHT);
+        appendContextContributors(contributors, snapshot.tests, "test", TEST_TOKEN_WEIGHT);
+        appendContextContributors(contributors, snapshot.docs, "doc", DOC_TOKEN_WEIGHT);
+        contributors.sort(Comparator.comparingInt((Map item) -> number(item, "estimatedTokens")).reversed()
+                .thenComparing(item -> String.valueOf(item.get("path"))));
+        return contributors.stream().limit(10).toList();
+    }
+
+    private static void appendContextContributors(List<Map> contributors, List facts, String kind, int fallbackTokens) {
+        for (Object item : facts) {
+            if (!(item instanceof Map fact)) continue;
+            Map contributor = new LinkedHashMap();
+            contributor.put("kind", kind);
+            contributor.put("name", contextName(fact, kind));
+            contributor.put("path", String.valueOf(fact.getOrDefault("sourceFile", fact.getOrDefault("path", ""))));
+            int lineCount = number(fact, "lineCount");
+            if (lineCount > 0) contributor.put("lineCount", lineCount);
+            contributor.put("estimatedTokens", lineCount > 0 ? lineCount * 12 : fallbackTokens);
+            contributors.add(contributor);
+        }
+    }
+
+    private static String contextName(Map fact, String kind) {
+        if ("class".equals(kind)) return String.valueOf(fact.getOrDefault("class", ""));
+        if ("test".equals(kind)) return String.valueOf(fact.getOrDefault("testClass", ""));
+        return String.valueOf(fact.getOrDefault("title", fact.getOrDefault("path", "")));
+    }
+
+    private static Map reasoningCostDrivers(Map codeComplexity) {
+        Map drivers = new LinkedHashMap();
+        drivers.put("maxMethodCognitiveComplexity", codeComplexity.getOrDefault("maxMethodCognitiveComplexity", 0));
+        drivers.put("maxMethodCyclomaticComplexity", codeComplexity.getOrDefault("maxMethodCyclomaticComplexity", 0));
+        drivers.put("averageMethodCognitiveComplexity", codeComplexity.getOrDefault("averageMethodCognitiveComplexity", 0.0d));
+        drivers.put("averageMethodCyclomaticComplexity", codeComplexity.getOrDefault("averageMethodCyclomaticComplexity", 0.0d));
+        drivers.put("topCognitiveMethods", codeComplexity.getOrDefault("topCognitiveMethods", List.of()));
+        return drivers;
+    }
+
+    private static List<String> aiCostRecommendations(RepositorySnapshot snapshot, Map codeComplexity, int estimatedTokens) {
+        List<String> recommendations = new ArrayList();
+        if (estimatedTokens > 12000) {
+            recommendations.add("Create smaller capability-specific context packs before AI review; estimated context exceeds a practical 12k-token working set.");
+        }
+        if (number(codeComplexity, "maxMethodCognitiveComplexity") > 15) {
+            recommendations.add("Split the highest-cognitive-complexity methods before adding behavior; this reduces reasoning and retry cost.");
+        }
+        if (number(codeComplexity, "maxMethodCyclomaticComplexity") > 10) {
+            recommendations.add("Add focused tests or simplify branching for methods with high McCabe complexity.");
+        }
+        if (snapshot.classes.size() > 80) {
+            recommendations.add("Split oversized code clusters or improve capability selectors so Copilot receives fewer unrelated classes.");
+        }
+        if (snapshot.docs.size() > 40) {
+            recommendations.add("Consolidate duplicate or stale documentation so AI context is not spent on redundant docs.");
+        }
+        if (recommendations.isEmpty()) recommendations.add("No dominant AI cost driver detected; keep context packs focused and monitor trend deltas.");
+        return List.copyOf(recommendations);
     }
 
     private static List<Map> complexityMethodFacts(RepositorySnapshot snapshot) {

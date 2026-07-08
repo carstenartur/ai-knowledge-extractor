@@ -3,7 +3,9 @@ package org.aiknowledge.core;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.aiknowledge.core.linker.ClaimVerifier;
 
@@ -57,11 +59,16 @@ public final class AiKnowledgeRunner {
         int claimFailures = ClaimVerifier.countErrorFailures(snapshot.claims);
         Map knowledgeGates = KnowledgeQualityGate.evaluate(options, snapshot);
         boolean knowledgeGatesPassed = Boolean.TRUE.equals(knowledgeGates.get("passed"));
-        boolean passed = debt <= options.maxCognitiveDebt() && trendViolations == 0 && claimFailures == 0 && knowledgeGatesPassed && (!options.failOnWarnings() || warnings == 0);
+        List<String> violations = qualityGateViolations(options, complexity, debt, trendViolations, claimFailures, knowledgeGatesPassed, warnings);
+        boolean passed = violations.isEmpty();
         Map check = new LinkedHashMap();
         check.put("passed", passed);
+        check.put("aiContextDebt", complexity.getOrDefault("aiContextDebt", debt));
         check.put("aiCognitiveDebt", debt);
         check.put("maxCognitiveDebt", options.maxCognitiveDebt());
+        check.put("codeComplexity", complexity.getOrDefault("codeComplexity", Map.of()));
+        check.put("methodComplexityThresholds", methodComplexityThresholds(options));
+        check.put("violations", violations);
         check.put("warningCount", warnings);
         check.put("failOnWarnings", options.failOnWarnings());
         check.put("trendViolationCount", trendViolations);
@@ -71,9 +78,85 @@ public final class AiKnowledgeRunner {
         check.put("knowledgeQualityGates", knowledgeGates);
         StableIo.writeJson(options.outputDirectory().resolve("check.json"), check);
         if (!passed) {
-            throw new IOException("AI knowledge quality gate failed: debt=" + debt + ", warnings=" + warnings + ", trendViolations=" + trendViolations + ", claimFailures=" + claimFailures + ", knowledgeGatesPassed=" + knowledgeGatesPassed);
+            throw new IOException("AI knowledge quality gate failed: " + String.join("; ", violations));
         }
         return check;
+    }
+
+    private static List<String> qualityGateViolations(
+            ExtractionOptions options,
+            Map complexity,
+            double debt,
+            int trendViolations,
+            int claimFailures,
+            boolean knowledgeGatesPassed,
+            int warnings) {
+        List<String> violations = new ArrayList<>();
+        if (debt > options.maxCognitiveDebt()) {
+            violations.add("aiContextDebt=" + debt + " > maxCognitiveDebt=" + options.maxCognitiveDebt());
+        }
+        Map code = codeComplexity(complexity);
+        addIntViolation(violations, code, "maxMethodCognitiveComplexity", options.maxMethodCognitiveComplexity());
+        addIntViolation(violations, code, "maxMethodCyclomaticComplexity", options.maxMethodCyclomaticComplexity());
+        addDoubleViolation(violations, code, "averageMethodCognitiveComplexity", options.maxAverageMethodCognitiveComplexity());
+        addDoubleViolation(violations, code, "averageMethodCyclomaticComplexity", options.maxAverageMethodCyclomaticComplexity());
+        addIntViolation(violations, code, "methodsAboveCognitiveThreshold", options.maxMethodsAboveCognitiveThreshold());
+        addIntViolation(violations, code, "methodsAboveCyclomaticThreshold", options.maxMethodsAboveCyclomaticThreshold());
+        if (trendViolations > 0) violations.add("trendViolations=" + trendViolations);
+        if (claimFailures > 0) violations.add("claimFailures=" + claimFailures);
+        if (!knowledgeGatesPassed) violations.add("knowledgeQualityGatesPassed=false");
+        if (options.failOnWarnings() && warnings > 0) violations.add("warnings=" + warnings + " while failOnWarnings=true");
+        return violations;
+    }
+
+    private static Map codeComplexity(Map complexity) {
+        Object code = complexity.get("codeComplexity");
+        return code instanceof Map map ? map : Map.of();
+    }
+
+    private static void addIntViolation(List<String> violations, Map metrics, String metric, int max) {
+        if (max == Integer.MAX_VALUE) return;
+        int actual = intMetric(metrics, metric);
+        if (actual > max) violations.add(metric + "=" + actual + " > " + metricLimitName(metric) + "=" + max);
+    }
+
+    private static void addDoubleViolation(List<String> violations, Map metrics, String metric, double max) {
+        if (max == Double.MAX_VALUE) return;
+        double actual = doubleMetric(metrics, metric);
+        if (actual > max) violations.add(metric + "=" + actual + " > " + metricLimitName(metric) + "=" + max);
+    }
+
+    private static String metricLimitName(String metric) {
+        return switch (metric) {
+            case "maxMethodCognitiveComplexity" -> "maxMethodCognitiveComplexity";
+            case "maxMethodCyclomaticComplexity" -> "maxMethodCyclomaticComplexity";
+            case "averageMethodCognitiveComplexity" -> "maxAverageMethodCognitiveComplexity";
+            case "averageMethodCyclomaticComplexity" -> "maxAverageMethodCyclomaticComplexity";
+            case "methodsAboveCognitiveThreshold" -> "maxMethodsAboveCognitiveThreshold";
+            case "methodsAboveCyclomaticThreshold" -> "maxMethodsAboveCyclomaticThreshold";
+            default -> "max" + metric;
+        };
+    }
+
+    private static int intMetric(Map metrics, String metric) {
+        Object value = metrics.get(metric);
+        return value instanceof Number number ? number.intValue() : 0;
+    }
+
+    private static double doubleMetric(Map metrics, String metric) {
+        Object value = metrics.get(metric);
+        return value instanceof Number number ? number.doubleValue() : 0.0d;
+    }
+
+    private static Map methodComplexityThresholds(ExtractionOptions options) {
+        Map thresholds = new LinkedHashMap();
+        thresholds.put("maxMethodCognitiveComplexity", options.maxMethodCognitiveComplexity());
+        thresholds.put("maxMethodCyclomaticComplexity", options.maxMethodCyclomaticComplexity());
+        thresholds.put("maxAverageMethodCognitiveComplexity", options.maxAverageMethodCognitiveComplexity());
+        thresholds.put("maxAverageMethodCyclomaticComplexity", options.maxAverageMethodCyclomaticComplexity());
+        thresholds.put("maxMethodsAboveCognitiveThreshold", options.maxMethodsAboveCognitiveThreshold());
+        thresholds.put("maxMethodsAboveCyclomaticThreshold", options.maxMethodsAboveCyclomaticThreshold());
+        return thresholds;
     }
 
     private static void writeAnalysisReports(ExtractionOptions options, Map complexity) throws IOException {

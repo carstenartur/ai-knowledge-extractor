@@ -22,6 +22,12 @@ public record ExtractionOptions(
         boolean requireClaimVerification,
         int minContextPackCount,
         int maxContextPackTokens,
+        int maxMethodCognitiveComplexity,
+        int maxMethodCyclomaticComplexity,
+        double maxAverageMethodCognitiveComplexity,
+        double maxAverageMethodCyclomaticComplexity,
+        int maxMethodsAboveCognitiveThreshold,
+        int maxMethodsAboveCyclomaticThreshold,
         List<Path> classpathEntries) {
 
     public ExtractionOptions(
@@ -31,7 +37,12 @@ public record ExtractionOptions(
             Path modelProfileDirectory,
             boolean failOnWarnings,
             double maxCognitiveDebt) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, false, null, false, false, 0, Integer.MAX_VALUE, List.of());
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory,
+                failOnWarnings, maxCognitiveDebt,
+                Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                false, null, false, false, 0, Integer.MAX_VALUE,
+                Integer.MAX_VALUE, Integer.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                Integer.MAX_VALUE, Integer.MAX_VALUE, List.of());
     }
 
     public ExtractionOptions(
@@ -44,7 +55,12 @@ public record ExtractionOptions(
             double maxCognitiveDebtIncrease,
             double maxConceptRadiusIncrease,
             double maxContextTokenIncrease) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, false, null, false, false, 0, Integer.MAX_VALUE, List.of());
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory,
+                failOnWarnings, maxCognitiveDebt,
+                maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease,
+                false, null, false, false, 0, Integer.MAX_VALUE,
+                Integer.MAX_VALUE, Integer.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                Integer.MAX_VALUE, Integer.MAX_VALUE, List.of());
     }
 
     public ExtractionOptions(
@@ -59,7 +75,13 @@ public record ExtractionOptions(
             double maxContextTokenIncrease,
             boolean empiricalBenchmarkEnabled,
             Path empiricalBenchmarkFixtureFile) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile, false, false, 0, Integer.MAX_VALUE, List.of());
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory,
+                failOnWarnings, maxCognitiveDebt,
+                maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease,
+                empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile,
+                false, false, 0, Integer.MAX_VALUE,
+                Integer.MAX_VALUE, Integer.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                Integer.MAX_VALUE, Integer.MAX_VALUE, List.of());
     }
 
     public ExtractionOptions(
@@ -78,7 +100,13 @@ public record ExtractionOptions(
             boolean requireClaimVerification,
             int minContextPackCount,
             int maxContextPackTokens) {
-        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory, failOnWarnings, maxCognitiveDebt, maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease, empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile, requireCapabilityEvidence, requireClaimVerification, minContextPackCount, maxContextPackTokens, List.of());
+        this(repositoryRoot, outputDirectory, seedDirectory, modelProfileDirectory,
+                failOnWarnings, maxCognitiveDebt,
+                maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease,
+                empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile,
+                requireCapabilityEvidence, requireClaimVerification, minContextPackCount, maxContextPackTokens,
+                Integer.MAX_VALUE, Integer.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE,
+                Integer.MAX_VALUE, Integer.MAX_VALUE, List.of());
     }
 
     public ExtractionOptions {
@@ -92,8 +120,14 @@ public record ExtractionOptions(
         maxCognitiveDebtIncrease = normalizeThreshold(maxCognitiveDebtIncrease);
         maxConceptRadiusIncrease = normalizeThreshold(maxConceptRadiusIncrease);
         maxContextTokenIncrease = normalizeThreshold(maxContextTokenIncrease);
+        maxAverageMethodCognitiveComplexity = normalizeThreshold(maxAverageMethodCognitiveComplexity);
+        maxAverageMethodCyclomaticComplexity = normalizeThreshold(maxAverageMethodCyclomaticComplexity);
         if (minContextPackCount < 0) minContextPackCount = 0;
         if (maxContextPackTokens < 0) maxContextPackTokens = Integer.MAX_VALUE;
+        maxMethodCognitiveComplexity = normalizeIntThreshold(maxMethodCognitiveComplexity);
+        maxMethodCyclomaticComplexity = normalizeIntThreshold(maxMethodCyclomaticComplexity);
+        maxMethodsAboveCognitiveThreshold = normalizeIntThreshold(maxMethodsAboveCognitiveThreshold);
+        maxMethodsAboveCyclomaticThreshold = normalizeIntThreshold(maxMethodsAboveCyclomaticThreshold);
         classpathEntries = List.copyOf(classpathEntries == null ? List.of() : classpathEntries);
     }
 
@@ -105,6 +139,9 @@ public record ExtractionOptions(
                 empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile,
                 requireCapabilityEvidence, requireClaimVerification,
                 minContextPackCount, maxContextPackTokens,
+                maxMethodCognitiveComplexity, maxMethodCyclomaticComplexity,
+                maxAverageMethodCognitiveComplexity, maxAverageMethodCyclomaticComplexity,
+                maxMethodsAboveCognitiveThreshold, maxMethodsAboveCyclomaticThreshold,
                 newClasspathEntries);
     }
 
@@ -124,5 +161,9 @@ public record ExtractionOptions(
     private static double normalizeThreshold(double value) {
         if (Double.isNaN(value) || value < 0.0d) return Double.MAX_VALUE;
         return value;
+    }
+
+    private static int normalizeIntThreshold(int value) {
+        return value < 0 ? Integer.MAX_VALUE : value;
     }
 }

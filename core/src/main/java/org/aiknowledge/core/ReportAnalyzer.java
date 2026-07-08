@@ -2,20 +2,33 @@ package org.aiknowledge.core;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 final class ReportAnalyzer {
+    private static final int CLASS_TOKEN_WEIGHT = 260;
+    private static final int TEST_TOKEN_WEIGHT = 140;
+    private static final int DOC_TOKEN_WEIGHT = 180;
+    private static final int DEPENDENCY_TOKEN_WEIGHT = 35;
+    private static final int CAPABILITY_TOKEN_WEIGHT = 80;
+
     Map complexity(ExtractionOptions options, RepositorySnapshot snapshot) throws IOException {
         int classes = snapshot.classes.size();
         int tests = snapshot.tests.size();
         int docs = snapshot.docs.size();
         int dependencies = snapshot.dependencies.size();
         int capabilities = snapshot.capabilities.size();
-        int estimatedTokens = classes * 260 + tests * 140 + docs * 180 + dependencies * 35 + capabilities * 80;
+        int estimatedTokens = classes * CLASS_TOKEN_WEIGHT
+                + tests * TEST_TOKEN_WEIGHT
+                + docs * DOC_TOKEN_WEIGHT
+                + dependencies * DEPENDENCY_TOKEN_WEIGHT
+                + capabilities * CAPABILITY_TOKEN_WEIGHT;
         double density = capabilities == 0 ? 0.0d : (classes + tests + docs) / (double) capabilities;
+        double contextDebt = Math.max(0.0d, estimatedTokens / 1000.0d + density - tests / 10.0d);
+        Map codeComplexity = codeComplexity(snapshot);
         List profileMetrics = ModelProfileSupport.profileMetrics(options, estimatedTokens);
         List warnings = new ArrayList();
         for (Object item : profileMetrics) {
@@ -34,7 +47,10 @@ final class ReportAnalyzer {
         report.put("contextLocality", Math.max(0.0d, 1.0d - density / 100.0d));
         report.put("compressionRatio", estimatedTokens == 0 ? 1.0d : Math.min(1.0d, 12000.0d / estimatedTokens));
         report.put("aiCognitiveComplexity", estimatedTokens / 1000.0d + dependencies * 0.5d);
-        report.put("aiCognitiveDebt", Math.max(0.0d, estimatedTokens / 1000.0d + density - tests / 10.0d));
+        report.put("aiContextDebt", contextDebt);
+        report.put("aiCognitiveDebt", contextDebt);
+        report.put("codeComplexity", codeComplexity);
+        report.put("aiCostDrivers", aiCostDrivers(snapshot, estimatedTokens, codeComplexity, classes, tests, docs, dependencies, capabilities));
         report.put("warningCount", warnings.size());
         report.put("warnings", warnings);
         report.put("modelProfiles", profileMetrics);
@@ -44,27 +60,19 @@ final class ReportAnalyzer {
 
     Map optimization(ExtractionOptions options, RepositorySnapshot snapshot, Map complexity) {
         List smells = new ArrayList();
-
-        // Hidden Concept: capabilities with no code, test or doc evidence at all
         for (Object item : snapshot.capabilities) {
             Map cap = (Map) item;
             if ("unknown".equals(cap.get("status"))) smells.add(smell("Hidden Concept", cap.get("id"), 300));
         }
-
-        // Weak Evidence: capabilities that have some evidence but lack full implementation+test coverage
         for (Object item : snapshot.capabilities) {
             Map cap = (Map) item;
             if ("partial".equals(cap.get("status"))) smells.add(smell("Weak Evidence", cap.get("id"), 200));
         }
-
-        // Large Concept: a capability backed by more than five implementing classes
         for (Object item : snapshot.capabilities) {
             Map cap = (Map) item;
             List classes = (List) cap.getOrDefault("classes", new ArrayList());
             if (classes.size() > 5) smells.add(smell("Large Concept", cap.get("id"), (classes.size() - 5) * 200));
         }
-
-        // Scattered Capability: a capability whose implementing classes span three or more packages
         for (Object item : snapshot.capabilities) {
             Map cap = (Map) item;
             List classes = (List) cap.getOrDefault("classes", new ArrayList());
@@ -75,8 +83,6 @@ final class ReportAnalyzer {
             }
             if (pkgs.size() >= 3) smells.add(smell("Scattered Capability", cap.get("id"), pkgs.size() * 150));
         }
-
-        // Concept Cycle: pairs of packages that directly depend on each other (A imports B and B imports A)
         Map packageDeps = new LinkedHashMap();
         for (Object item : snapshot.classes) {
             Map cls = (Map) item;
@@ -107,8 +113,6 @@ final class ReportAnalyzer {
                 }
             }
         }
-
-        // Duplicate Knowledge: documentation files that share the same normalised title
         Map normTitleCount = new LinkedHashMap();
         for (Object item : snapshot.docs) {
             Map doc = (Map) item;
@@ -119,15 +123,10 @@ final class ReportAnalyzer {
             int count = (Integer) normTitleCount.get(norm);
             if (count > 1) smells.add(smell("Duplicate Knowledge", norm, (count - 1) * 100));
         }
-
-        // Oversized Context Cluster: repository contains too many classes for a single AI context window
         if (snapshot.classes.size() > 80) smells.add(smell("Oversized Context Cluster", "repository", snapshot.classes.size() * 20));
-
-        // Rank smells by estimated token savings, highest impact first
         smells.sort((a, b) -> Integer.compare(
                 ((Number) ((Map) b).get("estimatedTokenSavings")).intValue(),
                 ((Number) ((Map) a).get("estimatedTokenSavings")).intValue()));
-
         List recommendations = new ArrayList();
         for (Object object : smells) {
             Map s = (Map) object;
@@ -176,65 +175,192 @@ final class ReportAnalyzer {
         return report;
     }
 
+    private static Map codeComplexity(RepositorySnapshot snapshot) {
+        List<Map> methods = complexityMethodFacts(snapshot);
+        int totalCyclomatic = sum(methods, "cyclomaticComplexity");
+        int totalCognitive = sum(methods, "cognitiveComplexity");
+        Map report = new LinkedHashMap();
+        report.put("methodCount", methods.size());
+        report.put("totalCyclomaticComplexity", totalCyclomatic);
+        report.put("maxMethodCyclomaticComplexity", max(methods, "cyclomaticComplexity"));
+        report.put("averageMethodCyclomaticComplexity", average(totalCyclomatic, methods.size()));
+        report.put("totalCognitiveComplexity", totalCognitive);
+        report.put("maxMethodCognitiveComplexity", max(methods, "cognitiveComplexity"));
+        report.put("averageMethodCognitiveComplexity", average(totalCognitive, methods.size()));
+        report.put("methodsAboveCyclomaticThreshold", countAbove(methods, "cyclomaticComplexity", 10));
+        report.put("methodsAboveCognitiveThreshold", countAbove(methods, "cognitiveComplexity", 15));
+        report.put("topCyclomaticMethods", topMethods(methods, "cyclomaticComplexity"));
+        report.put("topCognitiveMethods", topMethods(methods, "cognitiveComplexity"));
+        return report;
+    }
+
+    private static Map aiCostDrivers(
+            RepositorySnapshot snapshot,
+            int estimatedTokens,
+            Map codeComplexity,
+            int classes,
+            int tests,
+            int docs,
+            int dependencies,
+            int capabilities) {
+        Map report = new LinkedHashMap();
+        report.put("description", "Estimated AI cost drivers split context-token cost from local reasoning complexity.");
+        report.put("estimatedContextTokens", estimatedTokens);
+        report.put("tokenCostDrivers", tokenCostDrivers(classes, tests, docs, dependencies, capabilities));
+        report.put("largestContextContributors", largestContextContributors(snapshot));
+        report.put("reasoningCostDrivers", reasoningCostDrivers(codeComplexity));
+        report.put("recommendations", aiCostRecommendations(snapshot, codeComplexity, estimatedTokens));
+        return report;
+    }
+
+    private static Map tokenCostDrivers(int classes, int tests, int docs, int dependencies, int capabilities) {
+        Map drivers = new LinkedHashMap();
+        drivers.put("classes", tokenCostDriver(classes, CLASS_TOKEN_WEIGHT));
+        drivers.put("tests", tokenCostDriver(tests, TEST_TOKEN_WEIGHT));
+        drivers.put("docs", tokenCostDriver(docs, DOC_TOKEN_WEIGHT));
+        drivers.put("dependencies", tokenCostDriver(dependencies, DEPENDENCY_TOKEN_WEIGHT));
+        drivers.put("capabilities", tokenCostDriver(capabilities, CAPABILITY_TOKEN_WEIGHT));
+        return drivers;
+    }
+
+    private static Map tokenCostDriver(int count, int tokenWeight) {
+        Map driver = new LinkedHashMap();
+        driver.put("count", count);
+        driver.put("tokenWeight", tokenWeight);
+        driver.put("estimatedTokens", count * tokenWeight);
+        return driver;
+    }
+
+    private static List<Map> largestContextContributors(RepositorySnapshot snapshot) {
+        List<Map> contributors = new ArrayList();
+        appendContextContributors(contributors, snapshot.classes, "class", CLASS_TOKEN_WEIGHT);
+        appendContextContributors(contributors, snapshot.tests, "test", TEST_TOKEN_WEIGHT);
+        appendContextContributors(contributors, snapshot.docs, "doc", DOC_TOKEN_WEIGHT);
+        contributors.sort(Comparator.comparingInt((Map item) -> number(item, "estimatedTokens")).reversed()
+                .thenComparing(item -> String.valueOf(item.get("path"))));
+        return contributors.stream().limit(10).toList();
+    }
+
+    private static void appendContextContributors(List<Map> contributors, List facts, String kind, int fallbackTokens) {
+        for (Object item : facts) {
+            if (!(item instanceof Map fact)) continue;
+            Map contributor = new LinkedHashMap();
+            contributor.put("kind", kind);
+            contributor.put("name", contextName(fact, kind));
+            contributor.put("path", String.valueOf(fact.getOrDefault("sourceFile", fact.getOrDefault("path", ""))));
+            int lineCount = number(fact, "lineCount");
+            if (lineCount > 0) contributor.put("lineCount", lineCount);
+            contributor.put("estimatedTokens", lineCount > 0 ? lineCount * 12 : fallbackTokens);
+            contributors.add(contributor);
+        }
+    }
+
+    private static String contextName(Map fact, String kind) {
+        if ("class".equals(kind)) return String.valueOf(fact.getOrDefault("class", ""));
+        if ("test".equals(kind)) return String.valueOf(fact.getOrDefault("testClass", ""));
+        return String.valueOf(fact.getOrDefault("title", fact.getOrDefault("path", "")));
+    }
+
+    private static Map reasoningCostDrivers(Map codeComplexity) {
+        Map drivers = new LinkedHashMap();
+        drivers.put("maxMethodCognitiveComplexity", codeComplexity.getOrDefault("maxMethodCognitiveComplexity", 0));
+        drivers.put("maxMethodCyclomaticComplexity", codeComplexity.getOrDefault("maxMethodCyclomaticComplexity", 0));
+        drivers.put("averageMethodCognitiveComplexity", codeComplexity.getOrDefault("averageMethodCognitiveComplexity", 0.0d));
+        drivers.put("averageMethodCyclomaticComplexity", codeComplexity.getOrDefault("averageMethodCyclomaticComplexity", 0.0d));
+        drivers.put("topCognitiveMethods", codeComplexity.getOrDefault("topCognitiveMethods", List.of()));
+        return drivers;
+    }
+
+    private static List<String> aiCostRecommendations(RepositorySnapshot snapshot, Map codeComplexity, int estimatedTokens) {
+        List<String> recommendations = new ArrayList();
+        if (estimatedTokens > 12000) {
+            recommendations.add("Create smaller capability-specific context packs before AI review; estimated context exceeds a practical 12k-token working set.");
+        }
+        if (number(codeComplexity, "maxMethodCognitiveComplexity") > 15) {
+            recommendations.add("Split the highest-cognitive-complexity methods before adding behavior; this reduces reasoning and retry cost.");
+        }
+        if (number(codeComplexity, "maxMethodCyclomaticComplexity") > 10) {
+            recommendations.add("Add focused tests or simplify branching for methods with high McCabe complexity.");
+        }
+        if (snapshot.classes.size() > 80) {
+            recommendations.add("Split oversized code clusters or improve capability selectors so Copilot receives fewer unrelated classes.");
+        }
+        if (snapshot.docs.size() > 40) {
+            recommendations.add("Consolidate duplicate or stale documentation so AI context is not spent on redundant docs.");
+        }
+        if (recommendations.isEmpty()) recommendations.add("No dominant AI cost driver detected; keep context packs focused and monitor trend deltas.");
+        return List.copyOf(recommendations);
+    }
+
+    private static List<Map> complexityMethodFacts(RepositorySnapshot snapshot) {
+        List<Map> methods = new ArrayList();
+        collectComplexityMethodFacts(methods, snapshot.classes);
+        collectComplexityMethodFacts(methods, snapshot.tests);
+        return methods;
+    }
+
+    private static void collectComplexityMethodFacts(List<Map> methods, List facts) {
+        for (Object item : facts) {
+            if (!(item instanceof Map fact)) continue;
+            Object methodFacts = fact.get("methodFacts");
+            if (!(methodFacts instanceof List list)) continue;
+            for (Object method : list) {
+                if (method instanceof Map methodFact && methodFact.containsKey("cognitiveComplexity")) methods.add(methodFact);
+            }
+        }
+    }
+
+    private static List<Map> topMethods(List<Map> methods, String metric) {
+        return methods.stream()
+                .sorted(Comparator.comparingInt((Map method) -> number(method, metric)).reversed()
+                        .thenComparing(method -> String.valueOf(method.get("type")))
+                        .thenComparing(method -> String.valueOf(method.get("signature"))))
+                .limit(10)
+                .map(ReportAnalyzer::compactMethod)
+                .toList();
+    }
+
+    private static Map compactMethod(Map method) {
+        Map compact = new LinkedHashMap();
+        compact.put("type", method.get("type"));
+        compact.put("signature", method.get("signature"));
+        compact.put("sourceFile", method.get("sourceFile"));
+        if (method.containsKey("startLine")) compact.put("startLine", method.get("startLine"));
+        if (method.containsKey("endLine")) compact.put("endLine", method.get("endLine"));
+        compact.put("cyclomaticComplexity", method.get("cyclomaticComplexity"));
+        compact.put("cognitiveComplexity", method.get("cognitiveComplexity"));
+        compact.put("maxNestingDepth", method.get("maxNestingDepth"));
+        return compact;
+    }
+
+    private static int sum(List<Map> methods, String metric) { return methods.stream().mapToInt(method -> number(method, metric)).sum(); }
+    private static int max(List<Map> methods, String metric) { return methods.stream().mapToInt(method -> number(method, metric)).max().orElse(0); }
+    private static int countAbove(List<Map> methods, String metric, int threshold) { return (int) methods.stream().filter(method -> number(method, metric) > threshold).count(); }
+    private static double average(int total, int count) { return count == 0 ? 0.0d : Math.round((total / (double) count) * 100.0d) / 100.0d; }
+    private static int number(Map method, String metric) { Object value = method.get(metric); return value instanceof Number number ? number.intValue() : 0; }
+
     private static Map thresholds(ExtractionOptions options) {
         Map thresholds = new LinkedHashMap();
         thresholds.put("maxCognitiveDebt", options.maxCognitiveDebt());
+        thresholds.put("maxMethodCognitiveComplexity", options.maxMethodCognitiveComplexity());
+        thresholds.put("maxMethodCyclomaticComplexity", options.maxMethodCyclomaticComplexity());
+        thresholds.put("maxAverageMethodCognitiveComplexity", options.maxAverageMethodCognitiveComplexity());
+        thresholds.put("maxAverageMethodCyclomaticComplexity", options.maxAverageMethodCyclomaticComplexity());
+        thresholds.put("maxMethodsAboveCognitiveThreshold", options.maxMethodsAboveCognitiveThreshold());
+        thresholds.put("maxMethodsAboveCyclomaticThreshold", options.maxMethodsAboveCyclomaticThreshold());
         thresholds.put("failOnWarnings", options.failOnWarnings());
         thresholds.put("modelProfileDirectory", options.reportPath(options.modelProfileDirectory()));
         return thresholds;
     }
 
-    private static String budgetRisk(Map profile) {
-        if (Boolean.FALSE.equals(profile.get("compressedFitsHardLimit"))) return "high";
-        if (Boolean.FALSE.equals(profile.get("compressedFitsPracticalBudget"))) return "medium";
-        return "low";
-    }
-
-    private static String missingContextRisk(Map profile) {
-        double ratio = ((Number) profile.getOrDefault("targetCompressionRatio", 1.0d)).doubleValue();
-        if (ratio <= 0.4d) return "high";
-        if (ratio <= 0.7d) return "medium";
-        return "low";
-    }
-
-    private static String maxRisk(String left, String right) {
-        return rank(left) >= rank(right) ? left : right;
-    }
-
-    private static int rank(String risk) {
-        return switch (risk) {
-            case "high" -> 3;
-            case "medium" -> 2;
-            default -> 1;
-        };
-    }
-
-    private static Object recommended(List results) {
-        for (Object item : results) {
-            Map result = (Map) item;
-            if ("review".equals(result.get("profile"))) return "review";
-        }
-        for (Object item : results) {
-            Map result = (Map) item;
-            if ("low".equals(result.get("risk"))) return result.get("profile");
-        }
-        return results.isEmpty() ? "none" : ((Map) results.get(0)).get("profile");
-    }
-
+    private static String budgetRisk(Map profile) { if (Boolean.FALSE.equals(profile.get("compressedFitsHardLimit"))) return "high"; if (Boolean.FALSE.equals(profile.get("compressedFitsPracticalBudget"))) return "medium"; return "low"; }
+    private static String missingContextRisk(Map profile) { double ratio = ((Number) profile.getOrDefault("targetCompressionRatio", 1.0d)).doubleValue(); if (ratio <= 0.4d) return "high"; if (ratio <= 0.7d) return "medium"; return "low"; }
+    private static String maxRisk(String left, String right) { return rank(left) >= rank(right) ? left : right; }
+    private static int rank(String risk) { return switch (risk) { case "high" -> 3; case "medium" -> 2; default -> 1; }; }
+    private static Object recommended(List results) { for (Object item : results) { Map result = (Map) item; if ("review".equals(result.get("profile"))) return "review"; } for (Object item : results) { Map result = (Map) item; if ("low".equals(result.get("risk"))) return result.get("profile"); } return results.isEmpty() ? "none" : ((Map) results.get(0)).get("profile"); }
     private static String packageOf(String fqn) { int last = fqn.lastIndexOf('.'); return last < 0 ? "" : fqn.substring(0, last); }
     private static String normalizeTitle(String title) { return title.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", ""); }
-    private static String actionFor(String type) {
-        return switch (type) {
-            case "Large Concept" -> "Split the concept into smaller, more focused modules or packages.";
-            case "Hidden Concept" -> "Add implementation classes and tests to reveal and verify the capability.";
-            case "Concept Cycle" -> "Introduce an abstraction layer or extract shared code to break the cycle.";
-            case "Scattered Capability" -> "Consolidate capability classes into a single cohesive package.";
-            case "Weak Evidence" -> "Add test coverage and implementation to strengthen the evidence for this capability.";
-            case "Duplicate Knowledge" -> "Consolidate duplicate documentation into a single authoritative source.";
-            case "Oversized Context Cluster" -> "Modularize the repository by splitting large clusters into smaller bounded contexts.";
-            default -> "Improve locality, documentation and test evidence.";
-        };
-    }
+    private static String actionFor(String type) { return switch (type) { case "Large Concept" -> "Split the concept into smaller, more focused modules or packages."; case "Hidden Concept" -> "Add implementation classes and tests to reveal and verify the capability."; case "Concept Cycle" -> "Introduce an abstraction layer or extract shared code to break the cycle."; case "Scattered Capability" -> "Consolidate capability classes into a single cohesive package."; case "Weak Evidence" -> "Add test coverage and implementation to strengthen the evidence for this capability."; case "Duplicate Knowledge" -> "Consolidate duplicate documentation into a single authoritative source."; case "Oversized Context Cluster" -> "Modularize the repository by splitting large clusters into smaller bounded contexts."; default -> "Improve locality, documentation and test evidence."; }; }
     private static Map smell(String type, Object subject, int savings) { Map s = new LinkedHashMap(); s.put("type", type); s.put("subject", subject); s.put("estimatedTokenSavings", savings); return s; }
     private static Map after(Map before, List smells) { int savings = 0; for (Object item : smells) savings += ((Number) ((Map) item).get("estimatedTokenSavings")).intValue(); Map after = new LinkedHashMap(); int tokens = ((Number) before.get("estimatedContextTokens")).intValue(); after.put("estimatedContextTokens", Math.max(0, tokens - savings)); after.put("estimatedTokenSavings", savings); return after; }
     static String html(String title, Map report) { return "<!doctype html><html><head><meta charset=\"utf-8\"><title>" + title + "</title></head><body><h1>" + title + "</h1><pre>" + escape(JsonSupport.toJson(report)) + "</pre></body></html>\n"; }

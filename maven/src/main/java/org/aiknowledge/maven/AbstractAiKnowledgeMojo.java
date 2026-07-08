@@ -39,6 +39,18 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     protected int minContextPackCount;
     @Parameter(defaultValue = "2147483647")
     protected int maxContextPackTokens;
+    @Parameter(defaultValue = "2147483647")
+    protected int maxMethodCognitiveComplexity;
+    @Parameter(defaultValue = "2147483647")
+    protected int maxMethodCyclomaticComplexity;
+    @Parameter(defaultValue = "1.7976931348623157E308")
+    protected double maxAverageMethodCognitiveComplexity;
+    @Parameter(defaultValue = "1.7976931348623157E308")
+    protected double maxAverageMethodCyclomaticComplexity;
+    @Parameter(defaultValue = "2147483647")
+    protected int maxMethodsAboveCognitiveThreshold;
+    @Parameter(defaultValue = "2147483647")
+    protected int maxMethodsAboveCyclomaticThreshold;
     @Parameter(defaultValue = "basic")
     protected String javaProvider;
     @Parameter(defaultValue = "ast")
@@ -72,7 +84,14 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
                 requireCapabilityEvidence,
                 requireClaimVerification,
                 minContextPackCount,
-                maxContextPackTokens);
+                maxContextPackTokens,
+                systemInt("aiKnowledge.maxMethodCognitiveComplexity", maxMethodCognitiveComplexity),
+                systemInt("aiKnowledge.maxMethodCyclomaticComplexity", maxMethodCyclomaticComplexity),
+                systemDouble("aiKnowledge.maxAverageMethodCognitiveComplexity", maxAverageMethodCognitiveComplexity),
+                systemDouble("aiKnowledge.maxAverageMethodCyclomaticComplexity", maxAverageMethodCyclomaticComplexity),
+                systemInt("aiKnowledge.maxMethodsAboveCognitiveThreshold", maxMethodsAboveCognitiveThreshold),
+                systemInt("aiKnowledge.maxMethodsAboveCyclomaticThreshold", maxMethodsAboveCyclomaticThreshold),
+                List.of());
         List<Path> classpathPaths = resolveClasspath();
         return classpathPaths.isEmpty() ? base : base.withClasspathEntries(classpathPaths);
     }
@@ -103,6 +122,17 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
             return Double.parseDouble(value.trim());
         } catch (NumberFormatException ignored) {
             getLog().warn("Ignoring invalid numeric value for -D" + key + ": " + value);
+            return fallback;
+        }
+    }
+
+    private int systemInt(String key, int fallback) {
+        String value = System.getProperty(key);
+        if (value == null || value.isBlank()) return fallback;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException ignored) {
+            getLog().warn("Ignoring invalid integer value for -D" + key + ": " + value);
             return fallback;
         }
     }

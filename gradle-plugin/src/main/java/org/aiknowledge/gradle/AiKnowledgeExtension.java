@@ -23,6 +23,12 @@ public abstract class AiKnowledgeExtension {
     private final Property<Boolean> requireClaimVerification;
     private final Property<Integer> minContextPackCount;
     private final Property<Integer> maxContextPackTokens;
+    private final Property<Integer> maxMethodCognitiveComplexity;
+    private final Property<Integer> maxMethodCyclomaticComplexity;
+    private final Property<Double> maxAverageMethodCognitiveComplexity;
+    private final Property<Double> maxAverageMethodCyclomaticComplexity;
+    private final Property<Integer> maxMethodsAboveCognitiveThreshold;
+    private final Property<Integer> maxMethodsAboveCyclomaticThreshold;
     private final Property<String> javaProvider;
     private final Property<String> jdtMode;
     private final Property<String> jdtWorkspaceMode;
@@ -49,6 +55,12 @@ public abstract class AiKnowledgeExtension {
         this.requireClaimVerification = objects.property(Boolean.class).convention(false);
         this.minContextPackCount = objects.property(Integer.class).convention(0);
         this.maxContextPackTokens = objects.property(Integer.class).convention(Integer.MAX_VALUE);
+        this.maxMethodCognitiveComplexity = objects.property(Integer.class).convention(Integer.MAX_VALUE);
+        this.maxMethodCyclomaticComplexity = objects.property(Integer.class).convention(Integer.MAX_VALUE);
+        this.maxAverageMethodCognitiveComplexity = objects.property(Double.class).convention(Double.MAX_VALUE);
+        this.maxAverageMethodCyclomaticComplexity = objects.property(Double.class).convention(Double.MAX_VALUE);
+        this.maxMethodsAboveCognitiveThreshold = objects.property(Integer.class).convention(Integer.MAX_VALUE);
+        this.maxMethodsAboveCyclomaticThreshold = objects.property(Integer.class).convention(Integer.MAX_VALUE);
         this.javaProvider = objects.property(String.class).convention(System.getProperty("aiknowledge.javaProvider", "basic"));
         this.jdtMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.mode", "ast"));
         this.jdtWorkspaceMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.workspace.mode", "create"));
@@ -73,6 +85,12 @@ public abstract class AiKnowledgeExtension {
     public Property<Boolean> getRequireClaimVerification() { return requireClaimVerification; }
     public Property<Integer> getMinContextPackCount() { return minContextPackCount; }
     public Property<Integer> getMaxContextPackTokens() { return maxContextPackTokens; }
+    public Property<Integer> getMaxMethodCognitiveComplexity() { return maxMethodCognitiveComplexity; }
+    public Property<Integer> getMaxMethodCyclomaticComplexity() { return maxMethodCyclomaticComplexity; }
+    public Property<Double> getMaxAverageMethodCognitiveComplexity() { return maxAverageMethodCognitiveComplexity; }
+    public Property<Double> getMaxAverageMethodCyclomaticComplexity() { return maxAverageMethodCyclomaticComplexity; }
+    public Property<Integer> getMaxMethodsAboveCognitiveThreshold() { return maxMethodsAboveCognitiveThreshold; }
+    public Property<Integer> getMaxMethodsAboveCyclomaticThreshold() { return maxMethodsAboveCyclomaticThreshold; }
     public Property<String> getJavaProvider() { return javaProvider; }
     public Property<String> getJdtMode() { return jdtMode; }
     public Property<String> getJdtWorkspaceMode() { return jdtWorkspaceMode; }

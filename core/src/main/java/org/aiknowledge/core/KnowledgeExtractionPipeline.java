@@ -31,6 +31,7 @@ final class KnowledgeExtractionPipeline {
     private final CapabilityLinker capabilityLinker;
     private final ClaimVerifier claimVerifier;
     private final SeedContextGenerator seedContextGenerator;
+    private final CodeComplexityAnalyzer codeComplexityAnalyzer;
 
     KnowledgeExtractionPipeline() {
         this(loadJavaKnowledgeProvider());
@@ -45,7 +46,8 @@ final class KnowledgeExtractionPipeline {
                 javaKnowledgeProvider,
                 new CapabilityLinker(),
                 new ClaimVerifier(),
-                new SeedContextGenerator());
+                new SeedContextGenerator(),
+                new CodeComplexityAnalyzer());
     }
 
     private KnowledgeExtractionPipeline(
@@ -56,7 +58,8 @@ final class KnowledgeExtractionPipeline {
             JavaKnowledgeProvider javaKnowledgeProvider,
             CapabilityLinker capabilityLinker,
             ClaimVerifier claimVerifier,
-            SeedContextGenerator seedContextGenerator) {
+            SeedContextGenerator seedContextGenerator,
+            CodeComplexityAnalyzer codeComplexityAnalyzer) {
         this.inventoryScanner = inventoryScanner;
         this.moduleScanner = moduleScanner;
         this.markdownScanner = markdownScanner;
@@ -65,6 +68,7 @@ final class KnowledgeExtractionPipeline {
         this.capabilityLinker = capabilityLinker;
         this.claimVerifier = claimVerifier;
         this.seedContextGenerator = seedContextGenerator;
+        this.codeComplexityAnalyzer = codeComplexityAnalyzer;
     }
 
     private static JavaKnowledgeProvider loadJavaKnowledgeProvider() {
@@ -116,7 +120,7 @@ final class KnowledgeExtractionPipeline {
         List<Path> sourceRoots = sourceRoots(root, snapshot.modules);
         List<Path> testSourceRoots = testSourceRoots(root, snapshot.modules);
         for (JavaSourceUnit source : javaSources) {
-            JavaKnowledgeResult result = javaKnowledgeProvider.extract(new JavaKnowledgeRequest(
+            JavaKnowledgeRequest request = new JavaKnowledgeRequest(
                     root,
                     source.file(),
                     source.path(),
@@ -127,7 +131,9 @@ final class KnowledgeExtractionPipeline {
                     options.classpathEntries(),
                     Map.of(
                             "javaProvider", System.getProperty("aiknowledge.javaProvider", "basic"),
-                            "jdtMode", System.getProperty("aiknowledge.jdt.mode", "ast"))));
+                            "jdtMode", System.getProperty("aiknowledge.jdt.mode", "ast")));
+            JavaKnowledgeResult result = javaKnowledgeProvider.extract(request);
+            result = codeComplexityAnalyzer.enrich(request, result);
             snapshot.classes.addAll(enrichFacts(result.classFacts(), result));
             snapshot.tests.addAll(enrichFacts(result.testFacts(), result));
         }

@@ -88,7 +88,14 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                     extension.getRequireCapabilityEvidence().get(),
                     extension.getRequireClaimVerification().get(),
                     extension.getMinContextPackCount().get(),
-                    extension.getMaxContextPackTokens().get());
+                    extension.getMaxContextPackTokens().get(),
+                    extension.getMaxMethodCognitiveComplexity().get(),
+                    extension.getMaxMethodCyclomaticComplexity().get(),
+                    extension.getMaxAverageMethodCognitiveComplexity().get(),
+                    extension.getMaxAverageMethodCyclomaticComplexity().get(),
+                    extension.getMaxMethodsAboveCognitiveThreshold().get(),
+                    extension.getMaxMethodsAboveCyclomaticThreshold().get(),
+                    List.of());
             List<Path> classpathEntries = resolveClasspath(project);
             if (!classpathEntries.isEmpty()) options = options.withClasspathEntries(classpathEntries);
             switch (mode) {

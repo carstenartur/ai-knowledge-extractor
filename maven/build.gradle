@@ -1,9 +1,11 @@
 description = 'Maven plugin module.'
 
+def pluginVersion = version.toString()
+
 processResources {
     filesMatching('META-INF/maven/plugin.xml') {
         filter { line ->
-            def replacement = java.util.regex.Matcher.quoteReplacement('<version>' + project.version + '</version>')
+            def replacement = java.util.regex.Matcher.quoteReplacement('<version>' + pluginVersion + '</version>')
             line.replaceFirst('<version>[^<]+</version>', replacement)
         }
     }

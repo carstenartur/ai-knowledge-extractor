@@ -25,12 +25,13 @@ jobs:
         with:
           gradle-version: '9.5.1'
       - name: Build
-        run: gradle build
+        run: gradle build --warning-mode all
       - name: Publish artifacts to Maven local
-        run: gradle publishToMavenLocal
+        run: gradle publishToMavenLocal --warning-mode all
       - name: Verify Gradle consumer fixture
         run: |
           gradle -p examples/fixtures/gradle-consumer \
+            --warning-mode all \
             generateAiKnowledgeIndex \
             analyzeAiComplexity \
             optimizeAiKnowledge \

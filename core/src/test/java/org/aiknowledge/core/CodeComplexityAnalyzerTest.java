@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.aiknowledge.core.javaspi.JavaKnowledgeRequest;
 import org.aiknowledge.core.javaspi.JavaKnowledgeResult;
 import org.junit.jupiter.api.Test;
@@ -90,6 +92,26 @@ class CodeComplexityAnalyzerTest {
         assertTrue(number(method, "cognitiveComplexity") >= 6, "expected cognitive decision and nesting cost");
         assertTrue(number(method, "maxNestingDepth") >= 2);
         assertTrue(method.containsKey("decisionPointsByKind"));
+    }
+
+    @Test
+    void multipleTopLevelTypesAreAllAnalyzed() throws Exception {
+        JavaKnowledgeResult result = analyze("""
+                package example;
+                public class First {
+                    public int one() { return 1; }
+                }
+                class Second {
+                    public int two() { return 2; }
+                }
+                """);
+
+        Set<String> types = new HashSet<>();
+        for (Object m : result.methodFacts()) {
+            types.add(String.valueOf(((Map<?, ?>) m).get("type")));
+        }
+        assertTrue(types.contains("example.First"), "First type should be analyzed");
+        assertTrue(types.contains("example.Second"), "Second type should be analyzed");
     }
 
     private JavaKnowledgeResult analyze(String source) throws Exception {

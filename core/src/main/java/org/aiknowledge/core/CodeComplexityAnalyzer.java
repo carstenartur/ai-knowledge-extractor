@@ -69,15 +69,16 @@ final class CodeComplexityAnalyzer {
         CompilationUnit unit = parse(source);
         List<?> types = unit.types();
         if (types.isEmpty()) return List.of();
-        Object firstType = types.get(0);
-        String simpleName = simpleName(firstType);
-        if (simpleName.isBlank()) return List.of();
         String packageName = unit.getPackage() == null ? "" : unit.getPackage().getName().getFullyQualifiedName();
-        String typeName = packageName.isBlank() ? simpleName : packageName + "." + simpleName;
         String sourcePath = request.sourcePath();
         List<Map<String, Object>> facts = new ArrayList<>();
-        for (MethodDeclaration method : methodDeclarations(firstType)) {
-            facts.add(analyzeMethod(unit, typeName, sourcePath, method));
+        for (Object typeObj : types) {
+            String simpleName = simpleName(typeObj);
+            if (simpleName.isBlank()) continue;
+            String typeName = packageName.isBlank() ? simpleName : packageName + "." + simpleName;
+            for (MethodDeclaration method : methodDeclarations(typeObj)) {
+                facts.add(analyzeMethod(unit, typeName, sourcePath, method));
+            }
         }
         return List.copyOf(facts);
     }
@@ -117,7 +118,10 @@ final class CodeComplexityAnalyzer {
     }
 
     private static String methodKey(Map<String, Object> fact) {
-        return String.valueOf(fact.getOrDefault("type", "")) + "#" + String.valueOf(fact.getOrDefault("signature", ""));
+        String sig = String.valueOf(fact.getOrDefault("signature", ""));
+        int parenIndex = sig.indexOf('(');
+        String normalizedSig = parenIndex >= 0 ? sig.substring(0, parenIndex).trim() : sig;
+        return String.valueOf(fact.getOrDefault("type", "")) + "#" + normalizedSig;
     }
 
     private static Map<String, Object> copyOf(Map<?, ?> source) {

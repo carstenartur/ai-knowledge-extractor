@@ -4,7 +4,7 @@
   <description>Generates deterministic repository knowledge indexes and reports.</description>
   <groupId>org.aiknowledge</groupId>
   <artifactId>ai-knowledge-maven-plugin</artifactId>
-  <version>0.1.7-SNAPSHOT</version>
+  <version>0.1.7</version>
   <goalPrefix>ai-knowledge</goalPrefix>
   <mojos>
     <mojo>

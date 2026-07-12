@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/release-0.1.6-once.yml'
 
+concurrency:
+  group: ai-knowledge-extractor-release-0.1.6
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write

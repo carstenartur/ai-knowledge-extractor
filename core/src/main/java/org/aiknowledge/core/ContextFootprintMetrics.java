@@ -47,7 +47,8 @@ final class ContextFootprintMetrics {
         double evidencePenalty = productionTokens <= 0
                 ? 0.0d
                 : 15.0d * Math.max(0.0d, 0.25d - Math.min(0.25d, evidenceRatio)) / 0.25d;
-        double normalizedDebt = round2(Math.max(0.0d, Math.min(100.0d, 100.0d * p90ContextShare + evidencePenalty)));
+        double rawDebt = 100.0d * p90ContextShare + evidencePenalty;
+        double normalizedDebt = round2(Math.min(100.0d, rawDebt));
         double efficiency = round2(Math.max(0.0d, 100.0d - normalizedDebt));
 
         Map<String, Object> result = new LinkedHashMap<>();

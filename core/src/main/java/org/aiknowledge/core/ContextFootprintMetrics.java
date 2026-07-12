@@ -10,8 +10,8 @@ import java.util.Set;
 
 /**
  * Derives context-footprint metrics from extracted facts without treating every
- * class as an equal fixed cost. The estimates intentionally remain tokenizer
- * independent, but use observed line counts and capability-local working sets.
+ * class as an equal fixed cost. Estimates use observed line counts and the most
+ * precise available capability-local selector tier.
  */
 final class ContextFootprintMetrics {
     private static final int CODE_TOKENS_PER_LINE = 8;
@@ -24,9 +24,12 @@ final class ContextFootprintMetrics {
     }
 
     static Map<String, Object> calculate(RepositorySnapshot snapshot) {
-        List<FactSize> production = sizes(snapshot.classes, "class", CODE_TOKENS_PER_LINE, FALLBACK_CLASS_TOKENS);
-        List<FactSize> tests = sizes(snapshot.tests, "test", CODE_TOKENS_PER_LINE, FALLBACK_TEST_TOKENS);
-        List<FactSize> docs = sizes(snapshot.docs, "doc", DOC_TOKENS_PER_LINE, FALLBACK_DOC_TOKENS);
+        List<FactSize> production = sizes(
+                snapshot.classes, "class", CODE_TOKENS_PER_LINE, FALLBACK_CLASS_TOKENS);
+        List<FactSize> tests = sizes(
+                snapshot.tests, "test", CODE_TOKENS_PER_LINE, FALLBACK_TEST_TOKENS);
+        List<FactSize> docs = sizes(
+                snapshot.docs, "doc", DOC_TOKENS_PER_LINE, FALLBACK_DOC_TOKENS);
 
         int productionTokens = tokens(production);
         int testTokens = tokens(tests);
@@ -41,7 +44,9 @@ final class ContextFootprintMetrics {
         int p90WorkingSet = measured ? percentile(samples.workingSets(), 0.90d) : 0;
         double p90ContextShare = measured ? ratio(p90WorkingSet, repositoryTokens) : 0.0d;
         double evidenceRatio = ratio(testTokens + documentationTokens, productionTokens);
-        double tokensPerKloc = totalLines == 0 ? 0.0d : repositoryTokens * 1000.0d / totalLines;
+        double tokensPerKloc = totalLines == 0
+                ? 0.0d
+                : repositoryTokens * 1000.0d / totalLines;
 
         double evidencePenalty = productionTokens <= 0
                 ? 0.0d
@@ -58,6 +63,11 @@ final class ContextFootprintMetrics {
         referenceSources.put("ownerModules", samples.ownerModuleReferenceCount());
         referenceSources.put("matchedPackages", samples.matchedPackageReferenceCount());
         referenceSources.put("packages", samples.explicitPackageReferenceCount());
+
+        Map<String, Object> workingSetSources = new LinkedHashMap<>();
+        workingSetSources.put("typeOrPackage", samples.preciseSelectorSamples());
+        workingSetSources.put("ownerModules", samples.ownerModuleFallbackSamples());
+        workingSetSources.put("modules", samples.moduleFallbackSamples());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("schemaVersion", 3);
@@ -83,7 +93,8 @@ final class ContextFootprintMetrics {
         result.put("unresolvedCapabilityModuleReferences", samples.unresolvedModuleReferenceCount());
         result.put("unresolvedCapabilityPackageReferences", samples.unresolvedPackageReferenceCount());
         result.put("capabilityReferenceSources", referenceSources);
-        result.put("method", "line-weighted-capability-selector-working-set-proxy");
+        result.put("capabilityWorkingSetSources", workingSetSources);
+        result.put("method", "line-weighted-prioritized-capability-selector-working-set-proxy");
         return result;
     }
 
@@ -94,7 +105,7 @@ final class ContextFootprintMetrics {
         for (FactSize fact : production) {
             byClass.put(fact.name(), fact);
         }
-        Map<String, String> modulePaths = modulePaths(snapshot.modules);
+        ModuleIndex moduleIndex = moduleIndex(snapshot.modules);
 
         List<Integer> workingSets = new ArrayList<>();
         Counters counters = new Counters();
@@ -102,107 +113,171 @@ final class ContextFootprintMetrics {
             if (!(item instanceof Map capability)) continue;
             counters.capabilityCount++;
 
-            Set<String> typeSelectors = new LinkedHashSet<>();
-            counters.matchedTypeReferences += addReferences(typeSelectors, capability.get("matchedTypes"));
-            counters.explicitTypeReferences += addReferences(typeSelectors, capability.get("classes"));
+            Set<String> matchedTypes = references(capability.get("matchedTypes"));
+            Set<String> explicitTypes = references(capability.get("classes"));
+            Set<String> matchedPackages = references(capability.get("matchedPackages"));
+            Set<String> explicitPackages = references(capability.get("packages"));
+            Set<String> ownerModules = references(capability.get("ownerModules"));
+            Set<String> matchedModules = references(capability.get("matchedModules"));
+            Set<String> explicitModules = references(capability.get("modules"));
 
-            Set<String> moduleSelectors = new LinkedHashSet<>();
-            counters.matchedModuleReferences += addReferences(moduleSelectors, capability.get("matchedModules"));
-            counters.explicitModuleReferences += addReferences(moduleSelectors, capability.get("modules"));
-            counters.ownerModuleReferences += addReferences(moduleSelectors, capability.get("ownerModules"));
+            counters.matchedTypeReferences += matchedTypes.size();
+            counters.explicitTypeReferences += explicitTypes.size();
+            counters.matchedPackageReferences += matchedPackages.size();
+            counters.explicitPackageReferences += explicitPackages.size();
+            counters.ownerModuleReferences += ownerModules.size();
+            counters.matchedModuleReferences += matchedModules.size();
+            counters.explicitModuleReferences += explicitModules.size();
 
-            Set<String> packageSelectors = new LinkedHashSet<>();
-            counters.matchedPackageReferences += addReferences(packageSelectors, capability.get("matchedPackages"));
-            counters.explicitPackageReferences += addReferences(packageSelectors, capability.get("packages"));
-
-            if (typeSelectors.isEmpty() && moduleSelectors.isEmpty() && packageSelectors.isEmpty()) {
+            Set<String> typeSelectors = union(matchedTypes, explicitTypes);
+            Set<String> packageSelectors = union(matchedPackages, explicitPackages);
+            Set<String> generalModules = union(matchedModules, explicitModules);
+            if (typeSelectors.isEmpty() && packageSelectors.isEmpty()
+                    && ownerModules.isEmpty() && generalModules.isEmpty()) {
                 counters.withoutSelectors++;
                 continue;
             }
 
             Map<String, FactSize> selected = new LinkedHashMap<>();
-            for (String className : typeSelectors) {
-                FactSize fact = byClass.get(className);
-                if (fact == null) {
-                    counters.unresolvedTypeReferences++;
-                } else {
-                    selected.put(fact.name(), fact);
-                }
-            }
-            for (String module : moduleSelectors) {
-                int before = selected.size();
-                for (FactSize fact : production) {
-                    if (matchesModule(fact, module, modulePaths)) {
-                        selected.put(fact.name(), fact);
-                    }
-                }
-                if (selected.size() == before && production.stream()
-                        .noneMatch(fact -> matchesModule(fact, module, modulePaths))) {
-                    counters.unresolvedModuleReferences++;
-                }
-            }
-            for (String packageName : packageSelectors) {
-                int before = selected.size();
-                for (FactSize fact : production) {
-                    if (matchesPackage(fact, packageName)) {
-                        selected.put(fact.name(), fact);
-                    }
-                }
-                if (selected.size() == before && production.stream()
-                        .noneMatch(fact -> matchesPackage(fact, packageName))) {
-                    counters.unresolvedPackageReferences++;
-                }
+            resolveTypes(typeSelectors, byClass, selected, counters);
+            resolvePackages(packageSelectors, production, selected, counters);
+            if (!selected.isEmpty()) {
+                counters.preciseSelectorSamples++;
+                workingSets.add(tokens(selected.values()));
+                continue;
             }
 
-            if (selected.isEmpty()) {
-                counters.withoutResolvedTypes++;
+            resolveModules(ownerModules, production, moduleIndex, selected, counters);
+            if (!selected.isEmpty()) {
+                counters.ownerModuleFallbackSamples++;
+                workingSets.add(tokens(selected.values()));
+                continue;
+            }
+
+            resolveModules(generalModules, production, moduleIndex, selected, counters);
+            if (!selected.isEmpty()) {
+                counters.moduleFallbackSamples++;
+                workingSets.add(tokens(selected.values()));
             } else {
-                workingSets.add(selected.values().stream().mapToInt(FactSize::tokens).sum());
+                counters.withoutResolvedTypes++;
             }
         }
         workingSets.sort(Comparator.naturalOrder());
         return counters.toSamples(workingSets);
     }
 
-    private static Map<String, String> modulePaths(List modules) {
-        Map<String, String> result = new LinkedHashMap<>();
+    private static void resolveTypes(
+            Set<String> selectors,
+            Map<String, FactSize> byClass,
+            Map<String, FactSize> selected,
+            Counters counters) {
+        for (String className : selectors) {
+            FactSize fact = byClass.get(className);
+            if (fact == null) {
+                counters.unresolvedTypeReferences++;
+            } else {
+                selected.put(fact.name(), fact);
+            }
+        }
+    }
+
+    private static void resolvePackages(
+            Set<String> selectors,
+            List<FactSize> production,
+            Map<String, FactSize> selected,
+            Counters counters) {
+        for (String packageName : selectors) {
+            boolean matched = false;
+            for (FactSize fact : production) {
+                if (matchesPackage(fact, packageName)) {
+                    selected.put(fact.name(), fact);
+                    matched = true;
+                }
+            }
+            if (!matched) counters.unresolvedPackageReferences++;
+        }
+    }
+
+    private static void resolveModules(
+            Set<String> selectors,
+            List<FactSize> production,
+            ModuleIndex moduleIndex,
+            Map<String, FactSize> selected,
+            Counters counters) {
+        for (String moduleName : selectors) {
+            boolean matched = false;
+            for (FactSize fact : production) {
+                if (matchesModule(fact, moduleName, moduleIndex)) {
+                    selected.put(fact.name(), fact);
+                    matched = true;
+                }
+            }
+            if (!matched) counters.unresolvedModuleReferences++;
+        }
+    }
+
+    private static ModuleIndex moduleIndex(List modules) {
+        Map<String, String> paths = new LinkedHashMap<>();
+        List<String> nestedPaths = new ArrayList<>();
         for (Object item : modules) {
             if (!(item instanceof Map module)) continue;
             String name = text(module.get("name"));
             String path = normalizePath(text(module.get("path")));
-            if (!name.isEmpty()) result.put(name, path);
+            if (name.isEmpty()) continue;
+            paths.put(name, path);
+            if (!path.isEmpty()) nestedPaths.add(path);
         }
-        return result;
+        nestedPaths.sort(Comparator.naturalOrder());
+        return new ModuleIndex(Map.copyOf(paths), List.copyOf(nestedPaths));
     }
 
     private static boolean matchesModule(
             FactSize fact,
             String moduleSelector,
-            Map<String, String> modulePaths) {
+            ModuleIndex moduleIndex) {
         String selector = moduleSelector.trim();
         if (selector.isEmpty()) return false;
         if (selector.equals(fact.moduleName())) return true;
-        String path = normalizePath(modulePaths.getOrDefault(selector, selector));
-        if (path.isEmpty()) return false;
-        return fact.sourceFile().equals(path) || fact.sourceFile().startsWith(path + "/");
+
+        boolean knownModule = moduleIndex.paths().containsKey(selector);
+        String path = knownModule
+                ? moduleIndex.paths().get(selector)
+                : normalizePath(selector);
+        if (path.isEmpty()) {
+            return knownModule && moduleIndex.nestedPaths().stream()
+                    .noneMatch(nested -> matchesPath(fact.sourceFile(), nested));
+        }
+        return matchesPath(fact.sourceFile(), path);
+    }
+
+    private static boolean matchesPath(String sourceFile, String path) {
+        return sourceFile.equals(path) || sourceFile.startsWith(path + "/");
     }
 
     private static boolean matchesPackage(FactSize fact, String packageSelector) {
         String selector = packageSelector.trim();
         if (selector.isEmpty()) return false;
-        return fact.packageName().equals(selector) || fact.packageName().startsWith(selector + ".");
+        return fact.packageName().equals(selector)
+                || fact.packageName().startsWith(selector + ".");
     }
 
-    private static int addReferences(Set<String> target, Object value) {
-        int before = target.size();
+    @SafeVarargs
+    private static Set<String> union(Set<String>... values) {
+        Set<String> result = new LinkedHashSet<>();
+        for (Set<String> value : values) result.addAll(value);
+        return result;
+    }
+
+    private static Set<String> references(Object value) {
+        Set<String> result = new LinkedHashSet<>();
         if (value instanceof List<?> list) {
-            for (Object item : list) addReference(target, item);
-        } else if (value instanceof String text && (text.contains(",") || text.contains(";"))) {
-            for (String item : text.split("[,;]")) addReference(target, item);
+            for (Object item : list) addReference(result, item);
+        } else if (value instanceof String string && (string.contains(",") || string.contains(";"))) {
+            for (String item : string.split("[,;]")) addReference(result, item);
         } else {
-            addReference(target, value);
+            addReference(result, value);
         }
-        return target.size() - before;
+        return result;
     }
 
     private static void addReference(Set<String> target, Object value) {
@@ -210,7 +285,11 @@ final class ContextFootprintMetrics {
         if (!name.isEmpty() && !"null".equals(name)) target.add(name);
     }
 
-    private static List<FactSize> sizes(List facts, String kind, int tokensPerLine, int fallbackTokens) {
+    private static List<FactSize> sizes(
+            List facts,
+            String kind,
+            int tokensPerLine,
+            int fallbackTokens) {
         List<FactSize> result = new ArrayList<>();
         for (Object item : facts) {
             if (!(item instanceof Map fact)) continue;
@@ -237,8 +316,10 @@ final class ContextFootprintMetrics {
         return values.get(Math.max(0, Math.min(index, values.size() - 1)));
     }
 
-    private static int tokens(List<FactSize> facts) {
-        return facts.stream().mapToInt(FactSize::tokens).sum();
+    private static int tokens(Iterable<FactSize> facts) {
+        int total = 0;
+        for (FactSize fact : facts) total += fact.tokens();
+        return total;
     }
 
     private static int lines(List<FactSize> facts) {
@@ -281,6 +362,9 @@ final class ContextFootprintMetrics {
             int tokens) {
     }
 
+    private record ModuleIndex(Map<String, String> paths, List<String> nestedPaths) {
+    }
+
     private static final class Counters {
         private int capabilityCount;
         private int matchedTypeReferences;
@@ -295,6 +379,9 @@ final class ContextFootprintMetrics {
         private int unresolvedPackageReferences;
         private int withoutSelectors;
         private int withoutResolvedTypes;
+        private int preciseSelectorSamples;
+        private int ownerModuleFallbackSamples;
+        private int moduleFallbackSamples;
 
         private CapabilitySamples toSamples(List<Integer> workingSets) {
             return new CapabilitySamples(
@@ -303,7 +390,8 @@ final class ContextFootprintMetrics {
                     matchedModuleReferences, explicitModuleReferences, ownerModuleReferences,
                     matchedPackageReferences, explicitPackageReferences,
                     unresolvedTypeReferences, unresolvedModuleReferences, unresolvedPackageReferences,
-                    withoutSelectors, withoutResolvedTypes);
+                    withoutSelectors, withoutResolvedTypes,
+                    preciseSelectorSamples, ownerModuleFallbackSamples, moduleFallbackSamples);
         }
     }
 
@@ -321,6 +409,9 @@ final class ContextFootprintMetrics {
             int unresolvedModuleReferenceCount,
             int unresolvedPackageReferenceCount,
             int capabilitiesWithoutSelectors,
-            int capabilitiesWithoutResolvedTypes) {
+            int capabilitiesWithoutResolvedTypes,
+            int preciseSelectorSamples,
+            int ownerModuleFallbackSamples,
+            int moduleFallbackSamples) {
     }
 }

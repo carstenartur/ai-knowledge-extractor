@@ -6,7 +6,7 @@
   <version>1.0.0</version>
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
-    <aiKnowledge.version>0.1.7</aiKnowledge.version>
+    <aiKnowledge.version>0.1.8-SNAPSHOT</aiKnowledge.version>
   </properties>
   <build>
     <plugins>

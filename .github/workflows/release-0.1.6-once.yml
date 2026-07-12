@@ -1,5 +1,7 @@
-name: Release 0.1.6 once
+name: Release 0.1.7 once
 
+# The existing one-shot path is intentionally reused so the push that changes
+# this file triggers the already-installed default-branch workflow.
 on:
   push:
     branches: [ main ]
@@ -7,7 +9,7 @@ on:
       - '.github/workflows/release-0.1.6-once.yml'
 
 concurrency:
-  group: ai-knowledge-extractor-release-0.1.6
+  group: ai-knowledge-extractor-release-0.1.7
   cancel-in-progress: false
 
 permissions:
@@ -20,7 +22,7 @@ env:
 
 jobs:
   release:
-    name: Release 0.1.6
+    name: Release 0.1.7
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -46,8 +48,8 @@ jobs:
 
       - name: Run audited release workflow
         env:
-          RELEASE_VERSION: '0.1.6'
-          NEXT_VERSION_INPUT: '0.1.7-SNAPSHOT'
+          RELEASE_VERSION: '0.1.7'
+          NEXT_VERSION_INPUT: '0.1.8-SNAPSHOT'
           SKIP_TESTS: 'false'
           DRY_RUN: 'false'
           SOURCE_BRANCH: 'main'

@@ -1,0 +1,52 @@
+name: Release 0.1.6 once
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/release-0.1.6-once.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  release:
+    name: Release 0.1.6
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.1.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Configure git author
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Run audited release workflow
+        env:
+          RELEASE_VERSION: '0.1.6'
+          NEXT_VERSION_INPUT: '0.1.7-SNAPSHOT'
+          SKIP_TESTS: 'false'
+          DRY_RUN: 'false'
+          SOURCE_BRANCH: 'main'
+          METADATA_HELPER: .github/scripts/update-release-metadata.py
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/release.sh

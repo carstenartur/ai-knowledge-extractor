@@ -59,22 +59,64 @@ public final class SeedSupport {
         return parseYamlSeed(file);
     }
 
+    /**
+     * Parses the deliberately small seed dialect: a top-level YAML sequence of
+     * mappings whose values are scalars, inline lists, or indented block lists.
+     */
     private static List<Map> parseYamlSeed(Path file) throws IOException {
         List<Map> result = new ArrayList<>();
         Map current = null;
+        String pendingListKey = null;
+        int recordIndent = -1;
         for (String raw : Files.readAllLines(file)) {
             String line = raw.trim();
             if (line.isEmpty() || line.startsWith("#")) continue;
-            if (line.startsWith("- ")) {
+            int indent = leadingWhitespace(raw);
+
+            boolean startsRecord = line.startsWith("- ")
+                    && (current == null || indent <= recordIndent);
+            if (startsRecord) {
                 current = new LinkedHashMap();
                 result.add(current);
-                line = line.substring(2).trim();
+                recordIndent = indent;
+                pendingListKey = null;
+                String firstField = line.substring(2).trim();
+                if (!firstField.isEmpty()) pendingListKey = putYamlField(current, firstField);
+                continue;
             }
-            if (current == null || !line.contains(":")) continue;
-            int idx = line.indexOf(':');
-            current.put(line.substring(0, idx).trim(), parseValue(line.substring(idx + 1).trim()));
+
+            if (current == null) continue;
+            if (line.startsWith("- ")) {
+                if (pendingListKey != null && current.get(pendingListKey) instanceof List values) {
+                    String item = line.substring(2).trim();
+                    if (!item.isEmpty()) values.add(stripQuotes(item));
+                }
+                continue;
+            }
+            if (!line.contains(":")) continue;
+            pendingListKey = putYamlField(current, line);
         }
         return result;
+    }
+
+    private static String putYamlField(Map current, String line) {
+        int idx = line.indexOf(':');
+        if (idx < 0) return null;
+        String key = line.substring(0, idx).trim();
+        String value = line.substring(idx + 1).trim();
+        if (key.isEmpty()) return null;
+        if (value.isEmpty()) {
+            current.put(key, new ArrayList<>());
+            return key;
+        }
+        current.put(key, parseValue(value));
+        return null;
+    }
+
+    private static int leadingWhitespace(String line) {
+        int index = 0;
+        while (index < line.length() && Character.isWhitespace(line.charAt(index))) index++;
+        return index;
     }
 
     private static List<Map> parseJsonSeed(String text) {

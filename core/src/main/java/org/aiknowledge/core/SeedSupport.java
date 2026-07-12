@@ -59,22 +59,73 @@ public final class SeedSupport {
         return parseYamlSeed(file);
     }
 
+    /**
+     * Parses the deliberately small seed dialect: a top-level YAML list of flat
+     * maps whose values are scalars, inline lists, or indented block lists.
+     */
     private static List<Map> parseYamlSeed(Path file) throws IOException {
         List<Map> result = new ArrayList<>();
         Map current = null;
+        String pendingListKey = null;
+        int pendingListIndent = -1;
+
         for (String raw : Files.readAllLines(file)) {
             String line = raw.trim();
             if (line.isEmpty() || line.startsWith("#")) continue;
+            int indent = leadingWhitespace(raw);
+
             if (line.startsWith("- ")) {
+                String value = line.substring(2).trim();
+                if (current != null && pendingListKey != null && indent > pendingListIndent) {
+                    Object existing = current.get(pendingListKey);
+                    List list;
+                    if (existing instanceof List existingList) {
+                        list = existingList;
+                    } else {
+                        list = new ArrayList();
+                        current.put(pendingListKey, list);
+                    }
+                    list.add(stripQuotes(value));
+                    continue;
+                }
+
                 current = new LinkedHashMap();
                 result.add(current);
-                line = line.substring(2).trim();
+                pendingListKey = null;
+                pendingListIndent = -1;
+                if (!value.isEmpty()) {
+                    Pending pending = putYamlField(current, value, indent);
+                    pendingListKey = pending.key();
+                    pendingListIndent = pending.indent();
+                }
+                continue;
             }
+
             if (current == null || !line.contains(":")) continue;
-            int idx = line.indexOf(':');
-            current.put(line.substring(0, idx).trim(), parseValue(line.substring(idx + 1).trim()));
+            Pending pending = putYamlField(current, line, indent);
+            pendingListKey = pending.key();
+            pendingListIndent = pending.indent();
         }
         return result;
+    }
+
+    private static Pending putYamlField(Map current, String line, int indent) {
+        int idx = line.indexOf(':');
+        if (idx < 0) return Pending.NONE;
+        String key = line.substring(0, idx).trim();
+        String rawValue = line.substring(idx + 1).trim();
+        if (rawValue.isEmpty()) {
+            current.put(key, "");
+            return new Pending(key, indent);
+        }
+        current.put(key, parseValue(rawValue));
+        return Pending.NONE;
+    }
+
+    private static int leadingWhitespace(String line) {
+        int count = 0;
+        while (count < line.length() && Character.isWhitespace(line.charAt(count))) count++;
+        return count;
     }
 
     private static List<Map> parseJsonSeed(String text) {
@@ -202,5 +253,9 @@ public final class SeedSupport {
             }
         }
         return sb.toString();
+    }
+
+    private record Pending(String key, int indent) {
+        private static final Pending NONE = new Pending(null, -1);
     }
 }

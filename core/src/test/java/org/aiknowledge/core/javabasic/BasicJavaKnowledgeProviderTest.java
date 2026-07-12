@@ -65,7 +65,7 @@ class BasicJavaKnowledgeProviderTest {
 
         assertEquals(1, e2e.testFacts().size());
         assertEquals(0, e2e.classFacts().size());
-        assertEquals("example.TestEnvironment", ((Map) e2e.testFacts().getFirst()).get("testClass"));
+        assertEquals("example.TestEnvironment", ((Map) e2e.testFacts().get(0)).get("testClass"));
         assertEquals(1, benchmark.classFacts().size(), "JMH code is context code, not test evidence");
     }
 

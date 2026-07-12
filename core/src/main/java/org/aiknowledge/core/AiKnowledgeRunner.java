@@ -20,7 +20,7 @@ public final class AiKnowledgeRunner {
     public Map analyze(ExtractionOptions options) throws IOException {
         RepositorySnapshot snapshot = generate(options);
         ReportAnalyzer analyzer = new ReportAnalyzer();
-        Map report = analyzer.complexity(options, snapshot);
+        Map report = enrichComplexity(analyzer.complexity(options, snapshot), snapshot);
         writeAnalysisReports(options, report);
         return report;
     }
@@ -28,7 +28,7 @@ public final class AiKnowledgeRunner {
     public Map optimize(ExtractionOptions options) throws IOException {
         RepositorySnapshot snapshot = generate(options);
         ReportAnalyzer analyzer = new ReportAnalyzer();
-        Map complexity = analyzer.complexity(options, snapshot);
+        Map complexity = enrichComplexity(analyzer.complexity(options, snapshot), snapshot);
         Map report = analyzer.optimization(options, snapshot, complexity);
         writeAnalysisReports(options, complexity);
         StableIo.writeJson(options.outputDirectory().resolve("optimization.json"), report);
@@ -39,7 +39,7 @@ public final class AiKnowledgeRunner {
     public Map benchmark(ExtractionOptions options) throws IOException {
         RepositorySnapshot snapshot = generate(options);
         ReportAnalyzer analyzer = new ReportAnalyzer();
-        Map complexity = analyzer.complexity(options, snapshot);
+        Map complexity = enrichComplexity(analyzer.complexity(options, snapshot), snapshot);
         Map report = analyzer.benchmark(options, snapshot, complexity);
         writeAnalysisReports(options, complexity);
         StableIo.writeJson(options.outputDirectory().resolve("benchmark.json"), report);
@@ -50,10 +50,10 @@ public final class AiKnowledgeRunner {
     public Map check(ExtractionOptions options) throws IOException {
         RepositorySnapshot snapshot = generate(options);
         ReportAnalyzer analyzer = new ReportAnalyzer();
-        Map complexity = analyzer.complexity(options, snapshot);
+        Map complexity = enrichComplexity(analyzer.complexity(options, snapshot), snapshot);
         writeAnalysisReports(options, complexity);
         Map trend = TrendAnalyzer.trend(options, complexity);
-        double debt = ((Number) complexity.getOrDefault("aiCognitiveDebt", 0.0d)).doubleValue();
+        double debt = ((Number) complexity.getOrDefault("aiContextDebt", 0.0d)).doubleValue();
         int warnings = ((Number) complexity.getOrDefault("warningCount", 0)).intValue();
         int trendViolations = ((Number) trend.getOrDefault("violationCount", 0)).intValue();
         int claimFailures = ClaimVerifier.countErrorFailures(snapshot.claims);
@@ -63,9 +63,11 @@ public final class AiKnowledgeRunner {
         boolean passed = violations.isEmpty();
         Map check = new LinkedHashMap();
         check.put("passed", passed);
-        check.put("aiContextDebt", complexity.getOrDefault("aiContextDebt", debt));
-        check.put("aiCognitiveDebt", debt);
+        check.put("aiContextDebt", debt);
+        check.put("legacyAiContextDebt", complexity.getOrDefault("legacyAiContextDebt", 0.0d));
+        check.put("aiCognitiveDebt", complexity.getOrDefault("aiCognitiveDebt", 0.0d));
         check.put("maxCognitiveDebt", options.maxCognitiveDebt());
+        check.put("contextFootprint", complexity.getOrDefault("contextFootprint", Map.of()));
         check.put("codeComplexity", complexity.getOrDefault("codeComplexity", Map.of()));
         check.put("methodComplexityThresholds", methodComplexityThresholds(options));
         check.put("violations", violations);
@@ -81,6 +83,18 @@ public final class AiKnowledgeRunner {
             throw new IOException("AI knowledge quality gate failed: " + String.join("; ", violations));
         }
         return check;
+    }
+
+    private static Map enrichComplexity(Map complexity, RepositorySnapshot snapshot) {
+        Map footprint = ContextFootprintMetrics.calculate(snapshot);
+        Object legacyDebt = complexity.getOrDefault("aiContextDebt", complexity.getOrDefault("aiCognitiveDebt", 0.0d));
+        complexity.put("legacyAiContextDebt", legacyDebt);
+        complexity.put("contextFootprint", footprint);
+        complexity.put("repositoryContextTokens", footprint.get("repositoryContextTokens"));
+        complexity.put("normalizedContextDebt", footprint.get("normalizedContextDebt"));
+        complexity.put("contextEfficiencyScore", footprint.get("contextEfficiencyScore"));
+        complexity.put("aiContextDebt", footprint.get("normalizedContextDebt"));
+        return complexity;
     }
 
     private static List<String> qualityGateViolations(

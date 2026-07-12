@@ -9,35 +9,79 @@ import org.junit.jupiter.api.Test;
 
 class ContextFootprintMetricsTest {
     @Test
-    void usesLineWeightedSizesAndCapabilityWorkingSets() {
+    void usesLinkedTypesForLineWeightedCapabilityWorkingSets() {
         RepositorySnapshot snapshot = new RepositorySnapshot();
         snapshot.classes.add(classFact("example.A", 100));
         snapshot.classes.add(classFact("example.B", 50));
         snapshot.tests.add(testFact("example.ATest", 40));
         snapshot.docs.add(Map.of("title", "Architecture", "lineCount", 20));
-        snapshot.capabilities.add(Map.of("id", "a", "classes", List.of("example.A")));
-        snapshot.capabilities.add(Map.of("id", "b", "classes", List.of("example.B")));
+        snapshot.capabilities.add(Map.of("id", "a", "matchedTypes", List.of("example.A")));
+        snapshot.capabilities.add(Map.of("id", "b", "matchedTypes", List.of("example.B")));
 
         Map<String, Object> metrics = ContextFootprintMetrics.calculate(snapshot);
 
+        assertEquals(2, metrics.get("schemaVersion"));
+        assertEquals("MEASURED", metrics.get("measurementStatus"));
         assertEquals(1200, metrics.get("productionContextTokens"));
         assertEquals(320, metrics.get("testEvidenceTokens"));
         assertEquals(120, metrics.get("documentationContextTokens"));
         assertEquals(800, metrics.get("p90CapabilityWorkingSetTokens"));
         assertEquals(2, metrics.get("capabilitySampleCount"));
-        assertTrue(((Number) metrics.get("normalizedContextDebt")).doubleValue() <= 100.0d);
+        assertEquals(0, metrics.get("unresolvedCapabilityTypeReferences"));
+        assertEquals(
+                Map.of("matchedTypes", 2, "classes", 0),
+                metrics.get("capabilityReferenceSources"));
+        assertTrue(((Number) metrics.get("normalizedContextDebt")).doubleValue() < 100.0d);
+    }
+
+    @Test
+    void retainsExplicitClassesAndDeduplicatesUnresolvedReferences() {
+        RepositorySnapshot snapshot = new RepositorySnapshot();
+        snapshot.classes.add(classFact("example.A", 100));
+        snapshot.classes.add(classFact("example.B", 50));
+        snapshot.capabilities.add(Map.of(
+                "id", "feature",
+                "matchedTypes", List.of("example.A"),
+                "classes", List.of("example.A", "example.B", "example.Missing")));
+
+        Map<String, Object> metrics = ContextFootprintMetrics.calculate(snapshot);
+
+        assertEquals(1, metrics.get("capabilitySampleCount"));
+        assertEquals(1200, metrics.get("p90CapabilityWorkingSetTokens"));
+        assertEquals(1, metrics.get("unresolvedCapabilityTypeReferences"));
+        assertEquals(
+                Map.of("matchedTypes", 1, "classes", 2),
+                metrics.get("capabilityReferenceSources"));
+    }
+
+    @Test
+    void missingCapabilitySamplesAreExplicitAndFailClosed() {
+        RepositorySnapshot snapshot = new RepositorySnapshot();
+        snapshot.classes.add(classFact("example.A", 100));
+        snapshot.capabilities.add(Map.of("id", "unlinked"));
+
+        Map<String, Object> metrics = ContextFootprintMetrics.calculate(snapshot);
+
+        assertEquals("NO_CAPABILITY_SAMPLES", metrics.get("measurementStatus"));
+        assertEquals(0, metrics.get("capabilitySampleCount"));
+        assertEquals(1, metrics.get("capabilitiesWithoutTypeReferences"));
+        assertEquals(0, metrics.get("p90CapabilityWorkingSetTokens"));
+        assertEquals(100.0d, metrics.get("normalizedContextDebt"));
     }
 
     @Test
     void splittingAClassDoesNotIncreaseDebtWhenCapabilityWorkingSetStaysEqual() {
         RepositorySnapshot monolith = new RepositorySnapshot();
         monolith.classes.add(classFact("example.Monolith", 150));
-        monolith.capabilities.add(Map.of("id", "feature", "classes", List.of("example.Monolith")));
+        monolith.capabilities.add(Map.of(
+                "id", "feature", "matchedTypes", List.of("example.Monolith")));
 
         RepositorySnapshot split = new RepositorySnapshot();
         split.classes.add(classFact("example.PartA", 100));
         split.classes.add(classFact("example.PartB", 50));
-        split.capabilities.add(Map.of("id", "feature", "classes", List.of("example.PartA", "example.PartB")));
+        split.capabilities.add(Map.of(
+                "id", "feature",
+                "matchedTypes", List.of("example.PartA", "example.PartB")));
 
         Map<String, Object> before = ContextFootprintMetrics.calculate(monolith);
         Map<String, Object> after = ContextFootprintMetrics.calculate(split);

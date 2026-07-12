@@ -3,8 +3,10 @@ package org.aiknowledge.core;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Derives context-footprint metrics from extracted facts without treating every
@@ -33,26 +35,31 @@ final class ContextFootprintMetrics {
         int productionLines = lines(production);
         int totalLines = productionLines + lines(tests) + lines(docs);
 
-        List<Integer> capabilityWorkingSets = capabilityWorkingSets(snapshot, production);
-        int medianWorkingSet = percentile(capabilityWorkingSets, 0.50d, repositoryTokens);
-        int p90WorkingSet = percentile(capabilityWorkingSets, 0.90d, repositoryTokens);
-        double p90ContextShare = ratio(p90WorkingSet, repositoryTokens);
+        CapabilitySamples samples = capabilityWorkingSets(snapshot, production);
+        boolean measured = !samples.workingSets().isEmpty();
+        int medianWorkingSet = measured ? percentile(samples.workingSets(), 0.50d) : 0;
+        int p90WorkingSet = measured ? percentile(samples.workingSets(), 0.90d) : 0;
+        double p90ContextShare = measured ? ratio(p90WorkingSet, repositoryTokens) : 0.0d;
         double evidenceRatio = ratio(testTokens + documentationTokens, productionTokens);
         double tokensPerKloc = totalLines == 0 ? 0.0d : repositoryTokens * 1000.0d / totalLines;
 
-        // Lower is better. This proxy measures how much of the repository a
-        // typical large capability requires, with a bounded penalty for weak
-        // evidence. Repository growth alone does not increase the score when
-        // capability-local working sets remain stable.
+        // Lower is better. A missing capability sample is fail-closed at 100,
+        // but is reported explicitly rather than masquerading as a repository-
+        // sized capability working set.
         double evidencePenalty = productionTokens <= 0
                 ? 0.0d
                 : 15.0d * Math.max(0.0d, 0.25d - Math.min(0.25d, evidenceRatio)) / 0.25d;
         double rawDebt = 100.0d * p90ContextShare + evidencePenalty;
-        double normalizedDebt = round2(Math.min(100.0d, rawDebt));
+        double normalizedDebt = measured ? round2(Math.min(100.0d, rawDebt)) : 100.0d;
         double efficiency = round2(Math.max(0.0d, 100.0d - normalizedDebt));
 
+        Map<String, Object> referenceSources = new LinkedHashMap<>();
+        referenceSources.put("matchedTypes", samples.linkedReferenceCount());
+        referenceSources.put("classes", samples.explicitReferenceCount());
+
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("schemaVersion", 1);
+        result.put("schemaVersion", 2);
+        result.put("measurementStatus", measured ? "MEASURED" : "NO_CAPABILITY_SAMPLES");
         result.put("repositoryContextTokens", repositoryTokens);
         result.put("productionContextTokens", productionTokens);
         result.put("testEvidenceTokens", testTokens);
@@ -66,29 +73,85 @@ final class ContextFootprintMetrics {
         result.put("evidenceToProductionRatio", round4(evidenceRatio));
         result.put("normalizedContextDebt", normalizedDebt);
         result.put("contextEfficiencyScore", efficiency);
-        result.put("capabilitySampleCount", capabilityWorkingSets.size());
-        result.put("method", "line-weighted-capability-working-set-proxy");
+        result.put("capabilityCount", samples.capabilityCount());
+        result.put("capabilitySampleCount", samples.workingSets().size());
+        result.put("capabilitiesWithoutTypeReferences", samples.capabilitiesWithoutTypeReferences());
+        result.put("capabilitiesWithoutResolvedTypes", samples.capabilitiesWithoutResolvedTypes());
+        result.put("unresolvedCapabilityTypeReferences", samples.unresolvedReferenceCount());
+        result.put("capabilityReferenceSources", referenceSources);
+        result.put("method", "line-weighted-linked-capability-working-set-proxy");
         return result;
     }
 
-    private static List<Integer> capabilityWorkingSets(RepositorySnapshot snapshot, List<FactSize> production) {
+    private static CapabilitySamples capabilityWorkingSets(
+            RepositorySnapshot snapshot,
+            List<FactSize> production) {
         Map<String, Integer> byClass = new LinkedHashMap<>();
         for (FactSize fact : production) {
             byClass.put(fact.name(), fact.tokens());
         }
-        List<Integer> result = new ArrayList<>();
+
+        List<Integer> workingSets = new ArrayList<>();
+        int capabilityCount = 0;
+        int linkedReferences = 0;
+        int explicitReferences = 0;
+        int unresolvedReferences = 0;
+        int withoutReferences = 0;
+        int withoutResolvedTypes = 0;
+
         for (Object item : snapshot.capabilities) {
             if (!(item instanceof Map capability)) continue;
-            Object classes = capability.get("classes");
-            if (!(classes instanceof List classNames) || classNames.isEmpty()) continue;
-            int tokens = 0;
-            for (Object className : classNames) {
-                tokens += byClass.getOrDefault(String.valueOf(className), FALLBACK_CLASS_TOKENS);
+            capabilityCount++;
+            Set<String> classNames = new LinkedHashSet<>();
+            linkedReferences += addReferences(classNames, capability.get("matchedTypes"));
+            explicitReferences += addReferences(classNames, capability.get("classes"));
+            if (classNames.isEmpty()) {
+                withoutReferences++;
+                continue;
             }
-            if (tokens > 0) result.add(tokens);
+
+            int tokens = 0;
+            int resolved = 0;
+            for (String className : classNames) {
+                Integer size = byClass.get(className);
+                if (size == null) {
+                    unresolvedReferences++;
+                    continue;
+                }
+                tokens += size;
+                resolved++;
+            }
+            if (resolved == 0) {
+                withoutResolvedTypes++;
+            } else {
+                workingSets.add(tokens);
+            }
         }
-        result.sort(Comparator.naturalOrder());
-        return result;
+        workingSets.sort(Comparator.naturalOrder());
+        return new CapabilitySamples(
+                List.copyOf(workingSets),
+                capabilityCount,
+                linkedReferences,
+                explicitReferences,
+                unresolvedReferences,
+                withoutReferences,
+                withoutResolvedTypes);
+    }
+
+    private static int addReferences(Set<String> target, Object value) {
+        int before = target.size();
+        if (value instanceof List<?> list) {
+            for (Object item : list) addReference(target, item);
+        } else {
+            addReference(target, value);
+        }
+        return target.size() - before;
+    }
+
+    private static void addReference(Set<String> target, Object value) {
+        if (value == null) return;
+        String name = String.valueOf(value).trim();
+        if (!name.isEmpty() && !"null".equals(name)) target.add(name);
     }
 
     private static List<FactSize> sizes(List facts, String kind, int tokensPerLine, int fallbackTokens) {
@@ -107,8 +170,7 @@ final class ContextFootprintMetrics {
         return result;
     }
 
-    private static int percentile(List<Integer> values, double percentile, int fallback) {
-        if (values.isEmpty()) return fallback;
+    private static int percentile(List<Integer> values, double percentile) {
         int index = (int) Math.ceil(percentile * values.size()) - 1;
         return values.get(Math.max(0, Math.min(index, values.size() - 1)));
     }
@@ -138,5 +200,15 @@ final class ContextFootprintMetrics {
     }
 
     private record FactSize(String name, int lines, int tokens) {
+    }
+
+    private record CapabilitySamples(
+            List<Integer> workingSets,
+            int capabilityCount,
+            int linkedReferenceCount,
+            int explicitReferenceCount,
+            int unresolvedReferenceCount,
+            int capabilitiesWithoutTypeReferences,
+            int capabilitiesWithoutResolvedTypes) {
     }
 }

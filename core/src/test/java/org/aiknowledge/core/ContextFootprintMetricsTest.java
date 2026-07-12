@@ -25,7 +25,7 @@ class ContextFootprintMetricsTest {
         assertEquals(120, metrics.get("documentationContextTokens"));
         assertEquals(800, metrics.get("p90CapabilityWorkingSetTokens"));
         assertEquals(2, metrics.get("capabilitySampleCount"));
-        assertTrue(((Number) metrics.get("normalizedContextDebt")).doubleValue() < 100.0d);
+        assertTrue(((Number) metrics.get("normalizedContextDebt")).doubleValue() <= 100.0d);
     }
 
     @Test

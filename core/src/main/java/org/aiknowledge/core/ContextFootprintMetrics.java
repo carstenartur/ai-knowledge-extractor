@@ -44,8 +44,10 @@ final class ContextFootprintMetrics {
         // typical large capability requires, with a bounded penalty for weak
         // evidence. Repository growth alone does not increase the score when
         // capability-local working sets remain stable.
-        double normalizedDebt = round2(100.0d * p90ContextShare
-                + 15.0d * Math.max(0.0d, 0.25d - Math.min(0.25d, evidenceRatio)) / 0.25d);
+        double evidencePenalty = productionTokens <= 0
+                ? 0.0d
+                : 15.0d * Math.max(0.0d, 0.25d - Math.min(0.25d, evidenceRatio)) / 0.25d;
+        double normalizedDebt = round2(Math.max(0.0d, Math.min(100.0d, 100.0d * p90ContextShare + evidencePenalty)));
         double efficiency = round2(Math.max(0.0d, 100.0d - normalizedDebt));
 
         Map<String, Object> result = new LinkedHashMap<>();

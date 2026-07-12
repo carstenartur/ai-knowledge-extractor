@@ -32,7 +32,9 @@ public final class BasicJavaKnowledgeProvider implements JavaKnowledgeProvider {
             if (trimmed.startsWith("import ")) imports.add(parseImport(trimmed));
             methods.addAll(extractMethodSignatures(trimmed));
         }
-        boolean test = request.sourcePath().contains("/src/test/") || simple.endsWith("Test") || source.contains("@Test");
+        boolean test = JavaSourceMetadata.isTestSourcePath(request.sourcePath())
+                || simple.endsWith("Test")
+                || source.contains("@Test");
         Map data = new LinkedHashMap();
         data.put(test ? "testClass" : "class", pkg.isBlank() ? simple : pkg + "." + simple);
         data.put("sourceFile", request.sourcePath());

@@ -20,7 +20,7 @@ class ContextFootprintMetricsTest {
 
         Map<String, Object> metrics = ContextFootprintMetrics.calculate(snapshot);
 
-        assertEquals(2, metrics.get("schemaVersion"));
+        assertEquals(3, metrics.get("schemaVersion"));
         assertEquals("MEASURED", metrics.get("measurementStatus"));
         assertEquals(1200, metrics.get("productionContextTokens"));
         assertEquals(320, metrics.get("testEvidenceTokens"));
@@ -29,13 +29,114 @@ class ContextFootprintMetricsTest {
         assertEquals(2, metrics.get("capabilitySampleCount"));
         assertEquals(0, metrics.get("unresolvedCapabilityTypeReferences"));
         assertEquals(
-                Map.of("matchedTypes", 2, "classes", 0),
-                metrics.get("capabilityReferenceSources"));
+                Map.of("typeOrPackage", 2, "ownerModules", 0, "modules", 0),
+                metrics.get("capabilityWorkingSetSources"));
         assertTrue(((Number) metrics.get("normalizedContextDebt")).doubleValue() < 100.0d);
     }
 
     @Test
-    void retainsExplicitClassesAndDeduplicatesUnresolvedReferences() {
+    void preciseSelectorsDoNotExpandIntoEveryAssociatedModule() {
+        RepositorySnapshot snapshot = new RepositorySnapshot();
+        snapshot.modules.add(Map.of("name", "search", "path", "search"));
+        snapshot.modules.add(Map.of("name", "app", "path", "app"));
+        snapshot.classes.add(classFact(
+                "example.search.Engine", 100,
+                "search/src/main/java/example/search/Engine.java", "example.search"));
+        snapshot.classes.add(classFact(
+                "example.app.LargeApplication", 1000,
+                "app/src/main/java/example/app/LargeApplication.java", "example.app"));
+        snapshot.capabilities.add(Map.of(
+                "id", "search",
+                "matchedTypes", List.of("example.search.Engine"),
+                "ownerModules", List.of("search"),
+                "modules", List.of("search", "app"),
+                "matchedModules", List.of("search", "app")));
+
+        Map<String, Object> metrics = ContextFootprintMetrics.calculate(snapshot);
+
+        assertEquals(800, metrics.get("p90CapabilityWorkingSetTokens"),
+                "broad associated modules must not override a resolved type-level selector");
+        assertEquals(
+                Map.of("typeOrPackage", 1, "ownerModules", 0, "modules", 0),
+                metrics.get("capabilityWorkingSetSources"));
+    }
+
+    @Test
+    void resolvesOwnerModulesBeforeGeneralModuleFallbacks() {
+        RepositorySnapshot snapshot = new RepositorySnapshot();
+        snapshot.modules.add(Map.of("name", "app", "path", "app"));
+        snapshot.modules.add(Map.of("name", "regelsuche-core", "path", "regelsuche-core"));
+        snapshot.classes.add(classFact(
+                "de.regelsuche.App", 100,
+                "app/src/main/java/de/regelsuche/App.java", "de.regelsuche"));
+        snapshot.classes.add(classFact(
+                "de.regelsuche.ast.Expr", 50,
+                "regelsuche-core/src/main/java/de/regelsuche/ast/Expr.java", "de.regelsuche.ast"));
+        snapshot.capabilities.add(Map.of(
+                "id", "web-workbench",
+                "modules", List.of("app", "regelsuche-core"),
+                "ownerModules", List.of("app"),
+                "matchedModules", List.of("app", "regelsuche-core")));
+        snapshot.capabilities.add(Map.of(
+                "id", "rewrite-core",
+                "matchedModules", List.of("regelsuche-core")));
+
+        Map<String, Object> metrics = ContextFootprintMetrics.calculate(snapshot);
+
+        assertEquals("MEASURED", metrics.get("measurementStatus"));
+        assertEquals(2, metrics.get("capabilitySampleCount"));
+        assertEquals(800, metrics.get("p90CapabilityWorkingSetTokens"));
+        assertEquals(0, metrics.get("unresolvedCapabilityModuleReferences"));
+        assertEquals(
+                Map.of("typeOrPackage", 0, "ownerModules", 1, "modules", 1),
+                metrics.get("capabilityWorkingSetSources"));
+    }
+
+    @Test
+    void resolvesRootModuleWithoutAbsorbingNestedModules() {
+        RepositorySnapshot snapshot = new RepositorySnapshot();
+        snapshot.modules.add(Map.of("name", "root", "path", ""));
+        snapshot.modules.add(Map.of("name", "child", "path", "child"));
+        snapshot.classes.add(classFact(
+                "example.RootType", 100,
+                "src/main/java/example/RootType.java", "example"));
+        snapshot.classes.add(classFact(
+                "example.child.ChildType", 50,
+                "child/src/main/java/example/child/ChildType.java", "example.child"));
+        snapshot.capabilities.add(Map.of("id", "root-capability", "modules", List.of("root")));
+
+        Map<String, Object> metrics = ContextFootprintMetrics.calculate(snapshot);
+
+        assertEquals(800, metrics.get("p90CapabilityWorkingSetTokens"));
+        assertEquals(0, metrics.get("unresolvedCapabilityModuleReferences"));
+    }
+
+    @Test
+    void resolvesPackageSelectorsAndDeduplicatesOverlappingTypes() {
+        RepositorySnapshot snapshot = new RepositorySnapshot();
+        snapshot.classes.add(classFact(
+                "example.search.Engine", 100,
+                "search/src/main/java/example/search/Engine.java", "example.search"));
+        snapshot.classes.add(classFact(
+                "example.search.index.Index", 50,
+                "search/src/main/java/example/search/index/Index.java", "example.search.index"));
+        snapshot.classes.add(classFact(
+                "example.other.Other", 20,
+                "other/src/main/java/example/other/Other.java", "example.other"));
+        snapshot.capabilities.add(Map.of(
+                "id", "search",
+                "matchedTypes", List.of("example.search.Engine"),
+                "packages", "example.search"));
+
+        Map<String, Object> metrics = ContextFootprintMetrics.calculate(snapshot);
+
+        assertEquals(1, metrics.get("capabilitySampleCount"));
+        assertEquals(1200, metrics.get("p90CapabilityWorkingSetTokens"));
+        assertEquals(0, metrics.get("unresolvedCapabilityPackageReferences"));
+    }
+
+    @Test
+    void retainsExplicitClassesAndCountsUnresolvedReferences() {
         RepositorySnapshot snapshot = new RepositorySnapshot();
         snapshot.classes.add(classFact("example.A", 100));
         snapshot.classes.add(classFact("example.B", 50));
@@ -49,9 +150,6 @@ class ContextFootprintMetricsTest {
         assertEquals(1, metrics.get("capabilitySampleCount"));
         assertEquals(1200, metrics.get("p90CapabilityWorkingSetTokens"));
         assertEquals(1, metrics.get("unresolvedCapabilityTypeReferences"));
-        assertEquals(
-                Map.of("matchedTypes", 1, "classes", 2),
-                metrics.get("capabilityReferenceSources"));
     }
 
     @Test
@@ -64,7 +162,7 @@ class ContextFootprintMetricsTest {
 
         assertEquals("NO_CAPABILITY_SAMPLES", metrics.get("measurementStatus"));
         assertEquals(0, metrics.get("capabilitySampleCount"));
-        assertEquals(1, metrics.get("capabilitiesWithoutTypeReferences"));
+        assertEquals(1, metrics.get("capabilitiesWithoutSelectors"));
         assertEquals(0, metrics.get("p90CapabilityWorkingSetTokens"));
         assertEquals(100.0d, metrics.get("normalizedContextDebt"));
     }
@@ -91,10 +189,28 @@ class ContextFootprintMetricsTest {
     }
 
     private static Map<String, Object> classFact(String name, int lines) {
-        return Map.of("class", name, "lineCount", lines);
+        return classFact(name, lines,
+                "src/main/java/" + name.replace('.', '/') + ".java", packageOf(name));
+    }
+
+    private static Map<String, Object> classFact(
+            String name,
+            int lines,
+            String sourceFile,
+            String packageName) {
+        return Map.of(
+                "class", name,
+                "lineCount", lines,
+                "sourceFile", sourceFile,
+                "package", packageName);
     }
 
     private static Map<String, Object> testFact(String name, int lines) {
         return Map.of("testClass", name, "lineCount", lines);
+    }
+
+    private static String packageOf(String name) {
+        int separator = name.lastIndexOf('.');
+        return separator < 0 ? "" : name.substring(0, separator);
     }
 }

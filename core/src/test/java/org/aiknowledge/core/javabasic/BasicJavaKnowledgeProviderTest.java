@@ -49,6 +49,26 @@ class BasicJavaKnowledgeProviderTest {
         assertTrue(main.warnings().toString().contains("heuristic-line-parser"));
     }
 
+    @Test
+    void classifiesCustomGradleTestSourceSetsAsTestEvidence() throws Exception {
+        Path root = temp.resolve("custom-source-sets");
+        Path e2eFile = root.resolve("app/src/e2eTest/java/example/TestEnvironment.java");
+        Path benchmarkFile = root.resolve("app/src/jmh/java/example/CoreBenchmarks.java");
+        Files.createDirectories(e2eFile.getParent());
+        Files.createDirectories(benchmarkFile.getParent());
+        Files.writeString(e2eFile, "package example; class TestEnvironment {}\n");
+        Files.writeString(benchmarkFile, "package example; public class CoreBenchmarks {}\n");
+
+        BasicJavaKnowledgeProvider provider = new BasicJavaKnowledgeProvider();
+        JavaKnowledgeResult e2e = provider.extract(request(root, e2eFile));
+        JavaKnowledgeResult benchmark = provider.extract(request(root, benchmarkFile));
+
+        assertEquals(1, e2e.testFacts().size());
+        assertEquals(0, e2e.classFacts().size());
+        assertEquals("example.TestEnvironment", ((Map) e2e.testFacts().get(0)).get("testClass"));
+        assertEquals(1, benchmark.classFacts().size(), "JMH code is context code, not test evidence");
+    }
+
     private static JavaKnowledgeRequest request(Path root, Path file) {
         return new JavaKnowledgeRequest(
                 root,

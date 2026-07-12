@@ -22,6 +22,26 @@ public final class JavaSourceMetadata {
         }
     }
 
+    /**
+     * Recognizes conventional and custom Gradle test source sets such as
+     * {@code test}, {@code integrationTest}, {@code e2eTest}, and
+     * {@code dockerE2eTest}. Benchmark source sets such as {@code jmh} remain
+     * production/context code rather than test evidence.
+     */
+    public static boolean isTestSourcePath(String sourcePath) {
+        if (sourcePath == null || sourcePath.isBlank()) return false;
+        String normalized = sourcePath.replace('\\', '/');
+        int marker = normalized.indexOf("/src/");
+        if (marker < 0 && normalized.startsWith("src/")) marker = -1;
+        int start = marker < 0 ? (normalized.startsWith("src/") ? 4 : -1) : marker + 5;
+        if (start < 0 || start >= normalized.length()) return false;
+        int slash = normalized.indexOf('/', start);
+        String sourceSet = slash < 0 ? normalized.substring(start) : normalized.substring(start, slash);
+        return sourceSet.equals("test")
+                || sourceSet.equals("testFixtures")
+                || sourceSet.endsWith("Test");
+    }
+
     private static String kind(String source) {
         String text = " " + source.replace('\n', ' ').replace('\r', ' ') + " ";
         if (text.contains(" interface ")) return "interface";

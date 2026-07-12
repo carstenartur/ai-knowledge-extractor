@@ -53,7 +53,7 @@ class SeedSupportTest {
 
         assertEquals(1, snapshot.capabilities.size(),
                 "nested list items must not become phantom top-level capability maps");
-        Map capability = (Map) snapshot.capabilities.getFirst();
+        Map capability = (Map) snapshot.capabilities.get(0);
         assertEquals(List.of("search"), capability.get("modules"));
         assertEquals(List.of("de.regelsuche.search"), capability.get("packages"));
         assertEquals(List.of("*Search*", "*Rewrite*"), capability.get("typePatterns"));

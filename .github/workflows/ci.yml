@@ -25,7 +25,16 @@ jobs:
         with:
           gradle-version: '9.5.1'
       - name: Build
-        run: gradle build --warning-mode all
+        run: |
+          set -o pipefail
+          gradle build --warning-mode all 2>&1 | tee gradle-build.log
+      - name: Upload failed Gradle build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: gradle-build.log
+          if-no-files-found: warn
       - name: Publish artifacts to Maven local
         run: gradle publishToMavenLocal --warning-mode all
       - name: Verify Gradle consumer fixture

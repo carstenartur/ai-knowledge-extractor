@@ -28,18 +28,43 @@ jobs:
         run: |
           set -o pipefail
           gradle build --warning-mode all 2>&1 | tee gradle-build.log
-      - name: Upload failed Gradle build log
+      - name: Upload failed Gradle build diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-build-log
-          path: gradle-build.log
+          name: gradle-build-diagnostics
+          path: |
+            gradle-build.log
+            **/build/test-results/**
+            **/build/reports/tests/**
           if-no-files-found: warn
       - name: Publish artifacts to Maven local
         run: gradle publishToMavenLocal --warning-mode all
-      - name: Verify Gradle consumer fixture
+      - name: Verify Gradle composite consumer fixture
         run: |
           gradle -p examples/fixtures/gradle-consumer \
+            --warning-mode all \
+            generateAiKnowledgeIndex \
+            analyzeAiComplexity \
+            optimizeAiKnowledge \
+            benchmarkAiKnowledge \
+            checkAiKnowledgeIndex \
+            publishAiKnowledgeIndex
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/index.json
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/complexity.json
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/optimization.json
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/benchmark.json
+          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/check.json
+          test -f examples/fixtures/gradle-consumer/docs/ai-knowledge/index.json
+      - name: Verify published Gradle plugin marker consumer
+        run: |
+          VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
+          rm -rf \
+            examples/fixtures/gradle-consumer/build \
+            examples/fixtures/gradle-consumer/docs/ai-knowledge
+          gradle -p examples/fixtures/gradle-consumer \
+            -PpublishedPlugin=true \
+            -PaiKnowledgeVersion="$VERSION" \
             --warning-mode all \
             generateAiKnowledgeIndex \
             analyzeAiComplexity \

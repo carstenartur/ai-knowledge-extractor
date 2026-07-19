@@ -67,14 +67,22 @@ Plugin Portal publication is not part of the current release flow. Until that is
 | `optimizeAiKnowledge` | `verification` | Generate optimization recommendations. |
 | `benchmarkAiKnowledge` | `verification` | Generate model-profile benchmark reports. |
 | `checkAiKnowledgeIndex` | `verification` | Run configured quality gates, write `check.json` and verify the quality-gate artifact set. |
-| `verifyAiKnowledgeArtifacts` | `verification` | Verify the complete generated artifact contract, including optimization and benchmark outputs. |
-| `aiKnowledgeCheck` | `verification` | Canonical one-command lifecycle: generation, analysis, optimization, benchmark, quality gate and artifact verification. |
+| `verifyAiKnowledgeArtifacts` | `verification` | Verify an existing complete artifact set without regenerating it. |
+| `aiKnowledgeCheck` | `verification` | Canonical one-command lifecycle: scan once, generate all reports, run the quality gate and verify the complete artifact set. |
 | `publishAiKnowledgeIndex` | `documentation` | Copy generated artifacts to `docs/ai-knowledge` (depends on `generateAiKnowledgeIndex`). |
 
 For CI and release verification, prefer:
 
 ```bash
 ./gradlew aiKnowledgeCheck
+```
+
+`aiKnowledgeCheck` is a single orchestrated core lifecycle rather than a dependency chain over the five focused tasks. This avoids rescanning a repository and rewriting shared outputs several times. The focused tasks remain available when only one report family is needed.
+
+To verify already generated files without modifying them, run:
+
+```bash
+./gradlew verifyAiKnowledgeArtifacts
 ```
 
 The lifecycle rejects missing or empty required files, malformed JSON, duplicate object fields, trailing JSON tokens, index/envelope count drift, context-pack index drift, missing context packs, inconsistent context-footprint v3 data and disagreement between `check.json` and `complexity.json`.

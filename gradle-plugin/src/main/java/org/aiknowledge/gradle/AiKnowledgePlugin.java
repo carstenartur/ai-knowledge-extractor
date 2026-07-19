@@ -7,6 +7,7 @@ import java.util.List;
 import org.aiknowledge.core.AiKnowledgeArtifactVerifier;
 import org.aiknowledge.core.AiKnowledgeRunner;
 import org.aiknowledge.core.ExtractionOptions;
+import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -60,26 +61,25 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         benchmark.configure(task -> task.mustRunAfter(optimize));
         check.configure(task -> task.mustRunAfter(benchmark));
 
+        TaskProvider<Task> aiKnowledgeCheck = runnerTask(
+            project,
+            extension,
+            "aiKnowledgeCheck",
+            "verification",
+            "Runs the complete verified AI knowledge lifecycle from one repository snapshot.",
+            "verify");
+
         TaskProvider<Task> verifyArtifacts = project.getTasks().register(
             "verifyAiKnowledgeArtifacts",
             task -> {
                 task.setGroup("verification");
                 task.setDescription(
-                    "Verifies the complete deterministic AI knowledge artifact contract.");
-                task.dependsOn(generate, analyze, optimize, benchmark, check);
-                task.mustRunAfter(check);
-                task.doLast(ignored -> new AiKnowledgeArtifactVerifier()
-                    .verifyCompleteLifecycle(
-                        extension.getOutputDirectory().get().getAsFile().toPath())
-                    .requireValid());
+                    "Verifies an existing complete AI knowledge artifact set without regenerating it.");
+                task.doLast(ignored -> requireValid(
+                    new AiKnowledgeArtifactVerifier().verifyCompleteLifecycle(
+                        extension.getOutputDirectory().get().getAsFile().toPath())));
             });
-
-        project.getTasks().register("aiKnowledgeCheck", task -> {
-            task.setGroup("verification");
-            task.setDescription(
-                "Runs generation, analysis, optimization, benchmark, quality gate and artifact verification.");
-            task.dependsOn(verifyArtifacts);
-        });
+        verifyArtifacts.configure(task -> task.mustRunAfter(aiKnowledgeCheck));
 
         project.getTasks().register("publishAiKnowledgeIndex", task -> {
             task.setGroup("documentation");
@@ -195,10 +195,11 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                 case "optimize" -> runner.optimize(options);
                 case "benchmark" -> runner.benchmark(options);
                 case "check" -> runner.check(options);
+                case "verify" -> runner.verify(options);
                 default -> throw new IllegalArgumentException(mode);
             }
         } catch (Exception exception) {
-            throw new RuntimeException("AI knowledge task failed", exception);
+            throw new GradleException("AI knowledge task failed", exception);
         } finally {
             restoreProperty("aiknowledge.javaProvider", previousJavaProvider);
             restoreProperty("aiknowledge.jdt.mode", previousJdtMode);
@@ -220,6 +221,15 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         }
     }
 
+    private static void requireValid(
+            AiKnowledgeArtifactVerifier.VerificationReport report) {
+        if (!report.passed()) {
+            throw new GradleException(
+                "AI knowledge artifact verification failed: "
+                    + String.join("; ", report.errors()));
+        }
+    }
+
     private static List<Path> resolveClasspath(Project project) {
         List<Path> entries = new ArrayList<>();
         Configuration config = project.getConfigurations().findByName(
@@ -229,7 +239,9 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         }
         try {
             config.forEach(file -> {
-                if (file.exists()) entries.add(file.toPath());
+                if (file.exists()) {
+                    entries.add(file.toPath());
+                }
             });
         } catch (Exception exception) {
             project.getLogger().debug(
@@ -254,7 +266,7 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                 }
             }
         } catch (Exception exception) {
-            throw new RuntimeException(
+            throw new GradleException(
                 "Could not publish AI knowledge index", exception);
         }
     }

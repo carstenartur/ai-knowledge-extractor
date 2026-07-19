@@ -78,7 +78,7 @@ class AiKnowledgePluginLifecycleTest {
     private GradleRunner runner(String task) {
         return GradleRunner.create()
             .withProjectDir(project.toFile())
-            .withArguments(task, "--stacktrace", "--no-daemon")
+            .withArguments("--no-daemon", "--stacktrace", task)
             .withPluginClasspath()
             .forwardOutput();
     }

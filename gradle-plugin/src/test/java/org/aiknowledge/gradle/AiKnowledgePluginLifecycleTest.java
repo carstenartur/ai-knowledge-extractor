@@ -1,7 +1,9 @@
 package org.aiknowledge.gradle;
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -43,20 +45,14 @@ class AiKnowledgePluginLifecycleTest {
               docPatterns: ['docs/search.md']
             """);
 
-        BuildResult result = GradleRunner.create()
-            .withProjectDir(project.toFile())
-            .withArguments("aiKnowledgeCheck", "--stacktrace", "--no-daemon")
-            .withPluginClasspath()
-            .forwardOutput()
-            .build();
+        BuildResult result = runner("aiKnowledgeCheck").build();
 
-        assertEquals(SUCCESS, result.task(":generateAiKnowledgeIndex").getOutcome());
-        assertEquals(SUCCESS, result.task(":analyzeAiComplexity").getOutcome());
-        assertEquals(SUCCESS, result.task(":optimizeAiKnowledge").getOutcome());
-        assertEquals(SUCCESS, result.task(":benchmarkAiKnowledge").getOutcome());
-        assertEquals(SUCCESS, result.task(":checkAiKnowledgeIndex").getOutcome());
-        assertEquals(SUCCESS, result.task(":verifyAiKnowledgeArtifacts").getOutcome());
         assertEquals(SUCCESS, result.task(":aiKnowledgeCheck").getOutcome());
+        assertNull(result.task(":generateAiKnowledgeIndex"));
+        assertNull(result.task(":analyzeAiComplexity"));
+        assertNull(result.task(":optimizeAiKnowledge"));
+        assertNull(result.task(":benchmarkAiKnowledge"));
+        assertNull(result.task(":checkAiKnowledgeIndex"));
 
         Path output = project.resolve("build/ai-knowledge");
         for (String file : new String[] {
@@ -66,5 +62,24 @@ class AiKnowledgePluginLifecycleTest {
         }
         assertTrue(Files.readString(output.resolve("check.json"))
             .contains("\"passed\":true"));
+
+        byte[] indexBeforeVerification = Files.readAllBytes(
+            output.resolve("index.json"));
+        BuildResult verification = runner("verifyAiKnowledgeArtifacts").build();
+        assertEquals(
+            SUCCESS,
+            verification.task(":verifyAiKnowledgeArtifacts").getOutcome());
+        assertArrayEquals(
+            indexBeforeVerification,
+            Files.readAllBytes(output.resolve("index.json")),
+            "standalone verification must not regenerate artifacts");
+    }
+
+    private GradleRunner runner(String task) {
+        return GradleRunner.create()
+            .withProjectDir(project.toFile())
+            .withArguments(task, "--stacktrace", "--no-daemon")
+            .withPluginClasspath()
+            .forwardOutput();
     }
 }

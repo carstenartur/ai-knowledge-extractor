@@ -47,6 +47,7 @@ class AiKnowledgePluginLifecycleTest {
             .withProjectDir(project.toFile())
             .withArguments("aiKnowledgeCheck", "--stacktrace", "--no-daemon")
             .withPluginClasspath()
+            .forwardOutput()
             .build();
 
         assertEquals(SUCCESS, result.task(":generateAiKnowledgeIndex").getOutcome());

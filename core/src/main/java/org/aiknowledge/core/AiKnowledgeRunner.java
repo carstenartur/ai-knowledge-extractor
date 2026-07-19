@@ -79,10 +79,26 @@ public final class AiKnowledgeRunner {
         check.put("claimFailureCount", claimFailures);
         check.put("knowledgeQualityGates", knowledgeGates);
         StableIo.writeJson(options.outputDirectory().resolve("check.json"), check);
+        new AiKnowledgeArtifactVerifier()
+            .verifyQualityGate(options.outputDirectory())
+            .requireValid();
         if (!passed) {
             throw new IOException("AI knowledge quality gate failed: " + String.join("; ", violations));
         }
         return check;
+    }
+
+    /** Runs optimization, benchmark, quality gate and complete artifact verification. */
+    public AiKnowledgeArtifactVerifier.VerificationReport verify(
+            ExtractionOptions options) throws IOException {
+        optimize(options);
+        benchmark(options);
+        check(options);
+        AiKnowledgeArtifactVerifier.VerificationReport report =
+            new AiKnowledgeArtifactVerifier()
+                .verifyCompleteLifecycle(options.outputDirectory());
+        report.requireValid();
+        return report;
     }
 
     private static Map enrichComplexity(Map complexity, RepositorySnapshot snapshot) {

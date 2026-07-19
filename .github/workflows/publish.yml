@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: Release version to publish, without leading v, e.g. 0.1.4
+        description: Release version to publish, without leading v, e.g. 0.1.8
         required: true
         type: string
-        default: 0.1.4
+        default: 0.1.8
       next_development_version:
-        description: Optional next development version, e.g. 0.1.5-SNAPSHOT
+        description: Optional next development version, e.g. 0.1.9-SNAPSHOT
         required: false
         type: string
       skip_tests:

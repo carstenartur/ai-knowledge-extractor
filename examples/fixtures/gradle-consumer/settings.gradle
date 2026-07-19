@@ -1,6 +1,26 @@
 pluginManagement {
-    includeBuild('../../..')
+    def publishedPlugin =
+        providers.gradleProperty('publishedPlugin').orNull == 'true'
+
+    if (publishedPlugin) {
+        def aiKnowledgeVersion = providers
+            .gradleProperty('aiKnowledgeVersion')
+            .getOrElse('')
+        if (aiKnowledgeVersion.isBlank()) {
+            throw new GradleException(
+                'Published plugin mode requires -PaiKnowledgeVersion=<version>.')
+        }
+        plugins {
+            id 'org.aiknowledge.extractor' version aiKnowledgeVersion
+        }
+    } else {
+        includeBuild('../../..')
+    }
+
     repositories {
+        if (publishedPlugin) {
+            mavenLocal()
+        }
         gradlePluginPortal()
         mavenCentral()
     }

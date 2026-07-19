@@ -26,12 +26,12 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help
 Show one goal with full parameter detail:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Dgoal=benchmark -Ddetail=true
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Dgoal=check -Ddetail=true
 ```
 
 ## Shared parameters (all operational goals)
 
-`generate`, `analyze`, `optimize`, `benchmark`, and `check` all expose the same parameter set.
+`generate`, `analyze`, `optimize`, `benchmark`, and `check` expose the same parameter set.
 
 | Parameter | Type | Default | Required |
 | --- | --- | --- | --- |
@@ -59,13 +59,14 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Dgoal=benchmark -D
 | `keepJdtWorkspace` | `boolean` | `false` | no |
 
 Threshold overrides can also be passed as JVM properties:
+
 - `-DaiKnowledge.maxCognitiveDebt=...`
 - `-DaiKnowledge.maxCognitiveDebtIncrease=...`
 - `-DaiKnowledge.maxConceptRadiusIncrease=...`
 - `-DaiKnowledge.maxContextTokenIncrease=...`
-- `-Daiknowledge.javaProvider=jdt` (selects the JDT Java provider for stronger type/reference extraction)
+- `-Daiknowledge.javaProvider=jdt`
 - `-Daiknowledge.jdt.mode=search`
-- `-Daiknowledge.jdt.search.execution.mode=forked` (recommended for Maven/Gradle daemons)
+- `-Daiknowledge.jdt.search.execution.mode=forked`
 - `-Daiknowledge.jdt.search.fallback.to.ast=true|false`
 - `-Daiknowledge.jdt.workspace.mode=create`
 - `-Daiknowledge.jdt.workspace.directory=...`
@@ -78,7 +79,8 @@ Threshold overrides can also be passed as JVM properties:
 - Purpose: scan the repository and generate deterministic AI knowledge index artifacts.
 - Default lifecycle phase: `generate-resources`.
 - Output files:
-  - `index.json`, `modules.json`, `classes.json`, `tests.json`, `docs.json`, `dependencies.json`, `capabilities.json`, `claims.json`
+  - `index.json`, `modules.json`, `classes.json`, `tests.json`, `docs.json`, `dependencies.json`, `capabilities.json`, `claims.json`, `evidence.json`
+  - `review-context.md`, `context-packs/index.json`, and one context pack per capability
 
 CLI:
 
@@ -109,15 +111,6 @@ CLI:
 mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:analyze
 ```
 
-`pom.xml` execution:
-
-```xml
-<execution>
-  <id>ai-knowledge-analyze</id>
-  <goals><goal>analyze</goal></goals>
-</execution>
-```
-
 ### `optimize`
 
 - Purpose: detect knowledge smells and rank optimization suggestions.
@@ -130,15 +123,6 @@ CLI:
 
 ```bash
 mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:optimize
-```
-
-`pom.xml` execution:
-
-```xml
-<execution>
-  <id>ai-knowledge-optimize</id>
-  <goals><goal>optimize</goal></goals>
-</execution>
 ```
 
 ### `benchmark`
@@ -155,21 +139,24 @@ CLI:
 mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:benchmark
 ```
 
-`pom.xml` execution:
-
-```xml
-<execution>
-  <id>ai-knowledge-benchmark</id>
-  <goals><goal>benchmark</goal></goals>
-</execution>
-```
-
 ### `check`
 
-- Purpose: enforce AI quality-gate thresholds (debt, warning policy, trend regressions).
+`check` is the canonical complete Maven lifecycle. It:
+
+1. generates optimization reports;
+2. generates benchmark reports;
+3. executes the configured quality gate and writes `check.json`;
+4. verifies the complete artifact contract.
+
+The verifier rejects missing or empty required files, malformed JSON, duplicate object fields, trailing JSON tokens, index/envelope count drift, context-pack index drift, missing context packs, inconsistent context-footprint v3 data and disagreement between `check.json` and `complexity.json`.
+
+Project-specific thresholds and evidence requirements remain controlled by the shared configuration parameters; structural verification does not invent consumer policy.
+
 - Default lifecycle phase: `verify`.
 - Output files:
-  - all `analyze` outputs
+  - all `generate` and `analyze` outputs
+  - `optimization.json`, `optimization.html`
+  - `benchmark.json`, `benchmark.html`
   - `check.json`
 
 CLI:
@@ -183,6 +170,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
 ```xml
 <execution>
   <id>ai-knowledge-check</id>
+  <phase>verify</phase>
   <goals><goal>check</goal></goals>
 </execution>
 ```

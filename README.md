@@ -16,16 +16,34 @@ This repository provides a Java core plus Gradle and Maven entry points. It gene
 
 ## Quick start
 
-- Gradle: apply plugin `org.aiknowledge.extractor` and run `./gradlew generateAiKnowledgeIndex`.
-- Maven: invoke `mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:generate`.
+- Gradle: apply plugin `org.aiknowledge.extractor` and run `./gradlew aiKnowledgeCheck` for the complete verified lifecycle.
+- Maven: invoke `mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check` for the complete verified lifecycle.
+- `generateAiKnowledgeIndex` / Maven `generate` remain available when only the raw knowledge index is needed.
 - Consumer setup, tasks, extension parameters, goals and repository configuration are documented in [`docs/gradle-plugin.md`](docs/gradle-plugin.md), [`docs/maven-plugin.md`](docs/maven-plugin.md) and [`docs/publishing.md`](docs/publishing.md).
 - Releases are published through the GitHub Actions [`Release` workflow](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml); use the documented `dry_run` mode before the first real release.
+
+The complete lifecycle generates index, context, complexity, trend, optimization, benchmark and quality-gate outputs, then verifies their structural and cross-document integrity. It rejects missing or empty files, malformed or duplicate-field JSON, count drift, broken context-pack references and internally inconsistent v3 context metrics. Repository-specific thresholds remain controlled by the normal quality-gate configuration.
 
 ## Gradle
 
 Plugin id: `org.aiknowledge.extractor`
 
-Tasks: `generateAiKnowledgeIndex`, `analyzeAiComplexity`, `optimizeAiKnowledge`, `benchmarkAiKnowledge`, `checkAiKnowledgeIndex`, `publishAiKnowledgeIndex`.
+Tasks:
+
+- `generateAiKnowledgeIndex`
+- `analyzeAiComplexity`
+- `optimizeAiKnowledge`
+- `benchmarkAiKnowledge`
+- `checkAiKnowledgeIndex`
+- `verifyAiKnowledgeArtifacts`
+- `aiKnowledgeCheck`
+- `publishAiKnowledgeIndex`
+
+Canonical CI command:
+
+```bash
+./gradlew aiKnowledgeCheck
+```
 
 Optional empirical benchmark layer (disabled by default):
 
@@ -41,6 +59,12 @@ Canonical Gradle plugin usage (plugin id, tasks, extension defaults, CI/local ex
 Maven plugin coordinates: `org.aiknowledge:ai-knowledge-maven-plugin:<version>`.
 
 Goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`, `help`.
+
+`check` generates the complete report set, executes configured quality gates and verifies the emitted artifacts:
+
+```bash
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
+```
 
 Maven help goal:
 
@@ -65,13 +89,14 @@ Implemented as deterministic static analysis without external model calls:
 - knowledge-smell recommendations
 - deterministic extraction-profile benchmark scaffold with optional empirical fixture layer
 - configurable model-profile budget metrics
+- strict artifact and cross-document verification
 
 ## Extraction architecture packages
 
 The core extractor is organized as package-level modules (within `core`) so responsibilities stay separated while preserving the current artifacts:
 
 - `org.aiknowledge.core.model`: stable repository fact model helpers (`RepositoryFacts` index/count assembly).
-- `org.aiknowledge.core`: orchestration and outputs (`AiKnowledgeRunner`, `KnowledgeExtractionPipeline`).
+- `org.aiknowledge.core`: orchestration, outputs and artifact verification (`AiKnowledgeRunner`, `AiKnowledgeArtifactVerifier`, `KnowledgeExtractionPipeline`).
 - `org.aiknowledge.core.repositoryscan`: repository inventory and non-Java scanners (build files, docs, workflows, discovery evidence, benchmark sources).
 - `org.aiknowledge.core.javaspi`: Java provider interface (`JavaKnowledgeProvider`).
 - `org.aiknowledge.core.javabasic`: default heuristic Java provider implementation.
@@ -89,34 +114,11 @@ The core extractor is organized as package-level modules (within `core`) so resp
 
 ### JDT provider: fieldFacts and relationFacts
 
-When `-Daiknowledge.javaProvider=jdt` is active, the provider emits two additional fact collections per source file:
+When `-Daiknowledge.javaProvider=jdt` is active, the provider emits two additional fact collections per source file.
 
-**`fieldFacts`** — one entry per field declaration, including:
+`fieldFacts` contains one entry per field declaration with declaring type, name, declared type, modifiers, source location, provider and confidence.
 
-| Field | Description |
-|---|---|
-| `declaringType` | Fully qualified name of the declaring class |
-| `name` | Field name |
-| `fieldType` | Declared type (syntactic name) |
-| `modifiers` | Modifier keywords (e.g. `private`, `final`) |
-| `sourceFile` | Repository-relative path |
-| `offset` / `length` | Character position in source file |
-| `line` | 1-based line number |
-| `provider` | Always `jdt-ast` |
-| `confidence` | Currently always `syntactic` for JDT-emitted field facts |
-
-**`relationFacts`** — one entry per structural relationship, with `kind` values:
-
-| Kind | Description |
-|---|---|
-| `PACKAGE_CONTAINS_TYPE` | Package → type |
-| `TYPE_EXTENDS_TYPE` | Class superclass |
-| `TYPE_IMPLEMENTS_TYPE` | Interface implementation |
-| `FIELD_HAS_TYPE` | Field → declared type |
-| `METHOD_RETURNS_TYPE` | Method → return type |
-| `METHOD_PARAMETER_HAS_TYPE` | Method parameter → type |
-| `TYPE_REFERENCES_TYPE` | Any resolved cross-file reference |
-| `TEST_REFERENCES_PRODUCTION_TYPE` | Test class → referenced production type |
+`relationFacts` records structural relationships such as package containment, inheritance, interface implementation, field/parameter/return types, cross-file references and test-to-production references.
 
 Each relation fact includes `source`, `target`, `sourceFile`, `offset`/`length` (when available), `line`, `provider`, and `confidence`.
 
@@ -128,7 +130,7 @@ The Gradle plugin automatically resolves the `compileClasspath` configuration an
 aiKnowledge {
     javaProvider            = "jdt"      // basic | jdt
     jdtMode                 = "search"   // ast | search
-    jdtSearchExecutionMode  = "forked"   // embedded | forked (recommended for Gradle/Maven daemons)
+    jdtSearchExecutionMode  = "forked"   // embedded | forked
     jdtSearchFallbackToAst  = true
     jdtWorkspaceMode        = "create"   // create | existing | off
     jdtWorkspaceDirectory   = "$buildDir/ai-knowledge/jdt-workspace"
@@ -139,7 +141,7 @@ aiKnowledge {
 Or via system properties:
 
 ```bash
-./gradlew generateAiKnowledgeIndex \
+./gradlew aiKnowledgeCheck \
   -Daiknowledge.javaProvider=jdt \
   -Daiknowledge.jdt.mode=search \
   -Daiknowledge.jdt.search.execution.mode=forked \
@@ -147,21 +149,7 @@ Or via system properties:
   -Daiknowledge.jdt.workspace.directory="$PWD/build/ai-knowledge/jdt-workspace"
 ```
 
-The Maven plugin accepts the same parameters:
-
-```xml
-<configuration>
-    <javaProvider>jdt</javaProvider>
-    <jdtMode>search</jdtMode>
-    <jdtSearchExecutionMode>forked</jdtSearchExecutionMode>
-    <jdtSearchFallbackToAst>true</jdtSearchFallbackToAst>
-    <jdtWorkspaceMode>create</jdtWorkspaceMode>
-    <jdtWorkspaceDirectory>${project.build.directory}/ai-knowledge/jdt-workspace</jdtWorkspaceDirectory>
-    <keepJdtWorkspace>false</keepJdtWorkspace>
-</configuration>
-```
-
-The Maven plugin also automatically injects `${project.compileClasspathElements}` so bindings resolve correctly when the project has been compiled.
+The Maven plugin accepts the same parameters, and automatically injects `${project.compileClasspathElements}` so bindings resolve correctly when the project has been compiled.
 
 ## Model profiles
 

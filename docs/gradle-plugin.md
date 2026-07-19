@@ -62,12 +62,32 @@ Plugin Portal publication is not part of the current release flow. Until that is
 
 | Task | Group | Purpose |
 | --- | --- | --- |
-| `generateAiKnowledgeIndex` | `documentation` | Generate deterministic knowledge index files in `build/ai-knowledge`. |
+| `generateAiKnowledgeIndex` | `documentation` | Generate deterministic knowledge index, review context and context packs in `build/ai-knowledge`. |
 | `analyzeAiComplexity` | `verification` | Generate complexity metrics and trend reports. |
 | `optimizeAiKnowledge` | `verification` | Generate optimization recommendations. |
 | `benchmarkAiKnowledge` | `verification` | Generate model-profile benchmark reports. |
-| `checkAiKnowledgeIndex` | `verification` | Run AI quality gates and fail build on violations. |
+| `checkAiKnowledgeIndex` | `verification` | Run configured quality gates, write `check.json` and verify the quality-gate artifact set. |
+| `verifyAiKnowledgeArtifacts` | `verification` | Verify an existing complete artifact set without regenerating it. |
+| `aiKnowledgeCheck` | `verification` | Canonical one-command lifecycle: scan once, generate all reports, run the quality gate and verify the complete artifact set. |
 | `publishAiKnowledgeIndex` | `documentation` | Copy generated artifacts to `docs/ai-knowledge` (depends on `generateAiKnowledgeIndex`). |
+
+For CI and release verification, prefer:
+
+```bash
+./gradlew aiKnowledgeCheck
+```
+
+`aiKnowledgeCheck` is a single orchestrated core lifecycle rather than a dependency chain over the five focused tasks. This avoids rescanning a repository and rewriting shared outputs several times. The focused tasks remain available when only one report family is needed.
+
+To verify already generated files without modifying them, run:
+
+```bash
+./gradlew verifyAiKnowledgeArtifacts
+```
+
+The lifecycle rejects missing or empty required files, malformed JSON, duplicate object fields, trailing JSON tokens, index/envelope count drift, context-pack index drift, missing context packs, inconsistent context-footprint v3 data and disagreement between `check.json` and `complexity.json`.
+
+Artifact verification is intentionally different from project policy. The verifier establishes structural and cross-document integrity. Thresholds such as maximum context debt, required capability evidence or acceptable unresolved selectors remain controlled by the configured quality gate.
 
 ## Extension configuration
 
@@ -126,7 +146,7 @@ plugins {
 }
 
 tasks.named('check') {
-    dependsOn('checkAiKnowledgeIndex')
+    dependsOn('aiKnowledgeCheck')
 }
 
 aiKnowledge {
@@ -149,7 +169,7 @@ aiKnowledge {
 To use the JDT Java provider for stronger type/reference extraction, run Gradle with:
 
 ```bash
-./gradlew generateAiKnowledgeIndex \
+./gradlew aiKnowledgeCheck \
   -Daiknowledge.javaProvider=jdt \
   -Daiknowledge.jdt.mode=search \
   -Daiknowledge.jdt.search.execution.mode=forked \

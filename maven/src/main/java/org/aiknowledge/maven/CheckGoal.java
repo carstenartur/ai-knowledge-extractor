@@ -6,9 +6,10 @@ public final class CheckGoal extends AbstractAiKnowledgeMojo {
     @Override
     public void execute() throws MojoExecutionException {
         try (ScopedSystemProperties ignored = configureSystemProperties()) {
-            runner().check(options());
-        } catch (Exception ex) {
-            throw new MojoExecutionException("Quality gate failed", ex);
+            runner().verify(options());
+        } catch (Exception exception) {
+            throw new MojoExecutionException(
+                "AI knowledge lifecycle verification failed", exception);
         }
     }
 }

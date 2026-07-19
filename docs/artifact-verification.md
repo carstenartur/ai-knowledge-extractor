@@ -16,7 +16,13 @@ Maven:
 mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
 ```
 
-Both commands generate the complete artifact set, execute the configured quality gate and then validate the generated files.
+Both commands scan the repository once, generate the complete artifact set from that frozen snapshot, execute the configured quality gate and then validate the generated files. Focused Gradle tasks remain available for individual report families, but the canonical lifecycle does not chain them together and therefore does not rescan the checkout repeatedly.
+
+To validate an existing Gradle output directory without regenerating any artifact, use:
+
+```bash
+./gradlew verifyAiKnowledgeArtifacts
+```
 
 ## Verification profiles
 
@@ -40,7 +46,7 @@ This profile adds:
 - `optimization.json` and `optimization.html`;
 - `benchmark.json` and `benchmark.html`.
 
-Gradle `verifyAiKnowledgeArtifacts`, Gradle `aiKnowledgeCheck`, Maven `check` and `AiKnowledgeRunner.verify()` use this profile.
+Gradle `verifyAiKnowledgeArtifacts`, Gradle `aiKnowledgeCheck`, Maven `check` and `AiKnowledgeRunner.verify()` use this profile. The standalone Gradle verifier only reads the configured output directory; the other three entry points generate the complete lifecycle first.
 
 ## Fail-closed checks
 

@@ -25,8 +25,9 @@ AI Knowledge Extractor therefore attempts to:
 - extract explicit structural and semantic facts from a repository;
 - select and package task-relevant context instead of entire codebases;
 - expose relationships that a model would otherwise have to reconstruct;
-- estimate the complexity and model-profile budget of the resulting context; and
-- compare extraction and optimization strategies using reproducible artifacts.
+- estimate the complexity and model-profile budget of the resulting context;
+- record repeatable proxy metrics and baselines so changes can be compared across builds; and
+- detect and optionally reject gradual metric growth through configurable CI thresholds.
 
 ## Research question and working hypothesis
 
@@ -40,7 +41,17 @@ Knowledge extraction is therefore a means rather than the final objective. The l
 
 The project uses *cognitive load* as an operational engineering term, not as a claim that language models possess human cognition. It refers to the burden created by factors such as context size, dependency spread, ambiguity, traversal depth, the number of relevant entities and relationships, and the amount of structure that must be inferred before a task can be solved.
 
+Any attempt to reduce this burden needs a repeatable way to observe it. Without a measure, there is no objective basis for deciding whether one representation is less demanding than another or whether later repository changes have silently undone an earlier improvement. A core purpose of this project is therefore to produce deterministic proxy metrics that can be versioned, compared and checked across builds.
+
 There is currently no universally validated measure for this burden. The complexity metrics, model profiles, benchmark estimates and optimization hints produced by this project are experimental proxies. They are intended to make competing representations measurable and testable, not to present the underlying research problem as solved. Establishing whether these proxies predict real task success across models is part of the project's continuing empirical work.
+
+## Preventing cognitive-load drift
+
+Cognitive load rarely grows in one obvious step. It can increase incrementally as code, dependencies, relationships and generated context accumulate. Each change may appear harmless, while their combined effect may eventually exceed the budget of the smaller model a team intended to use.
+
+To make that drift visible, the project supports committed metric baselines, trend reports and configurable quality gates. CI can be configured to reject increases beyond selected thresholds—for example in estimated context tokens, concept radius or AI cognitive debt—and to limit individual context-pack size. This is intended to preserve an accepted cognitive-load budget as the repository evolves, instead of treating reduction as a one-time optimization.
+
+These thresholds are disabled by default and must be calibrated for the repository, task set and target model profiles. They are experimental guardrails rather than proof that a model will succeed or fail. Their practical value must be validated against empirical task outcomes. Configuration details are documented in [`docs/trend-gates.md`](docs/trend-gates.md).
 
 ## Quick start
 

@@ -14,6 +14,34 @@ Deterministic build-integrated knowledge extraction for AI-assisted code underst
 
 This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` for modules, classes, tests, docs, dependencies, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.
 
+## Why this project exists
+
+The project grew out of a recurring practical problem in AI-assisted software development: smaller and less expensive language models were repeatedly overwhelmed by repository-scale tasks. Selecting a larger model often solved the immediate problem, but increased inference cost and did not address the amount of irrelevant, duplicated or implicit information presented to the model.
+
+This project explores a complementary approach: instead of always increasing model capability, reduce the amount and difficulty of reasoning required from the model. The intended outcome is that a development task can be completed reliably by the least expensive model capable of performing it.
+
+AI Knowledge Extractor therefore attempts to:
+
+- extract explicit structural and semantic facts from a repository;
+- select and package task-relevant context instead of entire codebases;
+- expose relationships that a model would otherwise have to reconstruct;
+- estimate the complexity and model-profile budget of the resulting context; and
+- compare extraction and optimization strategies using reproducible artifacts.
+
+## Research question and working hypothesis
+
+> Can a software repository be transformed into a smaller, structured representation that preserves the knowledge required for a task while reducing the reasoning burden imposed on an LLM?
+
+The working hypothesis is that explicit repository knowledge can reduce context volume, ambiguity and costly rediscovery without removing information needed to solve the task. If successful, this should lower token consumption and latency, improve reliability and allow smaller, less expensive models to perform work that would otherwise require larger models.
+
+Knowledge extraction is therefore a means rather than the final objective. The longer-term objective is to provide a model with precisely the information needed for a development task: no more, no less.
+
+## What “cognitive load” means here
+
+The project uses *cognitive load* as an operational engineering term, not as a claim that language models possess human cognition. It refers to the burden created by factors such as context size, dependency spread, ambiguity, traversal depth, the number of relevant entities and relationships, and the amount of structure that must be inferred before a task can be solved.
+
+There is currently no universally validated measure for this burden. The complexity metrics, model profiles, benchmark estimates and optimization hints produced by this project are experimental proxies. They are intended to make competing representations measurable and testable, not to present the underlying research problem as solved. Establishing whether these proxies predict real task success across models is part of the project's continuing empirical work.
+
 ## Quick start
 
 - Gradle: apply plugin `org.aiknowledge.extractor` and run `./gradlew aiKnowledgeCheck` for the complete verified lifecycle.

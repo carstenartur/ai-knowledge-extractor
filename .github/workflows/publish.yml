@@ -50,7 +50,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          current=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
+          current=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' || true)
           if ! [[ "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
             echo "::error::gradle.properties must contain projectVersion=X.Y.Z-SNAPSHOT, found '$current'"
             exit 1

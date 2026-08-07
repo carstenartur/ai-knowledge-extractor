@@ -140,7 +140,7 @@ jobs:
           test -f site/target/site/tests/index.html
 
       - name: Upload Pages artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pages-site
           path: site/target/site

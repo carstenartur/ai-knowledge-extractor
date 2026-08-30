@@ -15,6 +15,14 @@ The plugin exposes goals: `generate`, `analyze`, `optimize`, `benchmark`, `check
 For the generated Maven plugin reference with full goal and parameter documentation, see the
 [GitHub Pages documentation site](https://carstenartur.github.io/ai-knowledge-extractor/).
 
+## Automatic JavaScript/TypeScript and boundary analysis
+
+Supported JavaScript and TypeScript files and npm-compatible `package.json` modules are discovered automatically. The built-in structural provider does not require Node.js. It runs compositionally with the selected Java provider and the JDT-backed Spring/JAX-RS endpoint extractor.
+
+The `generate` goal writes `source-units.json`, `symbols.json`, `relations.json`, `boundaries.json` and `warnings.json` in addition to the established artifacts. `analyze`, `check` and complete verification also write `boundary-analysis.json` and `boundary-analysis.html`.
+
+See [`language-providers-and-boundary-analysis.md`](language-providers-and-boundary-analysis.md) for the provider SPI, evidence model, scoring and limitations.
+
 ## Help goal
 
 Show all goals:
@@ -80,6 +88,7 @@ Threshold overrides can also be passed as JVM properties:
 - Default lifecycle phase: `generate-resources`.
 - Output files:
   - `index.json`, `modules.json`, `classes.json`, `tests.json`, `docs.json`, `dependencies.json`, `capabilities.json`, `claims.json`, `evidence.json`
+  - `source-units.json`, `symbols.json`, `relations.json`, `boundaries.json`, `warnings.json`
   - `review-context.md`, `context-packs/index.json`, and one context pack per capability
 
 CLI:
@@ -103,7 +112,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:generate
 - Default lifecycle phase: `verify`.
 - Output files:
   - all `generate` outputs
-  - `complexity.json`, `complexity.html`, `metrics-snapshot.json`, `trend.json`, `trend.html`
+  - `complexity.json`, `complexity.html`, `boundary-analysis.json`, `boundary-analysis.html`, `metrics-snapshot.json`, `trend.json`, `trend.html`
 
 CLI:
 
@@ -148,7 +157,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:benchmark
 3. executes the configured quality gate and writes `check.json`;
 4. verifies the complete artifact contract.
 
-The verifier rejects missing or empty required files, malformed JSON, duplicate object fields, trailing JSON tokens, index/envelope count drift, context-pack index drift, missing context packs, inconsistent context-footprint v3 data and disagreement between `check.json` and `complexity.json`.
+The verifier rejects missing or empty required files, malformed JSON, duplicate object fields, trailing JSON tokens, index/envelope count drift, context-pack index drift, missing context packs, inconsistent context-footprint v3 data, disagreement between `check.json` and `complexity.json`, and divergence between the embedded and standalone boundary analysis.
 
 Project-specific thresholds and evidence requirements remain controlled by the shared configuration parameters; structural verification does not invent consumer policy.
 

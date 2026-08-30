@@ -58,6 +58,16 @@ pluginManagement {
 
 Plugin Portal publication is not part of the current release flow. Until that is added, use GitHub Packages for released versions or composite builds for local development.
 
+## Automatic JavaScript/TypeScript and boundary analysis
+
+Supported JavaScript and TypeScript files are analyzed automatically. `package.json` files participate in module and dependency discovery, and no Node.js installation is required by the built-in provider.
+
+The provider composes with the selected Java mode. For example, `javaProvider = "jdt"` strengthens Java structural facts while JavaScript/TypeScript client extraction and JDT-backed Spring/JAX-RS endpoint extraction continue to run.
+
+`generateAiKnowledgeIndex` writes the language-neutral raw facts (`source-units.json`, `symbols.json`, `relations.json`, `boundaries.json`, `warnings.json`). Analysis and check lifecycles additionally write `boundary-analysis.json` and `boundary-analysis.html`.
+
+See [`language-providers-and-boundary-analysis.md`](language-providers-and-boundary-analysis.md) for provider extension, scoring and limitations.
+
 ## Tasks
 
 | Task | Group | Purpose |
@@ -85,7 +95,7 @@ To verify already generated files without modifying them, run:
 ./gradlew verifyAiKnowledgeArtifacts
 ```
 
-The lifecycle rejects missing or empty required files, malformed JSON, duplicate object fields, trailing JSON tokens, index/envelope count drift, context-pack index drift, missing context packs, inconsistent context-footprint v3 data and disagreement between `check.json` and `complexity.json`.
+The lifecycle rejects missing or empty required files, malformed JSON, duplicate object fields, trailing JSON tokens, index/envelope count drift, context-pack index drift, missing context packs, inconsistent context-footprint v3 data, disagreement between `check.json` and `complexity.json`, and divergence between the embedded and standalone boundary analysis.
 
 Artifact verification is intentionally different from project policy. The verifier establishes structural and cross-document integrity. Thresholds such as maximum context debt, required capability evidence or acceptable unresolved selectors remain controlled by the configured quality gate.
 

@@ -6,6 +6,8 @@
 
 **Description:** Scans the repository and generates deterministic AI knowledge index artifacts.
 
+JavaScript and TypeScript files are analyzed automatically; the built-in provider does not require Node.js.
+
 ## Output Files
 
 Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowledge`):
@@ -26,6 +28,12 @@ Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowle
 - `dependencies.json`
 - `capabilities.json`
 - `claims.json`
+- `evidence.json`
+- `source-units.json`
+- `symbols.json`
+- `relations.json`
+- `boundaries.json`
+- `warnings.json`
 
 ## Parameters
 

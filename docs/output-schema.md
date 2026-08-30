@@ -57,6 +57,11 @@ Each capability context pack contains:
 | `capabilities.json` | `capabilities` | Capability status inferred from code, tests, docs and optional seeds. |
 | `claims.json` | `claims` | Machine-readable claims linked to capability evidence. |
 | `evidence.json` | `evidence` | Project evidence artifacts such as discovery evidence files, benchmark source fixtures and GitHub workflow metadata. |
+| `source-units.json` | `sourceUnits` | Language-neutral Java type units and JavaScript/TypeScript source modules. |
+| `symbols.json` | `symbols` | Language-neutral types, functions, methods, fields and other declarations. |
+| `relations.json` | `relations` | Typed imports, declarations, structural relationships and boundary relations. |
+| `boundaries.json` | `boundaries` | Raw frontend client calls and Java server endpoint contracts. |
+| `warnings.json` | `warnings` | Recoverable provider limitations with source and provider provenance. |
 
 All list artifacts are wrapped in an object with the primary key shown above. Producers must keep file names and primary keys stable. New fields may be added, but existing fields should not be removed without increasing `schemaVersion`.
 
@@ -67,7 +72,9 @@ Current fields:
 - `schemaVersion`: integer schema version.
 - `repository`: repository root directory name.
 - `generationMode`: currently `deterministic-static`.
-- `counts`: object with counts for modules, classes, tests, docs, dependencies, capabilities, claims and evidence artifacts.
+- `counts`: object with counts for modules, classes, tests, docs, dependencies, capabilities, claims, evidence, source units, symbols, relations, boundaries and provider warnings.
+
+Schema version 2 adds the language-neutral artifact family. The Java-oriented `classes.json` and `tests.json` remain available, while cross-language consumers should prefer `source-units.json`, `symbols.json` and `relations.json`.
 
 ## modules.json
 
@@ -112,6 +119,70 @@ Current test type fields:
 - `imports`
 - `testedClass`
 - `tags`
+
+## source-units.json
+
+Each source-unit fact describes the top-level analyzable unit for one language or tool. Common fields are:
+
+- `id`
+- `name`
+- `simpleName` when available
+- `kind`
+- `language`
+- `sourceFile`
+- `module`
+- `namespace` and/or `package`
+- `lineCount`
+- `test`
+- `provider`
+- `confidence`
+
+JavaScript/TypeScript units additionally expose `imports`, `runtimeImports`, `typeOnlyImports`, `exports` and nested `methodFacts`.
+
+## symbols.json
+
+Common symbol fields are:
+
+- `id`
+- `name` and optional `qualifiedName`
+- `kind` and optional `callableKind`/`role`
+- `language`
+- `sourceFile`
+- `module`
+- source line/range evidence
+- `provider` and `confidence`
+
+Callable facts may include `cyclomaticComplexity`, `cognitiveComplexity`, `maxNestingDepth`, `decisionPointCount`, `decisionPointsByKind`, `complexityProvider`, `complexityAccuracy` and `complexityModel`. Java and JavaScript/TypeScript use `aiknowledge-control-flow-v1` when these values follow the common semantics.
+
+## relations.json
+
+Every relation has `kind`, `source`, `target`, `sourceFile`, `language` and `provider`. Import relations may additionally contain `runtime`, `typeOnly`, `dynamic`, `external`, `packageName` and line evidence.
+
+## boundaries.json
+
+Boundary facts have `kind=client-call` or `kind=server-endpoint`. Common fields include:
+
+- `id`
+- `protocol`
+- `method`
+- `path`
+- `normalizedPath`
+- `callable`
+- `sourceFile`
+- `module`
+- `language`
+- `provider`
+- `confidence`
+
+Client calls may include `client`, `literalPath`, `pathExpressionKind`, `awaited`, `errorHandling`, `errorBranchCount`, `modelTransformationCount`, `backendStateInterpretationCount`, `backendStateLiterals` and `contractSource`.
+
+Server endpoints additionally identify `framework` and `declaringType`.
+
+A runtime-generated path that cannot be resolved is represented as `normalizedPath=<dynamic>` rather than being guessed.
+
+## warnings.json
+
+Warnings identify the provider, source file, stable warning code and message where available. They are recoverable evidence and are separate from report-level warnings and configured quality-gate violations.
 
 ## docs.json
 
@@ -245,6 +316,8 @@ The evidence artifact is intended to expose project-specific generated proof, be
 |---|---|
 | `complexity.json` | Estimated context tokens, concept radius, dependency radius, knowledge density, profile-specific model budget metrics and AI cognitive debt. |
 | `complexity.html` | Human-readable complexity report. |
+| `boundary-analysis.json` | Linked frontend/backend operations, dimension scores, dependency surface, findings, confidence and limitations. |
+| `boundary-analysis.html` | Human-readable frontend/backend boundary report. |
 | `metrics-snapshot.json` | Compact current metrics snapshot intended for future trend baselines. |
 | `trend.json` | Machine-readable comparison of current metrics with `ai-knowledge/complexity-baseline.json`. |
 | `trend.html` | Human-readable trend report. |
@@ -267,6 +340,8 @@ Current top-level fields:
 - `compressionRatio`
 - `aiCognitiveComplexity`
 - `aiCognitiveDebt`
+- `sourceUnitCount`
+- `boundaryAnalysis`
 - `warningCount`
 - `warnings`
 - `modelProfiles`
@@ -287,6 +362,30 @@ Each `modelProfiles` entry contains:
 - `compressedFitsHardLimit`
 - `warnings`
 - `warningCount`
+
+## boundary-analysis.json
+
+Top-level fields:
+
+- `schemaVersion`
+- `method`
+- `score` (0–100; higher means a heavier structural boundary burden)
+- `rating`
+- `confidence`
+- `dimensions`
+- `dependencySurface`
+- client/server/link counts
+- `maxEndpointFanOutPerCallable`
+- `maxCallsPerCallable`
+- `links`
+- `findings`
+- `versionControlHistoryUsed` (always `false`)
+- `changeCouplingIncluded` (always `false`)
+- `limitations`
+
+The dimensions are `structuralCoupling`, `orchestration`, `modelTranslation`, `semanticCoupling`, `errorComplexity`, `dependencySurface` and `contractClarity`. `contractClarity` is higher-is-better; the aggregate score uses its inverse uncertainty.
+
+The report uses only current-checkout static evidence. Git commit history and co-change coupling are intentionally excluded.
 
 ## trend.json
 
@@ -320,6 +419,7 @@ The quality gate output includes:
 - `trendThresholds`
 - `claimFailureCount`: number of claims with `status=failed` and `severity=error`. Non-zero causes the quality gate to fail.
 - `knowledgeQualityGates`: summary of all enabled knowledge quality gates (see below).
+- `boundaryAnalysis`: the same boundary report embedded in `complexity.json` and written to `boundary-analysis.json`.
 
 ### knowledgeQualityGates
 

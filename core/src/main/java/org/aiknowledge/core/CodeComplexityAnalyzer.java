@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.aiknowledge.core.analysis.ComplexityModel;
 import org.aiknowledge.core.javaspi.JavaKnowledgeRequest;
 import org.aiknowledge.core.javaspi.JavaKnowledgeResult;
 import org.eclipse.jdt.core.JavaCore;
@@ -114,6 +115,8 @@ final class CodeComplexityAnalyzer {
         fact.put("decisionPointsByKind", visitor.decisionPointsByKind());
         fact.put("complexityProvider", "jdt-ast");
         fact.put("complexityAccuracy", "ast");
+        fact.put("complexityModel", ComplexityModel.ID);
+        fact.put("language", "java");
         return fact;
     }
 

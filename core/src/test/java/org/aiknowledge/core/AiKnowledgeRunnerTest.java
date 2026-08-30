@@ -731,6 +731,83 @@ class AiKnowledgeRunnerTest {
                 "gates must pass when no gates are enabled");
     }
 
+    @Test
+    void checkGeneratesAndVerifiesCrossLanguageBoundaryArtifacts() throws Exception {
+        Path project = temp.resolve("cross-language-boundary-fixture");
+        Files.createDirectories(project.resolve("backend/src/main/java/example/api"));
+        Files.createDirectories(project.resolve("web/src"));
+        Files.createDirectories(project.resolve("ai-knowledge"));
+        Files.writeString(project.resolve("backend/build.gradle"),
+                "plugins { id 'java' }\n");
+        Files.writeString(project.resolve("backend/src/main/java/example/api/UserController.java"), """
+                package example.api;
+                import org.springframework.web.bind.annotation.GetMapping;
+                import org.springframework.web.bind.annotation.PathVariable;
+                import org.springframework.web.bind.annotation.RequestMapping;
+                import org.springframework.web.bind.annotation.RestController;
+
+                @RestController
+                @RequestMapping("/api/users")
+                final class UserController {
+                    @GetMapping("/{id}")
+                    Object get(@PathVariable String id) { return null; }
+                }
+                """);
+        Files.writeString(project.resolve("web/package.json"), """
+                {
+                  "name": "example-web",
+                  "dependencies": { "axios": "1.0.0" },
+                  "devDependencies": { "typescript": "5.0.0" }
+                }
+                """);
+        Files.writeString(project.resolve("web/src/UserClient.ts"), """
+                import axios from 'axios';
+                import type { UserDto } from './UserDto';
+
+                export async function loadUser(id: string) {
+                  const response = await axios.get(`/api/users/${id}`);
+                  return { displayName: response.data.name };
+                }
+                """);
+        Files.writeString(project.resolve("ai-knowledge/capabilities.seed.yaml"), """
+                - id: user-client
+                  label: User Client
+                  typePatterns: ['*UserClient*']
+                """);
+
+        Path output = project.resolve("build/ai-knowledge");
+        new AiKnowledgeRunner().check(ExtractionOptions.defaults(project, output));
+
+        for (String artifact : List.of(
+                "source-units.json",
+                "symbols.json",
+                "relations.json",
+                "boundaries.json",
+                "warnings.json",
+                "boundary-analysis.json",
+                "boundary-analysis.html")) {
+            assertTrue(Files.isRegularFile(output.resolve(artifact)), artifact);
+        }
+        String sourceUnits = Files.readString(output.resolve("source-units.json"));
+        String relations = Files.readString(output.resolve("relations.json"));
+        String boundaries = Files.readString(output.resolve("boundaries.json"));
+        String analysis = Files.readString(output.resolve("boundary-analysis.json"));
+        String capabilities = Files.readString(output.resolve("capabilities.json"));
+        String reviewContext = Files.readString(output.resolve("review-context.md"));
+
+        assertTrue(sourceUnits.contains("\"language\":\"typescript\""));
+        assertTrue(sourceUnits.contains("\"simpleName\":\"UserClient\""));
+        assertTrue(relations.contains("\"typeOnly\":true"));
+        assertTrue(boundaries.contains("\"client-call\""));
+        assertTrue(boundaries.contains("\"server-endpoint\""));
+        assertTrue(analysis.contains("\"linkedCallCount\":1"));
+        assertTrue(analysis.contains("\"versionControlHistoryUsed\":false"));
+        assertTrue(analysis.contains("\"changeCouplingIncluded\":false"));
+        assertTrue(capabilities.contains("web/src/UserClient.ts"));
+        assertTrue(reviewContext.contains("Frontend/Backend Boundary Evidence"));
+        assertTrue(reviewContext.contains("**Client calls**: 1"));
+    }
+
     private static String objectContaining(String json, String marker) {
         int markerIndex = json.indexOf(marker);
         assertTrue(markerIndex >= 0, "Missing marker " + marker + " in " + json);

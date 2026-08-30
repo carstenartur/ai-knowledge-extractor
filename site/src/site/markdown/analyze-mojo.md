@@ -12,6 +12,8 @@ Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowle
 
 - `complexity.json`
 - `complexity.html`
+- `boundary-analysis.json`
+- `boundary-analysis.html`
 - `metrics-snapshot.json`
 - `trend.json`
 - `trend.html`

@@ -6,7 +6,8 @@ import java.util.Map;
 import org.aiknowledge.core.RepositorySnapshot;
 
 public final class RepositoryFacts {
-    private RepositoryFacts() {}
+    private RepositoryFacts() {
+    }
 
     public static void populateIndex(Path root, RepositorySnapshot snapshot) {
         Map counts = new LinkedHashMap();
@@ -18,7 +19,12 @@ public final class RepositoryFacts {
         counts.put("capabilities", snapshot.capabilities.size());
         counts.put("claims", snapshot.claims.size());
         counts.put("evidence", snapshot.evidence.size());
-        snapshot.index.put("schemaVersion", 1);
+        counts.put("sourceUnits", snapshot.sourceUnits.size());
+        counts.put("symbols", snapshot.symbols.size());
+        counts.put("relations", snapshot.relations.size());
+        counts.put("boundaries", snapshot.boundaries.size());
+        counts.put("warnings", snapshot.warnings.size());
+        snapshot.index.put("schemaVersion", 2);
         snapshot.index.put("repository", root.getFileName().toString());
         snapshot.index.put("generationMode", "deterministic-static");
         snapshot.index.put("counts", counts);

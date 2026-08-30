@@ -149,6 +149,8 @@ public final class AiKnowledgeRunner {
             "contextFootprint", Map.of()));
         check.put("codeComplexity", complexity.getOrDefault(
             "codeComplexity", Map.of()));
+        check.put("boundaryAnalysis", complexity.getOrDefault(
+            "boundaryAnalysis", Map.of()));
         check.put("methodComplexityThresholds", methodComplexityThresholds(options));
         check.put("violations", violations);
         check.put("warningCount", warnings);
@@ -336,6 +338,15 @@ public final class AiKnowledgeRunner {
         StableIo.writeText(
             options.outputDirectory().resolve("complexity.html"),
             ReportAnalyzer.html("AI Cognitive Complexity", complexity));
+        Object boundary = complexity.get("boundaryAnalysis");
+        if (boundary instanceof Map boundaryAnalysis) {
+            StableIo.writeJson(
+                options.outputDirectory().resolve("boundary-analysis.json"),
+                boundaryAnalysis);
+            StableIo.writeText(
+                options.outputDirectory().resolve("boundary-analysis.html"),
+                ReportAnalyzer.html("Frontend/Backend Boundary Analysis", boundaryAnalysis));
+        }
         StableIo.writeJson(
             options.outputDirectory().resolve("metrics-snapshot.json"), snapshot);
         StableIo.writeJson(options.outputDirectory().resolve("trend.json"), trend);
@@ -366,6 +377,16 @@ public final class AiKnowledgeRunner {
             envelope("claims", snapshot.claims));
         StableIo.writeJson(outputDirectory.resolve("evidence.json"),
             envelope("evidence", snapshot.evidence));
+        StableIo.writeJson(outputDirectory.resolve("source-units.json"),
+            envelope("sourceUnits", snapshot.sourceUnits));
+        StableIo.writeJson(outputDirectory.resolve("symbols.json"),
+            envelope("symbols", snapshot.symbols));
+        StableIo.writeJson(outputDirectory.resolve("relations.json"),
+            envelope("relations", snapshot.relations));
+        StableIo.writeJson(outputDirectory.resolve("boundaries.json"),
+            envelope("boundaries", snapshot.boundaries));
+        StableIo.writeJson(outputDirectory.resolve("warnings.json"),
+            envelope("warnings", snapshot.warnings));
         ReviewContextGenerator.generate(options, snapshot);
     }
 

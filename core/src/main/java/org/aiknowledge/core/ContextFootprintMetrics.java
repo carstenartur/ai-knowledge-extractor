@@ -25,9 +25,9 @@ final class ContextFootprintMetrics {
 
     static Map<String, Object> calculate(RepositorySnapshot snapshot) {
         List<FactSize> production = sizes(
-                snapshot.classes, "class", CODE_TOKENS_PER_LINE, FALLBACK_CLASS_TOKENS);
+                productionFacts(snapshot), "class", CODE_TOKENS_PER_LINE, FALLBACK_CLASS_TOKENS);
         List<FactSize> tests = sizes(
-                snapshot.tests, "test", CODE_TOKENS_PER_LINE, FALLBACK_TEST_TOKENS);
+                testFacts(snapshot), "test", CODE_TOKENS_PER_LINE, FALLBACK_TEST_TOKENS);
         List<FactSize> docs = sizes(
                 snapshot.docs, "doc", DOC_TOKENS_PER_LINE, FALLBACK_DOC_TOKENS);
 
@@ -285,6 +285,25 @@ final class ContextFootprintMetrics {
         if (!name.isEmpty() && !"null".equals(name)) target.add(name);
     }
 
+
+    private static List productionFacts(RepositorySnapshot snapshot) {
+        if (snapshot.sourceUnits.isEmpty()) return snapshot.classes;
+        List result = new ArrayList();
+        for (Object value : snapshot.sourceUnits) {
+            if (value instanceof Map fact && !Boolean.TRUE.equals(fact.get("test"))) result.add(value);
+        }
+        return result;
+    }
+
+    private static List testFacts(RepositorySnapshot snapshot) {
+        if (snapshot.sourceUnits.isEmpty()) return snapshot.tests;
+        List result = new ArrayList();
+        for (Object value : snapshot.sourceUnits) {
+            if (value instanceof Map fact && Boolean.TRUE.equals(fact.get("test"))) result.add(value);
+        }
+        return result;
+    }
+
     private static List<FactSize> sizes(
             List facts,
             String kind,
@@ -297,12 +316,15 @@ final class ContextFootprintMetrics {
             int estimatedTokens = lineCount > 0 ? lineCount * tokensPerLine : fallbackTokens;
             String name = switch (kind) {
                 case "class" -> text(fact.getOrDefault("class", fact.getOrDefault("name", "")));
-                case "test" -> text(fact.getOrDefault("testClass", fact.getOrDefault("class", "")));
+                case "test" -> text(fact.getOrDefault("testClass",
+                        fact.getOrDefault("class", fact.getOrDefault("name", ""))));
                 default -> text(fact.getOrDefault("title", fact.getOrDefault("path", "")));
             };
+            String packageName = text(fact.get("package"));
+            if (packageName.isBlank()) packageName = text(fact.get("namespace"));
             result.add(new FactSize(
                     name,
-                    text(fact.get("package")),
+                    packageName,
                     text(fact.get("module")),
                     normalizePath(text(fact.getOrDefault("sourceFile", fact.getOrDefault("path", "")))),
                     lineCount,

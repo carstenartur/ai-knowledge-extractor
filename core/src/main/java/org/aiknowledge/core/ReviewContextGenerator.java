@@ -185,17 +185,37 @@ final class ReviewContextGenerator {
         Map<String, String> map = new LinkedHashMap<>();
         for (Object obj : snapshot.classes) {
             if (!(obj instanceof Map cls)) continue;
-            String fqn = String.valueOf(cls.getOrDefault("class", ""));
-            String src = String.valueOf(cls.getOrDefault("sourceFile", ""));
-            if (!fqn.isBlank() && !src.isBlank()) map.put(fqn, src);
+            addSourceLookup(map, cls.get("class"), cls.get("sourceFile"));
+            addSourceLookup(map, cls.get("name"), cls.get("sourceFile"));
         }
         for (Object obj : snapshot.tests) {
             if (!(obj instanceof Map tst)) continue;
-            String fqn = String.valueOf(tst.getOrDefault("testClass", ""));
-            String src = String.valueOf(tst.getOrDefault("sourceFile", ""));
-            if (!fqn.isBlank() && !src.isBlank()) map.put(fqn, src);
+            addSourceLookup(map, tst.get("testClass"), tst.get("sourceFile"));
+            addSourceLookup(map, tst.get("name"), tst.get("sourceFile"));
+        }
+        for (Object obj : snapshot.sourceUnits) {
+            if (!(obj instanceof Map unit)) continue;
+            Object sourceFile = unit.get("sourceFile");
+            addSourceLookup(map, unit.get("id"), sourceFile);
+            addSourceLookup(map, unit.get("name"), sourceFile);
+            addSourceLookup(map, unit.get("class"), sourceFile);
+            addSourceLookup(map, unit.get("simpleName"), sourceFile);
+        }
+        for (Object obj : snapshot.symbols) {
+            if (!(obj instanceof Map symbol)) continue;
+            Object sourceFile = symbol.get("sourceFile");
+            addSourceLookup(map, symbol.get("id"), sourceFile);
+            addSourceLookup(map, symbol.get("name"), sourceFile);
+            addSourceLookup(map, symbol.get("qualifiedName"), sourceFile);
         }
         return map;
+    }
+
+    private static void addSourceLookup(
+            Map<String, String> target, Object identifier, Object sourceFile) {
+        String id = identifier == null ? "" : String.valueOf(identifier);
+        String path = sourceFile == null ? "" : String.valueOf(sourceFile);
+        if (!id.isBlank() && !path.isBlank()) target.putIfAbsent(id, path);
     }
 
     // ── Markdown generation ──────────────────────────────────────────────────
@@ -208,6 +228,7 @@ final class ReviewContextGenerator {
         appendModuleGraph(md, snapshot);
         appendCapabilityOverview(md, snapshot);
         appendArchitectureClaims(md, snapshot);
+        appendBoundaryEvidence(md, snapshot);
         appendRiskAreas(md, snapshot);
         appendSuggestedContextPacks(md, packIndex);
         appendConsumptionGuide(md);
@@ -227,9 +248,14 @@ final class ReviewContextGenerator {
         md.append(" | **Classes**: ").append(counts.getOrDefault("classes", 0));
         md.append(" | **Tests**: ").append(counts.getOrDefault("tests", 0));
         md.append(" | **Documents**: ").append(counts.getOrDefault("docs", 0)).append("\n");
+        md.append("- **Source Units**: ").append(counts.getOrDefault("sourceUnits", 0));
+        md.append(" | **Symbols**: ").append(counts.getOrDefault("symbols", 0));
+        md.append(" | **Relations**: ").append(counts.getOrDefault("relations", 0));
+        md.append(" | **Boundaries**: ").append(counts.getOrDefault("boundaries", 0)).append("\n");
         md.append("- **Capabilities**: ").append(counts.getOrDefault("capabilities", 0));
         md.append(" | **Claims**: ").append(counts.getOrDefault("claims", 0));
-        md.append(" | **Evidence**: ").append(counts.getOrDefault("evidence", 0)).append("\n\n");
+        md.append(" | **Evidence**: ").append(counts.getOrDefault("evidence", 0));
+        md.append(" | **Provider Warnings**: ").append(counts.getOrDefault("warnings", 0)).append("\n\n");
     }
 
     private static void appendModuleGraph(StringBuilder md, RepositorySnapshot snapshot) {
@@ -243,7 +269,10 @@ final class ReviewContextGenerator {
         for (Object obj : snapshot.modules) {
             if (!(obj instanceof Map module)) continue;
             String name = String.valueOf(module.getOrDefault("name", ""));
-            String buildSystem = String.valueOf(module.getOrDefault("buildSystem", ""));
+            List<String> buildSystems = asList(module.get("buildSystems"));
+            String buildSystem = buildSystems.isEmpty()
+                    ? String.valueOf(module.getOrDefault("buildSystem", ""))
+                    : String.join(", ", buildSystems);
             String packages = String.join(", ", asList(module.get("mainPackages")));
             String projectDeps = String.join(", ", asList(module.get("projectDependencies")));
             md.append("| ").append(name)
@@ -306,6 +335,46 @@ final class ReviewContextGenerator {
                     .append(" |\n");
         }
         md.append("\n");
+    }
+
+    private static void appendBoundaryEvidence(
+            StringBuilder md, RepositorySnapshot snapshot) {
+        md.append("## Frontend/Backend Boundary Evidence\n\n");
+        int clientCalls = 0;
+        int serverEndpoints = 0;
+        int dynamicCalls = 0;
+        Set<String> languages = new LinkedHashSet<>();
+        Set<String> clients = new LinkedHashSet<>();
+        for (Object obj : snapshot.boundaries) {
+            if (!(obj instanceof Map boundary)) continue;
+            String kind = String.valueOf(boundary.getOrDefault("kind", ""));
+            if ("client-call".equals(kind)) {
+                clientCalls++;
+                String normalized = String.valueOf(
+                        boundary.getOrDefault("normalizedPath", ""));
+                if ("<dynamic>".equals(normalized)) dynamicCalls++;
+                String client = String.valueOf(boundary.getOrDefault("client", ""));
+                if (!client.isBlank()) clients.add(client);
+            } else if ("server-endpoint".equals(kind)) {
+                serverEndpoints++;
+            }
+            String language = String.valueOf(boundary.getOrDefault("language", ""));
+            if (!language.isBlank()) languages.add(language);
+        }
+        if (snapshot.boundaries.isEmpty()) {
+            md.append("_No supported client calls or server endpoints detected._\n\n");
+            return;
+        }
+        md.append("- **Client calls**: ").append(clientCalls);
+        md.append(" | **Server endpoints**: ").append(serverEndpoints);
+        md.append(" | **Dynamic/unresolved client paths**: ").append(dynamicCalls).append("\n");
+        md.append("- **Languages**: ")
+                .append(languages.isEmpty() ? "_none_" : String.join(", ", languages));
+        md.append(" | **Client mechanisms**: ")
+                .append(clients.isEmpty() ? "_none_" : String.join(", ", clients))
+                .append("\n\n");
+        md.append("Raw evidence is available in `boundaries.json`. Run the analyze or check ");
+        md.append("lifecycle to produce the linked, scored `boundary-analysis.json` report.\n\n");
     }
 
     private static void appendRiskAreas(StringBuilder md, RepositorySnapshot snapshot) {
@@ -379,7 +448,8 @@ final class ReviewContextGenerator {
         md.append("**AI assistant**: Load `review-context.md` for an overview, then load a specific ");
         md.append("`context-packs/<capability-id>.json` for targeted review, bug-fixing or feature work.\n\n");
         md.append("**Architecture review**: Cross-reference the _Architecture Claims_ table with ");
-        md.append("the _Risk Areas_ section to identify gaps that need attention.\n");
+        md.append("the _Risk Areas_ section and inspect `boundary-analysis.json` for explainable ");
+        md.append("frontend/backend coupling, orchestration and contract findings.\n");
     }
 
     // ── Utility ──────────────────────────────────────────────────────────────

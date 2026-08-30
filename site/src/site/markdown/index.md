@@ -66,6 +66,12 @@ Or bind goals in your `pom.xml`:
 </build>
 ```
 
+## Language and boundary analysis
+
+JavaScript and TypeScript source files and npm-compatible `package.json` modules are analyzed automatically without requiring Node.js. The extractor links supported frontend client calls to Spring and JAX-RS endpoint templates and writes an explainable `boundary-analysis.json` report.
+
+The provider SPI, fact conventions, scoring dimensions and limitations are documented in the [language-provider and boundary-analysis guide](https://github.com/carstenartur/ai-knowledge-extractor/blob/main/docs/language-providers-and-boundary-analysis.md).
+
 ## Shared Parameters
 
 All operational goals (`generate`, `analyze`, `optimize`, `benchmark`, `check`) share the same parameters.

@@ -32,7 +32,12 @@ public final class AiKnowledgeArtifactVerifier {
         Map.entry("dependencies.json", "dependencies"),
         Map.entry("capabilities.json", "capabilities"),
         Map.entry("claims.json", "claims"),
-        Map.entry("evidence.json", "evidence"));
+        Map.entry("evidence.json", "evidence"),
+        Map.entry("source-units.json", "sourceUnits"),
+        Map.entry("symbols.json", "symbols"),
+        Map.entry("relations.json", "relations"),
+        Map.entry("boundaries.json", "boundaries"),
+        Map.entry("warnings.json", "warnings"));
 
     private static final List<String> QUALITY_JSON = List.of(
         "index.json",
@@ -44,14 +49,20 @@ public final class AiKnowledgeArtifactVerifier {
         "capabilities.json",
         "claims.json",
         "evidence.json",
+        "source-units.json",
+        "symbols.json",
+        "relations.json",
+        "boundaries.json",
+        "warnings.json",
         "context-packs/index.json",
         "complexity.json",
+        "boundary-analysis.json",
         "metrics-snapshot.json",
         "trend.json",
         "check.json");
 
     private static final List<String> QUALITY_TEXT = List.of(
-        "review-context.md", "complexity.html", "trend.html");
+        "review-context.md", "complexity.html", "boundary-analysis.html", "trend.html");
 
     private static final List<String> COMPLETE_JSON = List.of(
         "optimization.json", "benchmark.json");
@@ -111,7 +122,7 @@ public final class AiKnowledgeArtifactVerifier {
         });
 
         Map<String, Object> index = object(documents.get("index.json"), "index.json", errors);
-        requireInteger(index.get("schemaVersion"), 1, "index.json.schemaVersion", errors);
+        requireInteger(index.get("schemaVersion"), 2, "index.json.schemaVersion", errors);
         requireText(index.get("repository"), "index.json.repository", errors);
         requireTextValue(index.get("generationMode"), "deterministic-static",
             "index.json.generationMode", errors);
@@ -241,6 +252,24 @@ public final class AiKnowledgeArtifactVerifier {
             "complexity.json.aiCostDrivers", errors);
         object(costDrivers.get("tokenCostDrivers"),
             "complexity.json.aiCostDrivers.tokenCostDrivers", errors);
+        Map<String, Object> boundary = object(complexity.get("boundaryAnalysis"),
+            "complexity.json.boundaryAnalysis", errors);
+        requireInteger(boundary.get("schemaVersion"), 1,
+            "complexity.json.boundaryAnalysis.schemaVersion", errors);
+        requireRange(boundary.get("score"), BigDecimal.ZERO, new BigDecimal("100"),
+            "complexity.json.boundaryAnalysis.score", errors);
+        requireText(boundary.get("rating"),
+            "complexity.json.boundaryAnalysis.rating", errors);
+        object(boundary.get("dimensions"),
+            "complexity.json.boundaryAnalysis.dimensions", errors);
+        if (!Boolean.FALSE.equals(boundary.get("versionControlHistoryUsed"))) {
+            errors.add("boundary analysis must declare versionControlHistoryUsed=false");
+        }
+        Map<String, Object> boundaryFile = object(documents.get("boundary-analysis.json"),
+            "boundary-analysis.json", errors);
+        if (!Objects.equals(boundary, boundaryFile)) {
+            errors.add("boundary-analysis.json differs from complexity.json.boundaryAnalysis");
+        }
 
         Map<String, Object> footprint = object(complexity.get("contextFootprint"),
             "complexity.json.contextFootprint", errors);
@@ -323,6 +352,9 @@ public final class AiKnowledgeArtifactVerifier {
         }
         if (!Objects.equals(check.get("codeComplexity"), complexity.get("codeComplexity"))) {
             errors.add("check.json.codeComplexity differs from complexity.json");
+        }
+        if (!Objects.equals(check.get("boundaryAnalysis"), complexity.get("boundaryAnalysis"))) {
+            errors.add("check.json.boundaryAnalysis differs from complexity.json");
         }
         BigDecimal checkDebt = decimal(check.get("aiContextDebt"));
         BigDecimal complexityDebt = decimal(complexity.get("aiContextDebt"));

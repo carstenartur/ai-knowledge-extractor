@@ -41,9 +41,11 @@ public final class CapabilityLinker {
         List<String> evidenceTypes = asList(cap.get("evidenceTypes"));
 
         List<String> matchedModules = matchByField(moduleSelectors, snapshot.modules, "name");
-        List<String> matchedPackages = matchPackages(packageSelectors, snapshot.classes);
-        List<String> matchedTypes = matchTypes(typePatterns, packageSelectors, snapshot.classes);
-        List<String> matchedTests = matchTests(testPatterns, packageSelectors, snapshot.tests);
+        List productionFacts = productionFacts(snapshot);
+        List testFacts = testFacts(snapshot);
+        List<String> matchedPackages = matchPackages(packageSelectors, productionFacts);
+        List<String> matchedTypes = matchTypes(typePatterns, packageSelectors, productionFacts);
+        List<String> matchedTests = matchTests(testPatterns, packageSelectors, testFacts);
         List<String> matchedDocs = matchDocs(docPatterns, snapshot.docs);
         List<String> matchedEvidence = matchEvidence(evidenceTypes, snapshot.evidence);
 
@@ -95,10 +97,11 @@ public final class CapabilityLinker {
         List<String> result = new ArrayList<>();
         for (Object obj : classes) {
             if (!(obj instanceof Map map)) continue;
-            String fqn = String.valueOf(map.getOrDefault("class", ""));
-            String pkg = String.valueOf(map.getOrDefault("package", ""));
+            String fqn = String.valueOf(map.getOrDefault("class", map.getOrDefault("name", "")));
+            String candidateName = String.valueOf(map.getOrDefault("simpleName", simpleName(fqn)));
+            String pkg = String.valueOf(map.getOrDefault("package", map.getOrDefault("namespace", "")));
             boolean inPackage = !pkgSet.isEmpty() && pkgSet.contains(pkg);
-            boolean matchesPattern = matchesAnyGlob(patterns, simpleName(fqn));
+            boolean matchesPattern = matchesAnyGlob(patterns, candidateName);
             if ((inPackage || matchesPattern) && !result.contains(fqn)) result.add(fqn);
         }
         return result;
@@ -109,10 +112,11 @@ public final class CapabilityLinker {
         List<String> result = new ArrayList<>();
         for (Object obj : tests) {
             if (!(obj instanceof Map map)) continue;
-            String fqn = String.valueOf(map.getOrDefault("testClass", ""));
-            String pkg = String.valueOf(map.getOrDefault("package", ""));
+            String fqn = String.valueOf(map.getOrDefault("testClass", map.getOrDefault("name", "")));
+            String candidateName = String.valueOf(map.getOrDefault("simpleName", simpleName(fqn)));
+            String pkg = String.valueOf(map.getOrDefault("package", map.getOrDefault("namespace", "")));
             boolean inPackage = !pkgSet.isEmpty() && pkgSet.contains(pkg);
-            boolean matchesPattern = matchesAnyGlob(patterns, simpleName(fqn));
+            boolean matchesPattern = matchesAnyGlob(patterns, candidateName);
             if ((inPackage || matchesPattern) && !result.contains(fqn)) result.add(fqn);
         }
         return result;
@@ -190,6 +194,24 @@ public final class CapabilityLinker {
     private static String simpleName(String fqn) {
         int dot = fqn.lastIndexOf('.');
         return dot >= 0 ? fqn.substring(dot + 1) : fqn;
+    }
+
+    private static List productionFacts(RepositorySnapshot snapshot) {
+        if (snapshot.sourceUnits.isEmpty()) return snapshot.classes;
+        List result = new ArrayList();
+        for (Object value : snapshot.sourceUnits) {
+            if (value instanceof Map map && !Boolean.TRUE.equals(map.get("test"))) result.add(value);
+        }
+        return result;
+    }
+
+    private static List testFacts(RepositorySnapshot snapshot) {
+        if (snapshot.sourceUnits.isEmpty()) return snapshot.tests;
+        List result = new ArrayList();
+        for (Object value : snapshot.sourceUnits) {
+            if (value instanceof Map map && Boolean.TRUE.equals(map.get("test"))) result.add(value);
+        }
+        return result;
     }
 
     @SuppressWarnings("unchecked")

@@ -12,7 +12,7 @@
 
 Deterministic build-integrated knowledge extraction for AI-assisted code understanding.
 
-This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` for modules, classes, tests, docs, dependencies, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.
+This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` for build modules, language-neutral source units and symbols, Java classes and tests, dependencies, frontend/backend boundary contracts, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.
 
 ## Why this project exists
 
@@ -58,6 +58,7 @@ These thresholds are disabled by default and must be calibrated for the reposito
 - Gradle: apply plugin `org.aiknowledge.extractor` and run `./gradlew aiKnowledgeCheck` for the complete verified lifecycle.
 - Maven: invoke `mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check` for the complete verified lifecycle.
 - `generateAiKnowledgeIndex` / Maven `generate` remain available when only the raw knowledge index is needed.
+- JavaScript and TypeScript files plus npm-compatible `package.json` modules are discovered automatically; no Node.js installation is required by the built-in structural provider.
 - Consumer setup, tasks, extension parameters, goals and repository configuration are documented in [`docs/gradle-plugin.md`](docs/gradle-plugin.md), [`docs/maven-plugin.md`](docs/maven-plugin.md) and [`docs/publishing.md`](docs/publishing.md).
 - Releases are published through the GitHub Actions [`Release` workflow](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml); use the documented `dry_run` mode before the first real release.
 
@@ -129,6 +130,8 @@ Implemented as deterministic static analysis without external model calls:
 - deterministic extraction-profile benchmark scaffold with optional empirical fixture layer
 - configurable model-profile budget metrics
 - strict artifact and cross-document verification
+- composable language/tooling providers for Java, JavaScript and TypeScript facts
+- explainable frontend/backend boundary analysis for supported Java HTTP endpoints and JavaScript/TypeScript clients
 
 ## Extraction architecture packages
 
@@ -137,10 +140,24 @@ The core extractor is organized as package-level modules (within `core`) so resp
 - `org.aiknowledge.core.model`: stable repository fact model helpers (`RepositoryFacts` index/count assembly).
 - `org.aiknowledge.core`: orchestration, outputs and artifact verification (`AiKnowledgeRunner`, `AiKnowledgeArtifactVerifier`, `KnowledgeExtractionPipeline`).
 - `org.aiknowledge.core.repositoryscan`: repository inventory and non-Java scanners (build files, docs, workflows, discovery evidence, benchmark sources).
-- `org.aiknowledge.core.javaspi`: Java provider interface (`JavaKnowledgeProvider`).
+- `org.aiknowledge.core.javaspi`: established Java-specific provider interface (`JavaKnowledgeProvider`).
+- `org.aiknowledge.core.sourcespi`: composable language-neutral provider interface (`SourceKnowledgeProvider`).
+- `org.aiknowledge.core.javascript`: built-in JavaScript/TypeScript structural provider.
+- `org.aiknowledge.core.javahttp`: JDT-backed Spring and JAX-RS endpoint provider.
+- `org.aiknowledge.core.analysis`: shared route normalization, dependency-surface analysis, complexity semantics and frontend/backend boundary scoring.
 - `org.aiknowledge.core.javabasic`: default heuristic Java provider implementation.
 - `org.aiknowledge.core.linker`: capability/claim linking from extracted evidence.
 - `org.aiknowledge.core.context`: seed/context merge step before output writing.
+
+### Language-neutral providers and frontend/backend boundary analysis
+
+The extraction pipeline maps Java facts into a common source-unit, symbol and relation model and composes additional `SourceKnowledgeProvider` implementations. The built-in JavaScript/TypeScript provider recognizes imports, exports, declarations, callable complexity, `fetch`, Axios, GraphQL, WebSocket and `EventSource` calls. A focused JDT provider extracts Spring and JAX-RS server endpoints.
+
+Client and server route templates are normalized and linked across languages. The resulting `boundary-analysis.json` separates structural coupling, frontend orchestration, model translation, backend-state interpretation, error complexity, actual runtime dependency surface and contract clarity. Raw evidence remains available in `source-units.json`, `symbols.json`, `relations.json`, `boundaries.json` and `warnings.json`.
+
+The boundary score is an explainable structural proxy, not a direct measurement of a developer. It uses only the current checkout: Git commit history and co-change coupling are intentionally excluded.
+
+Provider development, ServiceLoader registration, common fact conventions, supported syntax, scoring weights and limitations are documented in [`docs/language-providers-and-boundary-analysis.md`](docs/language-providers-and-boundary-analysis.md).
 
 ### Java provider selection and limitations
 

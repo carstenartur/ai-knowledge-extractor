@@ -32,12 +32,23 @@ jobs:
           gradle-version: '9.5.1'
 
       - name: Build and publish plugin to Maven local
-        run: gradle build publishToMavenLocal
+        run: gradle build publishToMavenLocal --warning-mode all
 
       - name: Generate Maven site
         run: |
+          set -o pipefail
           VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
-          mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
+          mkdir -p build/reports/pages
+          SITE_LOG=build/reports/pages/maven-site.log
+          mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site 2>&1 | tee "$SITE_LOG"
+          if grep -F '[WARNING]' "$SITE_LOG"; then
+            echo 'Maven site generation emitted warnings' >&2
+            exit 1
+          fi
+          if grep -E 'NoSuchMethodError|LinkageError|An issue has occurred|old pre-version' "$SITE_LOG"; then
+            echo 'Maven site generation skipped or failed a report' >&2
+            exit 1
+          fi
 
       - name: Generate test badge and summary
         run: |
@@ -128,16 +139,32 @@ jobs:
 
       - name: Verify site content
         run: |
-          test -f site/target/site/index.html
-          test -f site/target/site/plugin-info.html
-          test -f site/target/site/generate-mojo.html
-          test -f site/target/site/analyze-mojo.html
-          test -f site/target/site/optimize-mojo.html
-          test -f site/target/site/benchmark-mojo.html
-          test -f site/target/site/check-mojo.html
-          test -f site/target/site/help-mojo.html
-          test -f site/target/site/badges/tests.json
-          test -f site/target/site/tests/index.html
+          for page in \
+            index \
+            generate-mojo \
+            analyze-mojo \
+            optimize-mojo \
+            benchmark-mojo \
+            check-mojo \
+            help-mojo; do
+            test -s "site/target/site/${page}.html"
+          done
+          test ! -e site/target/site/plugin-info.html
+          test -s site/target/site/badges/tests.json
+          test -s site/target/site/tests/index.html
+          if grep -R '/home/runner/' site/target/site/; then
+            echo 'Found forbidden absolute paths in generated site' >&2
+            exit 1
+          fi
+
+      - name: Upload Pages diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pages-diagnostics
+          path: build/reports/pages/maven-site.log
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Upload Pages artifact
         uses: actions/upload-artifact@v7

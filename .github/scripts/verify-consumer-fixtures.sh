@@ -67,7 +67,7 @@ assert_artifacts() {
     check.json; do
     test -s "$directory/$file" || fail "missing consumer artifact: $directory/$file"
   done
-  if grep -RIl --include='*.json' "$ROOT" "$directory" | grep -q .; then
+  if grep -RIlF --include='*.json' -- "$ROOT" "$directory" | grep -q .; then
     fail "consumer output exposes the absolute checkout path: $directory"
   fi
 }

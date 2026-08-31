@@ -1,0 +1,133 @@
+name: Verify 0.2.0 hardening on main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: verify-020-hardening-main
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve a not-yet-merged verified hardening branch
+        id: branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ -e core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java ]]; then
+            echo 'needs_merge=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch origin release/0.2.0-hardening:refs/remotes/origin/release/0.2.0-hardening
+          git ls-tree -r --name-only origin/release/0.2.0-hardening \
+            | grep -Fx 'core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java'
+          if git ls-tree -r --name-only origin/release/0.2.0-hardening \
+              | grep -E '(^|/)(apply-release-hardening.py|apply-release-hardening.yml|export-release-hardening-bootstrap.yml|finalize-release-hardening.yml|override-finalize-release-hardening.yml)$'; then
+            echo 'The release-hardening branch still contains temporary automation.' >&2
+            exit 1
+          fi
+          echo 'needs_merge=true' >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Verify the hardening branch before merge
+        if: steps.branch.outputs.needs_merge == 'true'
+        run: |
+          git checkout -B release-verification origin/release/0.2.0-hardening
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+
+      - name: Create and squash-merge the verified branch
+        if: steps.branch.outputs.needs_merge == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_URL=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head release/0.2.0-hardening \
+            --base main \
+            --state open \
+            --json url \
+            --jq '.[0].url')
+          if [[ -z "$PR_URL" || "$PR_URL" == "null" ]]; then
+            PR_URL=$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head release/0.2.0-hardening \
+              --title "Harden 0.2.0 integration and provider contracts" \
+              --body "Adds the shared source scan policy, provider SPI contract, schema-v2 contract, mixed Java/TypeScript integration tests, JS/TS golden tests, release documentation and publication checks. Git history and commit-derived change coupling remain explicitly excluded.")
+          fi
+          gh pr merge "$PR_URL" \
+            --repo "$GITHUB_REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --subject "Harden 0.2.0 integration and provider contracts" \
+            --body "Verified with the complete Gradle build, Maven-local publication, Gradle/Maven consumer fixtures and release-contract checks."
+          git checkout main
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Verify exact main commit
+        run: |
+          test -e core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java
+          test ! -e .github/scripts/apply-release-hardening.py
+          test ! -e .github/workflows/export-release-hardening-bootstrap.yml
+          test ! -e .github/workflows/apply-release-hardening.yml
+          test ! -e .github/workflows/finalize-release-hardening.yml
+          test ! -e .github/workflows/override-finalize-release-hardening.yml
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+
+      - name: Record verified release candidate and remove this workflow
+        run: |
+          VERIFIED_SHA=$(git rev-parse HEAD)
+          VERIFIED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          cat > docs/release-readiness-verified.md <<EOF
+          # Verified 0.2.0 release-hardening candidate
+
+          - Commit: \`${VERIFIED_SHA}\`
+          - Verified at: \`${VERIFIED_AT}\`
+          - Java/Gradle build: passed
+          - Maven-local publication: passed
+          - Gradle consumer fixture: passed
+          - Maven consumer fixture: passed
+          - Release metadata contract: passed
+          - Git history/change coupling used: no
+
+          This record verifies release readiness of the source tree and local publication flow. A
+          Maven Central release still requires successful credentialed signing, staging and clean
+          remote-resolution smoke tests on the tagged release commit.
+          EOF
+          rm .github/workflows/verify-020-hardening-main.yml
+          git config user.name "ai-knowledge-extractor automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "docs: record verified 0.2.0 release candidate"
+          git push origin HEAD:main

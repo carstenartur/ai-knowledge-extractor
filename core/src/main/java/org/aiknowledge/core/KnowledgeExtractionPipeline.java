@@ -25,6 +25,7 @@ import org.aiknowledge.core.repositoryscan.BuildModuleScanner;
 import org.aiknowledge.core.repositoryscan.MarkdownDocumentScanner;
 import org.aiknowledge.core.repositoryscan.RepositoryEvidenceScanner;
 import org.aiknowledge.core.repositoryscan.RepositoryFileInventoryScanner;
+import org.aiknowledge.core.sourcespi.SourceAnalysisConfiguration;
 import org.aiknowledge.core.sourcespi.SourceKnowledgeProvider;
 import org.aiknowledge.core.sourcespi.SourceKnowledgeRequest;
 import org.aiknowledge.core.sourcespi.SourceKnowledgeResult;
@@ -36,6 +37,7 @@ final class KnowledgeExtractionPipeline {
     private final RepositoryEvidenceScanner evidenceScanner;
     private final JavaKnowledgeProvider javaKnowledgeProvider;
     private final List<SourceKnowledgeProvider> sourceKnowledgeProviders;
+    private final SourceAnalysisConfiguration sourceAnalysisConfiguration = SourceAnalysisConfiguration.fromSystemProperties();
     private final CapabilityLinker capabilityLinker;
     private final ClaimVerifier claimVerifier;
     private final SeedContextGenerator seedContextGenerator;
@@ -183,15 +185,23 @@ final class KnowledgeExtractionPipeline {
         for (Path file : files) {
             String path = inventoryScanner.rel(root, file);
             for (SourceKnowledgeProvider provider : sourceKnowledgeProviders) {
-                if (!provider.supports(path)) continue;
-                SourceKnowledgeResult result = provider.extract(new SourceKnowledgeRequest(
-                        root,
-                        file,
-                        path,
-                        snapshot.modules,
-                        buildMetadata,
-                        Map.of()));
-                recordSourceFacts(snapshot, provider, path, result);
+                if (!sourceAnalysisConfiguration.providerEnabled(provider.id())
+                        || !provider.supports(path)
+                        || !sourceAnalysisConfiguration.acceptsSource(file, path)) {
+                    continue;
+                }
+                try {
+                    SourceKnowledgeResult result = provider.extract(new SourceKnowledgeRequest(
+                            root,
+                            file,
+                            path,
+                            snapshot.modules,
+                            buildMetadata,
+                            Map.of()));
+                    recordSourceFacts(snapshot, provider, path, result);
+                } catch (Exception exception) {
+                    handleSourceProviderFailure(snapshot, provider, path, exception);
+                }
             }
         }
 
@@ -199,8 +209,29 @@ final class KnowledgeExtractionPipeline {
         seedContextGenerator.generate(options, snapshot);
         capabilityLinker.link(snapshot);
         claimVerifier.verify(snapshot);
+        snapshot.evidence.add(sourceAnalysisConfiguration.asEvidence());
         RepositoryFacts.populateIndex(root, snapshot);
         return snapshot;
+    }
+
+    private void handleSourceProviderFailure(
+            RepositorySnapshot snapshot,
+            SourceKnowledgeProvider provider,
+            String sourcePath,
+            Exception exception) throws IOException {
+        if (sourceAnalysisConfiguration.errorPolicy() == SourceAnalysisConfiguration.ErrorPolicy.FAIL) {
+            if (exception instanceof IOException ioException) throw ioException;
+            throw new IOException("Source provider " + provider.id() + " failed for " + sourcePath, exception);
+        }
+        if (sourceAnalysisConfiguration.errorPolicy() == SourceAnalysisConfiguration.ErrorPolicy.WARN) {
+            Map<String, Object> warning = new LinkedHashMap<>();
+            warning.put("provider", provider.id());
+            warning.put("sourceFile", sourcePath);
+            warning.put("code", "source-provider-failure");
+            warning.put("message", exception.getClass().getSimpleName() + ": "
+                    + String.valueOf(exception.getMessage()));
+            snapshot.warnings.add(warning);
+        }
     }
 
     private static void recordJavaFacts(RepositorySnapshot snapshot) {

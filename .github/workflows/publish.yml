@@ -18,7 +18,7 @@ on:
           - minor
           - major
       skip_tests:
-        description: Skip tests during release build
+        description: Skip the duplicate release-version test run; the full readiness gate still runs tests
         required: false
         type: boolean
         default: false
@@ -129,6 +129,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.3.0
         with:
           gradle-version: '9.5.1'
+
+      - name: Verify the exact release candidate
+        run: bash .github/scripts/verify-release-readiness.sh
 
       - name: Configure git author
         run: |

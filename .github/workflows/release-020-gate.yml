@@ -1,0 +1,194 @@
+name: Gate and dispatch the audited 0.2.0 release
+
+on:
+  push:
+    branches:
+      - release/0.2.0-gate
+
+permissions:
+  actions: write
+  contents: write
+
+concurrency:
+  group: release-020-gate
+  cancel-in-progress: false
+
+jobs:
+  gate-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-gate
+          fetch-depth: 0
+
+      - name: Wait for the clean 0.2.0 candidate on main
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 160); do
+            git fetch origin main
+            PROJECT_VERSION=$(git show origin/main:gradle.properties 2>/dev/null \
+              | sed -n 's/^projectVersion=//p' || true)
+            RELEASE_VERSION=$(git show origin/main:release.properties 2>/dev/null \
+              | sed -n 's/^next.release.version=//p' || true)
+            if [[ "$PROJECT_VERSION" == '0.2.0-SNAPSHOT' \
+                  && "$RELEASE_VERSION" == '0.2.0' ]] \
+                && git cat-file -e origin/main:core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java 2>/dev/null \
+                && git cat-file -e origin/main:docs/integrator-quickstart.md 2>/dev/null \
+                && git cat-file -e origin/main:docs/provider-spi.md 2>/dev/null \
+                && git cat-file -e origin/main:docs/schema-v2-contract.md 2>/dev/null \
+                && git cat-file -e origin/main:docs/releases/0.2.0.md 2>/dev/null \
+                && ! git cat-file -e origin/main:.github/workflows/verify-020-hardening-main.yml 2>/dev/null \
+                && ! git cat-file -e origin/main:.github/workflows/post-verify-020-cleanup.yml 2>/dev/null \
+                && ! git cat-file -e origin/main:.github/workflows/post-verify-020-final-cleanup.yml 2>/dev/null; then
+              git reset --hard origin/main
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'A clean 0.2.0-SNAPSHOT candidate did not reach main.' >&2
+          exit 1
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Re-verify the exact release candidate
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/verify-version-consistency.py
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+          mvn -B -f site/pom.xml -Drevision=0.2.0-SNAPSHOT process-resources site
+          if grep -R -n -E 'org\.eclipse\.jgit|JGit|git[[:space:]]+log|co[- ]?change' core/src/main/java; then
+            echo 'Production analysis must not inspect Git history or commit-derived change coupling.' >&2
+            exit 1
+          fi
+
+      - name: Resolve audited workflow-dispatch inputs
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          path = Path('.github/workflows/publish.yml')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          dispatch = None
+          inputs = None
+          keys = []
+          current = None
+          required = {}
+          defaults = {}
+
+          for index, line in enumerate(lines):
+              match = re.match(r'^(\s*)workflow_dispatch\s*:', line)
+              if match:
+                  dispatch = len(match.group(1))
+                  continue
+              if dispatch is None:
+                  continue
+              stripped = line.strip()
+              indent = len(line) - len(line.lstrip())
+              if stripped and indent <= dispatch and not stripped.startswith('#'):
+                  break
+              if re.match(r'^\s*inputs\s*:', line):
+                  inputs = indent
+                  continue
+              if inputs is None:
+                  continue
+              key_match = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*$', line)
+              if key_match and len(key_match.group(1)) > inputs:
+                  current = key_match.group(2)
+                  keys.append(current)
+                  required[current] = False
+                  continue
+              if current is None:
+                  continue
+              req = re.match(r'^\s*required\s*:\s*(true|false)\s*$', line, re.I)
+              if req:
+                  required[current] = req.group(1).lower() == 'true'
+              default = re.match(r'^\s*default\s*:\s*["\']?([^"\']+?)["\']?\s*$', line)
+              if default:
+                  defaults[current] = default.group(1).strip()
+
+          if any('release_version' in key.lower() for key in keys):
+              raise SystemExit('The audited workflow must derive the release version from projectVersion.')
+
+          values = {}
+          bump_keys = {
+              'bump', 'increment', 'version_increment', 'version_bump',
+              'next_version_bump', 'next_development_bump', 'release_type'
+          }
+          for key in keys:
+              lower = key.lower()
+              if lower in bump_keys or ('bump' in lower and 'version' in lower):
+                  values[key] = 'patch'
+              elif lower == 'next_development_version':
+                  values[key] = '0.2.1-SNAPSHOT'
+              elif required.get(key) and key not in defaults:
+                  raise SystemExit(f'Unsupported required publish input: {key}')
+
+          Path('/tmp/release-dispatch.json').write_text(
+              json.dumps({'ref': 'main', 'inputs': values}), encoding='utf-8')
+          print(json.dumps({'detectedInputs': keys, 'submittedInputs': values}, indent=2))
+          PY
+
+      - name: Dispatch and monitor the audited publish workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/v0.2.0" >/tmp/existing-release.json 2>/dev/null; then
+            jq -e '.draft == false and .tag_name == "v0.2.0"' /tmp/existing-release.json >/dev/null
+            echo 'Release v0.2.0 already exists; no duplicate dispatch is needed.'
+            exit 0
+          fi
+
+          DISPATCHED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          gh api --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/publish.yml/dispatches" \
+            --input /tmp/release-dispatch.json
+
+          RUN_ID=''
+          for attempt in $(seq 1 60); do
+            RUN_ID=$(gh api \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/publish.yml/runs?event=workflow_dispatch&branch=main&per_page=20" \
+              --jq ".workflow_runs | map(select(.created_at >= \"$DISPATCHED_AT\")) | sort_by(.created_at) | last | .id // empty")
+            [[ -n "$RUN_ID" ]] && break
+            sleep 10
+          done
+          [[ -n "$RUN_ID" ]] || { echo 'No audited publish run appeared.' >&2; exit 1; }
+          echo "Audited publish run: $RUN_ID"
+
+          for attempt in $(seq 1 180); do
+            STATUS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq '.status')
+            CONCLUSION=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq '.conclusion // empty')
+            if [[ "$STATUS" == 'completed' ]]; then
+              [[ "$CONCLUSION" == 'success' ]] || {
+                echo "Audited publish workflow concluded: $CONCLUSION" >&2
+                exit 1
+              }
+              break
+            fi
+            sleep 15
+          done
+
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/v0.2.0" >/tmp/release.json
+          jq -e '.draft == false and .prerelease == false and .tag_name == "v0.2.0"' /tmp/release.json >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v0.2.0" >/tmp/tag.json
+          echo 'Release v0.2.0 and its Git tag are present.'
+
+      - name: Remove the temporary gate branch after success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/release/0.2.0-gate"

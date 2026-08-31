@@ -70,6 +70,7 @@ public final class SourceAnalysisConfiguration {
     private final boolean includeGenerated;
     private final ErrorPolicy errorPolicy;
     private final Map<String, Boolean> admissionDecisions = new LinkedHashMap<>();
+    private final List<Map<String, Object>> admissionWarnings = new ArrayList<>();
     private int admittedFiles;
     private long admittedBytes;
 
@@ -148,7 +149,16 @@ public final class SourceAnalysisConfiguration {
             size = Files.size(sourceFile);
         } catch (IOException exception) {
             admissionDecisions.put(normalized, false);
-            throw exception;
+            if (errorPolicy == ErrorPolicy.FAIL) throw exception;
+            if (errorPolicy == ErrorPolicy.WARN) {
+                Map<String, Object> warning = new LinkedHashMap<>();
+                warning.put("sourceFile", normalized);
+                warning.put("code", "source-admission-failure");
+                warning.put("message", exception.getClass().getSimpleName() + ": "
+                        + String.valueOf(exception.getMessage()));
+                admissionWarnings.add(Map.copyOf(warning));
+            }
+            return false;
         }
         if (size > maxFileBytes || admittedFiles >= maxFiles || admittedBytes + size > maxTotalBytes) {
             return reject(normalized);
@@ -163,7 +173,7 @@ public final class SourceAnalysisConfiguration {
         return errorPolicy;
     }
 
-    public Map<String, Object> asEvidence() {
+    public synchronized Map<String, Object> asEvidence() {
         Map<String, Object> evidence = new LinkedHashMap<>();
         evidence.put("type", "source-analysis-configuration");
         evidence.put("enabledProviders", enabledProviders.stream().sorted().toList());
@@ -175,6 +185,7 @@ public final class SourceAnalysisConfiguration {
         evidence.put("errorPolicy", errorPolicy.name().toLowerCase(Locale.ROOT));
         evidence.put("admittedFiles", admittedFiles);
         evidence.put("admittedBytes", admittedBytes);
+        evidence.put("admissionWarnings", List.copyOf(admissionWarnings));
         evidence.put("versionControlHistoryUsed", false);
         return evidence;
     }

@@ -1,0 +1,312 @@
+name: Verify released 0.2.0 from clean remote consumers
+
+on:
+  push:
+    branches:
+      - release/0.2.0-remote-consumer-smoke
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: verify-ai-knowledge-extractor-020-remote-consumers
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      VERSION: 0.2.0
+    steps:
+      - name: Check out the isolated smoke-test branch
+        uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-remote-consumer-smoke
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Require the final GitHub release and wait for public repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/releases/tags/v$VERSION" >/tmp/release.json
+          jq -e '.draft == false and .prerelease == false and .tag_name == "v0.2.0"' /tmp/release.json >/dev/null
+
+          CORE_POM="https://repo1.maven.org/maven2/org/aiknowledge/ai-knowledge-core/$VERSION/ai-knowledge-core-$VERSION.pom"
+          CORE_JAR="https://repo1.maven.org/maven2/org/aiknowledge/ai-knowledge-core/$VERSION/ai-knowledge-core-$VERSION.jar"
+          MAVEN_POM="https://repo1.maven.org/maven2/org/aiknowledge/ai-knowledge-maven-plugin/$VERSION/ai-knowledge-maven-plugin-$VERSION.pom"
+          MAVEN_JAR="https://repo1.maven.org/maven2/org/aiknowledge/ai-knowledge-maven-plugin/$VERSION/ai-knowledge-maven-plugin-$VERSION.jar"
+          GRADLE_IMPL_POM="https://repo1.maven.org/maven2/org/aiknowledge/ai-knowledge-gradle-plugin/$VERSION/ai-knowledge-gradle-plugin-$VERSION.pom"
+          GRADLE_IMPL_JAR="https://repo1.maven.org/maven2/org/aiknowledge/ai-knowledge-gradle-plugin/$VERSION/ai-knowledge-gradle-plugin-$VERSION.jar"
+          MARKER_PATH="org/aiknowledge/extractor/org.aiknowledge.extractor.gradle.plugin/$VERSION/org.aiknowledge.extractor.gradle.plugin-$VERSION.pom"
+          MARKER_CENTRAL="https://repo1.maven.org/maven2/$MARKER_PATH"
+          MARKER_PORTAL="https://plugins.gradle.org/m2/$MARKER_PATH"
+
+          urls=("$CORE_POM" "$CORE_JAR" "$MAVEN_POM" "$MAVEN_JAR" "$GRADLE_IMPL_POM" "$GRADLE_IMPL_JAR")
+          ready=false
+          marker_url=''
+          for attempt in $(seq 1 120); do
+            ready=true
+            for url in "${urls[@]}"; do
+              if ! curl --fail --silent --show-error --location --head "$url" >/dev/null; then
+                ready=false
+                break
+              fi
+            done
+            if [[ "$ready" == true ]]; then
+              if curl --fail --silent --show-error --location --head "$MARKER_CENTRAL" >/dev/null; then
+                marker_url="$MARKER_CENTRAL"
+              elif curl --fail --silent --show-error --location --head "$MARKER_PORTAL" >/dev/null; then
+                marker_url="$MARKER_PORTAL"
+              else
+                ready=false
+              fi
+            fi
+            [[ "$ready" == true ]] && break
+            sleep 30
+          done
+          [[ "$ready" == true ]] || {
+            echo 'The 0.2.0 Maven/Gradle artifacts did not become publicly resolvable within one hour.' >&2
+            exit 1
+          }
+
+          printf '%s\n' "$CORE_POM" > /tmp/core-pom-url
+          printf '%s\n' "$MAVEN_POM" > /tmp/maven-plugin-pom-url
+          printf '%s\n' "$GRADLE_IMPL_POM" > /tmp/gradle-plugin-pom-url
+          printf '%s\n' "$marker_url" > /tmp/gradle-marker-url
+
+      - name: Verify the Core and Maven plugin from an empty Maven repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/ake-maven-smoke /tmp/ake-m2-smoke
+          mkdir -p /tmp/ake-maven-smoke/src/main/java/example /tmp/ake-maven-smoke/web/src
+
+          cat >/tmp/ake-maven-smoke/settings.xml <<'EOF'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+            <mirrors>
+              <mirror>
+                <id>central-only</id>
+                <mirrorOf>*</mirrorOf>
+                <url>https://repo1.maven.org/maven2</url>
+              </mirror>
+            </mirrors>
+          </settings>
+          EOF
+
+          cat >/tmp/ake-maven-smoke/pom.xml <<'EOF'
+          <project xmlns="http://maven.apache.org/POM/4.0.0"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>example.remote</groupId>
+            <artifactId>ai-knowledge-maven-remote-smoke</artifactId>
+            <version>1.0.0</version>
+            <properties>
+              <maven.compiler.release>17</maven.compiler.release>
+              <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+            </properties>
+            <dependencies>
+              <dependency>
+                <groupId>org.aiknowledge</groupId>
+                <artifactId>ai-knowledge-core</artifactId>
+                <version>0.2.0</version>
+              </dependency>
+            </dependencies>
+          </project>
+          EOF
+
+          cat >/tmp/ake-maven-smoke/src/main/java/example/UserController.java <<'EOF'
+          package example;
+
+          import org.springframework.web.bind.annotation.GetMapping;
+          import org.springframework.web.bind.annotation.PathVariable;
+          import org.springframework.web.bind.annotation.RequestMapping;
+          import org.springframework.web.bind.annotation.RestController;
+
+          @RestController
+          @RequestMapping("/api/users")
+          public class UserController {
+              @GetMapping("/{id}")
+              public String get(@PathVariable String id) {
+                  return id;
+              }
+          }
+          EOF
+
+          cat >/tmp/ake-maven-smoke/web/package.json <<'EOF'
+          {
+            "name": "remote-smoke-web",
+            "private": true,
+            "dependencies": { "axios": "1.13.2" },
+            "devDependencies": { "typescript": "5.9.3" }
+          }
+          EOF
+
+          cat >/tmp/ake-maven-smoke/web/src/users.ts <<'EOF'
+          export async function loadUser(id: string) {
+            const response = await fetch(`/api/users/${id}`);
+            if (!response.ok) throw new Error(`request failed: ${response.status}`);
+            return response.json();
+          }
+          EOF
+
+          mvn -B -U \
+            -s /tmp/ake-maven-smoke/settings.xml \
+            -Dmaven.repo.local=/tmp/ake-m2-smoke \
+            -f /tmp/ake-maven-smoke/pom.xml \
+            dependency:resolve
+
+          mvn -B -U \
+            -s /tmp/ake-maven-smoke/settings.xml \
+            -Dmaven.repo.local=/tmp/ake-m2-smoke \
+            -f /tmp/ake-maven-smoke/pom.xml \
+            org.aiknowledge:ai-knowledge-maven-plugin:0.2.0:generate
+
+          test -s /tmp/ake-maven-smoke/target/ai-knowledge/index.json
+          test -s /tmp/ake-maven-smoke/target/ai-knowledge/source-units.json
+          test -s /tmp/ake-maven-smoke/target/ai-knowledge/symbols.json
+          test -s /tmp/ake-maven-smoke/target/ai-knowledge/relations.json
+          test -s /tmp/ake-maven-smoke/target/ai-knowledge/boundaries.json
+
+      - name: Verify the released Gradle marker from an empty Gradle home
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/ake-gradle-smoke /tmp/ake-gradle-user-home
+          mkdir -p /tmp/ake-gradle-smoke/src/main/java/example /tmp/ake-gradle-smoke/web/src
+
+          cat >/tmp/ake-gradle-smoke/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositories {
+                  mavenCentral()
+              }
+          }
+          rootProject.name = 'ai-knowledge-gradle-remote-smoke'
+          EOF
+
+          cat >/tmp/ake-gradle-smoke/build.gradle <<'EOF'
+          plugins {
+              id 'java'
+              id 'org.aiknowledge.extractor' version '0.2.0'
+          }
+          EOF
+
+          cat >/tmp/ake-gradle-smoke/src/main/java/example/UserController.java <<'EOF'
+          package example;
+
+          import org.springframework.web.bind.annotation.GetMapping;
+          import org.springframework.web.bind.annotation.PathVariable;
+          import org.springframework.web.bind.annotation.RequestMapping;
+          import org.springframework.web.bind.annotation.RestController;
+
+          @RestController
+          @RequestMapping("/api/users")
+          public class UserController {
+              @GetMapping("/{id}")
+              public String get(@PathVariable String id) {
+                  return id;
+              }
+          }
+          EOF
+
+          cat >/tmp/ake-gradle-smoke/web/package.json <<'EOF'
+          { "name": "remote-smoke-web", "private": true }
+          EOF
+
+          cat >/tmp/ake-gradle-smoke/web/src/users.ts <<'EOF'
+          export const loadUser = async (id: string) => {
+            const response = await fetch(`/api/users/${id}`);
+            if (!response.ok) throw new Error(String(response.status));
+            return response.json();
+          };
+          EOF
+
+          GRADLE_USER_HOME=/tmp/ake-gradle-user-home \
+            gradle -p /tmp/ake-gradle-smoke --no-daemon --refresh-dependencies \
+              generateAiKnowledgeIndex analyzeAiComplexity
+
+          test -s /tmp/ake-gradle-smoke/build/ai-knowledge/index.json
+          test -s /tmp/ake-gradle-smoke/build/ai-knowledge/source-units.json
+          test -s /tmp/ake-gradle-smoke/build/ai-knowledge/boundaries.json
+          test -s /tmp/ake-gradle-smoke/build/ai-knowledge/complexity.json
+
+      - name: Record successful public consumer verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B release-020-remote-verification origin/main
+          main_sha=$(git rev-parse HEAD)
+          verified_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          core_url=$(cat /tmp/core-pom-url)
+          maven_url=$(cat /tmp/maven-plugin-pom-url)
+          gradle_url=$(cat /tmp/gradle-plugin-pom-url)
+          marker_url=$(cat /tmp/gradle-marker-url)
+          mkdir -p docs/releases
+          cat >docs/releases/0.2.0-remote-consumer-verification.md <<EOF
+          # 0.2.0 public consumer verification
+
+          - Verified at: \`${verified_at}\`
+          - Main commit used for the verification record: \`${main_sha}\`
+          - Core POM: ${core_url}
+          - Maven plugin POM: ${maven_url}
+          - Gradle plugin implementation POM: ${gradle_url}
+          - Gradle plugin marker POM: ${marker_url}
+          - Maven repository cache: newly created and Central-only
+          - Gradle user home: newly created
+          - Maven plugin execution: passed
+          - Gradle plugin-marker resolution and execution: passed
+          - Language-neutral schema-v2 artifacts: generated
+          - Git history/change-coupling analysis: not used
+
+          This smoke test used no composite build, Maven local repository, checkout-relative plugin
+          substitution or unreleased project artifact.
+          EOF
+
+          git config user.name 'ai-knowledge-extractor automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add docs/releases/0.2.0-remote-consumer-verification.md
+          git diff --cached --check
+          git commit -m 'docs: record public 0.2.0 consumer verification'
+          git push --force origin HEAD:release/0.2.0-remote-verification
+
+          pr_url=$(gh pr list --repo "$REPOSITORY" --head release/0.2.0-remote-verification --base main \
+            --state open --json url --jq '.[0].url // empty')
+          if [[ -z "$pr_url" ]]; then
+            pr_url=$(gh pr create --repo "$REPOSITORY" --base main \
+              --head release/0.2.0-remote-verification \
+              --title 'Record public 0.2.0 consumer verification' \
+              --body 'Records clean Maven Central and Gradle plugin-marker resolution from empty consumer caches, including execution of both released plugins and generation of schema-v2 artifacts.')
+          fi
+          gh pr merge "$pr_url" --repo "$REPOSITORY" --squash --delete-branch \
+            --subject 'Record public 0.2.0 consumer verification' \
+            --body 'Maven and Gradle remote consumers resolved and executed version 0.2.0 without local or composite-build substitution.'
+
+      - name: Delete the one-shot smoke-test branch
+        shell: bash
+        run: |
+          encoded=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("release/0.2.0-remote-consumer-smoke", safe=""))')
+          gh api --method DELETE "repos/$REPOSITORY/git/refs/heads/$encoded" >/dev/null 2>&1 || true

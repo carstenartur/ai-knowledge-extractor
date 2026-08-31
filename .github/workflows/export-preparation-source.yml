@@ -1,0 +1,27 @@
+name: Export preparation source
+
+on:
+  push:
+    branches:
+      - release/0.2.0-preparation-v2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-preparation-v2
+          fetch-depth: 0
+      - name: Package tracked source
+        run: git archive --format=tar.gz --output=preparation-source.tar.gz HEAD
+      - name: Upload tracked source
+        uses: actions/upload-artifact@v7
+        with:
+          name: ai-knowledge-extractor-preparation-source
+          path: preparation-source.tar.gz
+          if-no-files-found: error

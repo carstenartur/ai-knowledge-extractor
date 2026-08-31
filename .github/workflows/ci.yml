@@ -61,6 +61,14 @@ jobs:
       - name: Verify Gradle and Maven consumer fixtures
         run: bash .github/scripts/verify-consumer-fixtures.sh
 
+      - name: Upload consumer fixture diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: consumer-fixture-diagnostics
+          path: build/reports/consumer-fixtures/*.log
+          if-no-files-found: ignore
+
       - name: Verify Maven site generation
         run: |
           set -o pipefail

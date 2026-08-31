@@ -15,19 +15,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
+
       - name: Verify version consistency
         run: python3 .github/scripts/verify-version-consistency.py
+
+      - name: Verify release-readiness metadata
+        run: bash .github/scripts/verify-release-readiness.sh --metadata-only
+
       - uses: gradle/actions/setup-gradle@v6.3.0
         with:
           gradle-version: '9.5.1'
+
       - name: Build
         run: |
           set -o pipefail
           gradle build --warning-mode all 2>&1 | tee gradle-build.log
+
       - name: Upload failed Gradle build diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
@@ -38,102 +46,56 @@ jobs:
             **/build/test-results/**
             **/build/reports/tests/**
           if-no-files-found: warn
-      - name: Publish artifacts to Maven local
-        run: gradle publishToMavenLocal --warning-mode all
-      - name: Verify Gradle composite consumer fixture
+
+      - name: Verify Javadocs under the POSIX locale
+        env:
+          LC_ALL: C
+          LANG: C
+          JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8
         run: |
-          gradle -p examples/fixtures/gradle-consumer \
-            --warning-mode all \
-            generateAiKnowledgeIndex \
-            analyzeAiComplexity \
-            optimizeAiKnowledge \
-            benchmarkAiKnowledge \
-            checkAiKnowledgeIndex \
-            publishAiKnowledgeIndex
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/index.json
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/complexity.json
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/optimization.json
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/benchmark.json
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/check.json
-          test -f examples/fixtures/gradle-consumer/docs/ai-knowledge/index.json
-      - name: Verify published Gradle plugin marker consumer
+          gradle --no-daemon --warning-mode all \
+            :core:javadoc \
+            :gradle-plugin:javadoc \
+            :maven:javadoc
+
+      - name: Verify Gradle and Maven consumer fixtures
+        run: bash .github/scripts/verify-consumer-fixtures.sh
+
+      - name: Verify Maven site generation
         run: |
+          set -o pipefail
           VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
-          rm -rf \
-            examples/fixtures/gradle-consumer/build \
-            examples/fixtures/gradle-consumer/docs/ai-knowledge
-          gradle -p examples/fixtures/gradle-consumer \
-            -PpublishedPlugin=true \
-            -PaiKnowledgeVersion="$VERSION" \
-            --warning-mode all \
-            generateAiKnowledgeIndex \
-            analyzeAiComplexity \
-            optimizeAiKnowledge \
-            benchmarkAiKnowledge \
-            checkAiKnowledgeIndex \
-            publishAiKnowledgeIndex
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/index.json
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/complexity.json
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/optimization.json
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/benchmark.json
-          test -f examples/fixtures/gradle-consumer/build/ai-knowledge/check.json
-          test -f examples/fixtures/gradle-consumer/docs/ai-knowledge/index.json
-      - name: Verify Maven consumer fixture
-        run: |
-          VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
-          {
-            mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
-              -DaiKnowledge.version="$VERSION" \
-              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":generate \
-              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":analyze \
-              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":optimize \
-              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":benchmark \
-              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check
-            mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
-              -DaiKnowledge.version="$VERSION" \
-              -Ddetail=true \
-              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":help
-            mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
-              -DaiKnowledge.version="$VERSION" \
-              -Dgoal=benchmark \
-              -Ddetail=true \
-              org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":help
-          } 2>&1 | tee maven-consumer-fixture.log
-          test -f examples/fixtures/maven-consumer/target/ai-knowledge/index.json
-          test -f examples/fixtures/maven-consumer/target/ai-knowledge/complexity.json
-          test -f examples/fixtures/maven-consumer/target/ai-knowledge/optimization.json
-          test -f examples/fixtures/maven-consumer/target/ai-knowledge/benchmark.json
-          test -f examples/fixtures/maven-consumer/target/ai-knowledge/check.json
-          grep -F "AI Knowledge Maven Plugin goals:" maven-consumer-fixture.log
-          grep -F "benchmark (phase: verify)" maven-consumer-fixture.log
-          grep -F "empiricalBenchmarkFixtureFile [java.io.File]" maven-consumer-fixture.log
-      - name: Upload Maven fixture log
+          mkdir -p build/reports/release-readiness
+          SITE_LOG=build/reports/release-readiness/maven-site.log
+          mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site 2>&1 | tee "$SITE_LOG"
+          if grep -F '[WARNING]' "$SITE_LOG"; then
+            echo 'Maven site generation emitted warnings' >&2
+            exit 1
+          fi
+          if grep -E 'NoSuchMethodError|LinkageError|An issue has occurred|old pre-version' "$SITE_LOG"; then
+            echo 'Maven site generation skipped or failed a report' >&2
+            exit 1
+          fi
+          for page in \
+            index \
+            generate-mojo \
+            analyze-mojo \
+            optimize-mojo \
+            benchmark-mojo \
+            check-mojo \
+            help-mojo; do
+            test -s "site/target/site/${page}.html"
+          done
+          test ! -e site/target/site/plugin-info.html
+          if grep -R "/home/runner/" site/target/site/; then
+            echo 'Found forbidden absolute paths in generated site' >&2
+            exit 1
+          fi
+
+      - name: Upload Maven site diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: maven-consumer-fixture-log
-          path: maven-consumer-fixture.log
+          name: maven-site-diagnostics
+          path: build/reports/release-readiness/maven-site.log
           if-no-files-found: ignore
-      - name: Verify Maven site generation
-        run: |
-          VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
-          mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
-          test -f site/target/site/index.html
-          test -f site/target/site/plugin-info.html
-          test -f site/target/site/generate-mojo.html
-          test -f site/target/site/analyze-mojo.html
-          test -f site/target/site/optimize-mojo.html
-          test -f site/target/site/benchmark-mojo.html
-          test -f site/target/site/check-mojo.html
-          test -f site/target/site/help-mojo.html
-          set +e
-          grep -r "/home/runner/" site/target/site/
-          status=$?
-          set -e
-          if [ "$status" -eq 0 ]; then
-            echo "Found forbidden absolute paths in generated site" >&2
-            exit 1
-          elif [ "$status" -ne 1 ]; then
-            echo "grep failed while checking for forbidden absolute paths" >&2
-            exit "$status"
-          fi

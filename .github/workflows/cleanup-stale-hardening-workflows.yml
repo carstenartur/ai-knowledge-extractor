@@ -1,0 +1,35 @@
+name: Remove stale 0.2.0 transition workflows
+
+on:
+  push:
+    branches:
+      - cleanup/release-hardening-artifacts
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: cleanup/release-hardening-artifacts
+          fetch-depth: 0
+      - name: Remove one-shot transition automation
+        run: |
+          rm -f \
+            .github/workflows/post-verify-020-cleanup.yml \
+            .github/workflows/post-verify-020-final-cleanup.yml \
+            .github/workflows/verify-020-hardening-main.yml \
+            .github/workflows/cleanup-stale-hardening-workflows.yml
+          git config user.name "ai-knowledge-extractor automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No stale workflow files remain."
+            exit 0
+          fi
+          git commit -m "chore: remove stale 0.2.0 transition workflows"
+          git push origin HEAD:cleanup/release-hardening-artifacts

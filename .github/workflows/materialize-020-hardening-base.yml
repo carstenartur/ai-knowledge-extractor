@@ -18,7 +18,8 @@ jobs:
           fetch-depth: 0
       - name: Apply the previously prepared hardening generator
         run: |
-          git fetch origin release/0.2.0-hardening
+          set -euxo pipefail
+          git fetch origin release/0.2.0-hardening:refs/remotes/origin/release/0.2.0-hardening
           git show origin/release/0.2.0-hardening:.github/scripts/apply-release-hardening.py > /tmp/apply-release-hardening.py
           python3 /tmp/apply-release-hardening.py
           rm -f \
@@ -31,9 +32,11 @@ jobs:
             .github/workflows/post-verify-020-cleanup.yml \
             .github/workflows/post-verify-020-final-cleanup.yml
       - name: Package materialized source
+        if: always()
         run: |
           tar --exclude=.git --exclude=build --exclude='*/build' --exclude=target --exclude='*/target' -czf /tmp/materialized-source.tgz .
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: materialized-020-hardening-base
           path: /tmp/materialized-source.tgz

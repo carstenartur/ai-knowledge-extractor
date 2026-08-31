@@ -18,7 +18,7 @@ on:
           - minor
           - major
       skip_tests:
-        description: Skip tests during release build
+        description: Skip the duplicate release-version test run; the full readiness gate still runs tests
         required: false
         type: boolean
         default: false

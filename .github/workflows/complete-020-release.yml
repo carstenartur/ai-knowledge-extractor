@@ -1,0 +1,495 @@
+name: Complete and verify the 0.2.0 release
+
+on:
+  push:
+    branches:
+      - release/0.2.0-orchestrator
+
+permissions:
+  actions: write
+  contents: write
+  packages: write
+  pull-requests: write
+
+concurrency:
+  group: complete-ai-knowledge-extractor-020
+  cancel-in-progress: false
+
+jobs:
+  complete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Check out the isolated orchestrator
+        uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-orchestrator
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Cancel obsolete transition runs and close duplicate pull requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          obsolete_branches=(
+            cleanup/release-hardening-artifacts
+            release/0.2.0-hardening-clean
+            release/0.2.0-version-prep
+            release/0.2.0-gate
+            cleanup/post-0.2.0-release
+            release/0.2.0-preparation-v2
+          )
+          for branch in "${obsolete_branches[@]}"; do
+            while IFS= read -r run_id; do
+              [[ -n "$run_id" ]] || continue
+              gh api --method POST "repos/$REPOSITORY/actions/runs/$run_id/cancel" >/dev/null 2>&1 || true
+            done < <(gh api --method GET "repos/$REPOSITORY/actions/runs" \
+              -f branch="$branch" -f per_page=100 \
+              --jq '.workflow_runs[] | select(.status == "queued" or .status == "in_progress") | .id' \
+              2>/dev/null || true)
+          done
+          gh pr close 104 --repo "$REPOSITORY" \
+            --comment 'Obsolete: the complete implementation was merged in #95; the remaining work is handled by the isolated 0.2.0 release orchestrator.' \
+            >/dev/null 2>&1 || true
+
+      - name: Complete product hardening on a clean branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          verify_candidate() {
+            python3 .github/scripts/verify-version-consistency.py
+            gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+            bash .github/scripts/verify-consumer-fixtures.sh
+            if [[ -x .github/scripts/verify-release-readiness.sh ]]; then
+              bash .github/scripts/verify-release-readiness.sh --metadata-only
+            fi
+            VERSION=$(sed -n 's/^projectVersion=//p' gradle.properties)
+            mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
+          }
+
+          merge_current_branch() {
+            local remote_branch=$1
+            local title=$2
+            local body=$3
+            git push --force origin "HEAD:$remote_branch"
+            local pr_url
+            pr_url=$(gh pr list --repo "$REPOSITORY" --head "$remote_branch" --base main \
+              --state open --json url --jq '.[0].url // empty')
+            if [[ -z "$pr_url" ]]; then
+              pr_url=$(gh pr create --repo "$REPOSITORY" --base main --head "$remote_branch" \
+                --title "$title" --body "$body")
+            fi
+            gh pr merge "$pr_url" --repo "$REPOSITORY" --squash --delete-branch \
+              --subject "$title" --body "$body"
+            git fetch origin main
+            git checkout -B orchestrator-main origin/main
+          }
+
+          remove_transition_files() {
+            rm -f \
+              .github/scripts/apply-release-hardening.py \
+              .github/workflows/apply-release-hardening.yml \
+              .github/workflows/export-release-hardening-bootstrap.yml \
+              .github/workflows/finalize-release-hardening.yml \
+              .github/workflows/override-finalize-release-hardening.yml \
+              .github/workflows/post-verify-020-cleanup.yml \
+              .github/workflows/post-verify-020-final-cleanup.yml \
+              .github/workflows/verify-020-hardening-main.yml \
+              .github/workflows/cleanup-stale-hardening-workflows.yml \
+              .github/workflows/materialize-clean-020-hardening.yml \
+              .github/workflows/finalize-clean-020-hardening.yml \
+              .github/workflows/prepare-020-version.yml \
+              .github/workflows/release-020-gate.yml \
+              .github/workflows/post-020-release-cleanup.yml
+          }
+
+          git fetch origin main
+          git checkout -B orchestrator-main origin/main
+          hardened=false
+          if [[ -e core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java \
+                && -e docs/integrator-quickstart.md \
+                && -e docs/provider-spi.md \
+                && -e docs/schema-v2-contract.md \
+                && -e docs/releases/0.2.0.md \
+                && -e CHANGELOG.md \
+                && -e .github/scripts/verify-release-readiness.sh ]]; then
+            hardened=true
+          fi
+
+          if [[ "$hardened" != true ]]; then
+            git fetch origin release/0.2.0-hardening:refs/remotes/origin/release/0.2.0-hardening
+            git checkout -B release-020-product origin/main
+            base=$(git merge-base origin/main origin/release/0.2.0-hardening)
+            git diff --name-only "$base" origin/release/0.2.0-hardening | sort -u >/tmp/hardening-paths.txt
+            while IFS= read -r path; do
+              [[ -n "$path" ]] || continue
+              case "$path" in
+                .github/workflows/*|.github/scripts/apply-release-hardening.py)
+                  continue
+                  ;;
+              esac
+              if git cat-file -e "origin/release/0.2.0-hardening:$path" 2>/dev/null; then
+                git checkout origin/release/0.2.0-hardening -- "$path"
+              else
+                rm -f -- "$path"
+              fi
+            done </tmp/hardening-paths.txt
+            remove_transition_files
+
+            test -e core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java
+            test -e docs/integrator-quickstart.md
+            test -e docs/provider-spi.md
+            test -e docs/schema-v2-contract.md
+            test -e docs/releases/0.2.0.md
+            test -e CHANGELOG.md
+            test -e .github/scripts/verify-release-readiness.sh
+            if grep -R -n -E 'org\.eclipse\.jgit|JGit|git[[:space:]]+log|co[- ]?change' core/src/main/java; then
+              echo 'Production analysis must not inspect Git history or commit-derived change coupling.' >&2
+              exit 1
+            fi
+            git diff --check
+            verify_candidate
+            git config user.name 'ai-knowledge-extractor automation'
+            git config user.email 'actions@users.noreply.github.com'
+            git add -A
+            git diff --cached --check
+            git commit -m 'chore: harden 0.2.0 integration and release contracts'
+            merge_current_branch \
+              release/0.2.0-product-final \
+              'Harden 0.2.0 integration and release contracts' \
+              'Adds the shared source scan policy, provider SPI and schema-v2 contracts, mixed Java/TypeScript fixtures, JS/TS golden tests, release documentation and publication checks. Git history and commit-derived change coupling remain explicitly excluded.'
+          else
+            git checkout -B release-020-transition-cleanup origin/main
+            remove_transition_files
+            if ! git diff --quiet; then
+              verify_candidate
+              git config user.name 'ai-knowledge-extractor automation'
+              git config user.email 'actions@users.noreply.github.com'
+              git add -A
+              git diff --cached --check
+              git commit -m 'chore: remove obsolete 0.2.0 transition automation'
+              merge_current_branch \
+                release/0.2.0-transition-cleanup \
+                'Remove obsolete 0.2.0 transition automation' \
+                'Removes one-shot migration and cleanup workflows after preserving the regular CI, Pages, prepare-next and audited publish workflows.'
+            fi
+          fi
+
+          test -e core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java
+          test ! -e .github/workflows/verify-020-hardening-main.yml
+          test ! -e .github/workflows/post-verify-020-cleanup.yml
+          test ! -e .github/workflows/post-verify-020-final-cleanup.yml
+
+      - name: Prepare and merge the 0.2.0 version contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh api "repos/$REPOSITORY/releases/tags/v0.2.0" >/tmp/release-existing.json 2>/dev/null; then
+            echo 'Release v0.2.0 already exists; version preparation is complete.'
+            exit 0
+          fi
+
+          git fetch origin main
+          git checkout -B release-020-version-final origin/main
+          current=$(sed -n 's/^projectVersion=//p' gradle.properties)
+          release=$(sed -n 's/^next.release.version=//p' release.properties)
+          if [[ "$current" != '0.2.0-SNAPSHOT' || "$release" != '0.2.0' ]]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          gradle = Path('gradle.properties')
+          text = gradle.read_text(encoding='utf-8')
+          text, count = re.subn(r'(?m)^projectVersion=.*$', 'projectVersion=0.2.0-SNAPSHOT', text, count=1)
+          if count != 1:
+              raise SystemExit('projectVersion is missing or ambiguous')
+          gradle.write_text(text, encoding='utf-8')
+
+          release = Path('release.properties')
+          text = release.read_text(encoding='utf-8')
+          text, count = re.subn(r'(?m)^next\.release\.version=.*$', 'next.release.version=0.2.0', text, count=1)
+          if count != 1:
+              raise SystemExit('next.release.version is missing or ambiguous')
+          release.write_text(text, encoding='utf-8')
+          PY
+          fi
+
+          python3 .github/scripts/verify-version-consistency.py
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+          mvn -B -f site/pom.xml -Drevision=0.2.0-SNAPSHOT process-resources site
+
+          if ! git diff --quiet; then
+            git config user.name 'ai-knowledge-extractor automation'
+            git config user.email 'actions@users.noreply.github.com'
+            git add -A
+            git diff --cached --check
+            git commit -m 'chore: prepare the 0.2.0 release version'
+            git push --force origin HEAD:release/0.2.0-version-final
+            pr_url=$(gh pr list --repo "$REPOSITORY" --head release/0.2.0-version-final --base main \
+              --state open --json url --jq '.[0].url // empty')
+            if [[ -z "$pr_url" ]]; then
+              pr_url=$(gh pr create --repo "$REPOSITORY" --base main \
+                --head release/0.2.0-version-final \
+                --title 'Prepare the 0.2.0 release version' \
+                --body 'Moves the verified development line to 0.2.0-SNAPSHOT and sets the audited release cross-check to 0.2.0. The full build, local publication, consumer fixtures, site and metadata contract passed before merge.')
+            fi
+            gh pr merge "$pr_url" --repo "$REPOSITORY" --squash --delete-branch \
+              --subject 'Prepare the 0.2.0 release version' \
+              --body 'Verified against the complete 0.2.0-SNAPSHOT consumer and metadata contract.'
+          fi
+
+          git fetch origin main
+          git checkout -B orchestrator-main origin/main
+          test "$(sed -n 's/^projectVersion=//p' gradle.properties)" = '0.2.0-SNAPSHOT'
+          test "$(sed -n 's/^next.release.version=//p' release.properties)" = '0.2.0'
+
+      - name: Verify exact main and resolve the audited publish inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B orchestrator-main origin/main
+          python3 .github/scripts/verify-version-consistency.py
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+          mvn -B -f site/pom.xml -Drevision=0.2.0-SNAPSHOT process-resources site
+          if grep -R -n -E 'org\.eclipse\.jgit|JGit|git[[:space:]]+log|co[- ]?change' core/src/main/java; then
+            echo 'Production analysis must not inspect Git history or commit-derived change coupling.' >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          lines = Path('.github/workflows/publish.yml').read_text(encoding='utf-8').splitlines()
+          dispatch_indent = None
+          inputs_indent = None
+          keys = []
+          required = {}
+          defaults = {}
+          current = None
+          for line in lines:
+              match = re.match(r'^(\s*)workflow_dispatch\s*:', line)
+              if match:
+                  dispatch_indent = len(match.group(1))
+                  continue
+              if dispatch_indent is None:
+                  continue
+              stripped = line.strip()
+              indent = len(line) - len(line.lstrip())
+              if stripped and indent <= dispatch_indent and not stripped.startswith('#'):
+                  break
+              if re.match(r'^\s*inputs\s*:', line):
+                  inputs_indent = indent
+                  continue
+              if inputs_indent is None:
+                  continue
+              key = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*$', line)
+              if key and len(key.group(1)) > inputs_indent:
+                  current = key.group(2)
+                  keys.append(current)
+                  required[current] = False
+                  continue
+              if current is None:
+                  continue
+              req = re.match(r'^\s*required\s*:\s*(true|false)\s*$', line, re.I)
+              if req:
+                  required[current] = req.group(1).lower() == 'true'
+              default = re.match(r'^\s*default\s*:\s*["\']?([^"\']+?)["\']?\s*$', line)
+              if default:
+                  defaults[current] = default.group(1).strip()
+
+          if any('release_version' in key.lower() for key in keys):
+              raise SystemExit('The audited workflow must derive the release version from projectVersion.')
+          values = {}
+          bump_names = {'bump', 'increment', 'version_increment', 'version_bump',
+                        'next_version_bump', 'next_development_bump', 'release_type'}
+          for key in keys:
+              lower = key.lower()
+              if lower in bump_names or ('bump' in lower and 'version' in lower):
+                  values[key] = 'patch'
+              elif lower == 'next_development_version':
+                  values[key] = '0.2.1-SNAPSHOT'
+              elif required.get(key) and key not in defaults:
+                  raise SystemExit(f'Unsupported required publish input: {key}')
+          Path('/tmp/release-dispatch.json').write_text(
+              json.dumps({'ref': 'main', 'inputs': values}), encoding='utf-8')
+          print(json.dumps({'detectedInputs': keys, 'submittedInputs': values}, indent=2))
+          PY
+
+      - name: Dispatch and monitor the audited publish workflow
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh api "repos/$REPOSITORY/releases/tags/v0.2.0" >/tmp/release.json 2>/dev/null; then
+            jq -e '.draft == false and .prerelease == false and .tag_name == "v0.2.0"' /tmp/release.json >/dev/null
+            echo 'run_id=existing' >> "$GITHUB_OUTPUT"
+            echo 'Release v0.2.0 already exists.'
+            exit 0
+          fi
+
+          dispatched_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          gh api --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/$REPOSITORY/actions/workflows/publish.yml/dispatches" \
+            --input /tmp/release-dispatch.json
+
+          run_id=''
+          for attempt in $(seq 1 90); do
+            run_id=$(gh api --method GET \
+              "repos/$REPOSITORY/actions/workflows/publish.yml/runs" \
+              -f event=workflow_dispatch -f branch=main -f per_page=30 \
+              --jq ".workflow_runs | map(select(.created_at >= \"$dispatched_at\")) | sort_by(.created_at) | last | .id // empty")
+            [[ -n "$run_id" ]] && break
+            sleep 10
+          done
+          [[ -n "$run_id" ]] || { echo 'No audited publish run appeared.' >&2; exit 1; }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Audited publish run: $run_id"
+
+          completed=false
+          for attempt in $(seq 1 240); do
+            status=$(gh api "repos/$REPOSITORY/actions/runs/$run_id" --jq '.status')
+            conclusion=$(gh api "repos/$REPOSITORY/actions/runs/$run_id" --jq '.conclusion // empty')
+            if [[ "$status" == completed ]]; then
+              [[ "$conclusion" == success ]] || {
+                echo "Audited publish workflow concluded: $conclusion" >&2
+                exit 1
+              }
+              completed=true
+              break
+            fi
+            sleep 15
+          done
+          [[ "$completed" == true ]] || { echo 'Audited publish workflow timed out.' >&2; exit 1; }
+
+          for attempt in $(seq 1 80); do
+            if gh api "repos/$REPOSITORY/releases/tags/v0.2.0" >/tmp/release.json 2>/dev/null; then
+              break
+            fi
+            sleep 15
+          done
+          jq -e '.draft == false and .prerelease == false and .tag_name == "v0.2.0"' /tmp/release.json >/dev/null
+          gh api "repos/$REPOSITORY/git/ref/tags/v0.2.0" >/tmp/tag.json
+
+      - name: Wait for and verify the next development line
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 100); do
+            git fetch origin main
+            next=$(git show origin/main:gradle.properties 2>/dev/null | sed -n 's/^projectVersion=//p' || true)
+            if [[ "$next" == '0.2.1-SNAPSHOT' ]]; then
+              git checkout -B orchestrator-main origin/main
+              python3 .github/scripts/verify-version-consistency.py
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'The audited release did not establish 0.2.1-SNAPSHOT on main.' >&2
+          exit 1
+
+      - name: Record release verification and clean the repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B release-020-verification origin/main
+          release_sha=$(gh api "repos/$REPOSITORY/git/ref/tags/v0.2.0" --jq '.object.sha')
+          release_url=$(gh api "repos/$REPOSITORY/releases/tags/v0.2.0" --jq '.html_url')
+          publish_run='${{ steps.publish.outputs.run_id }}'
+          verified_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          mkdir -p docs/releases
+          cat >docs/releases/0.2.0-verification.md <<EOF
+          # 0.2.0 release verification
+
+          - Tag: \`v0.2.0\`
+          - Tagged object: \`${release_sha}\`
+          - GitHub release: ${release_url}
+          - Audited publish workflow run: \`${publish_run}\`
+          - Verified at: \`${verified_at}\`
+          - Complete Gradle build: passed
+          - Maven-local publication: passed
+          - Gradle consumer fixture: passed
+          - Maven consumer fixture: passed
+          - Maven site generation: passed
+          - Release metadata contract: passed
+          - Next development version: \`0.2.1-SNAPSHOT\`
+          - Git history/change-coupling analysis: not used
+
+          The release evaluation is based on the checked-out source tree and declared build metadata.
+          Commit history and commit-derived co-change coupling are deliberately outside the product scope.
+          EOF
+
+          rm -f \
+            .github/workflows/verify-020-hardening-main.yml \
+            .github/workflows/post-verify-020-cleanup.yml \
+            .github/workflows/post-verify-020-final-cleanup.yml \
+            .github/workflows/materialize-clean-020-hardening.yml \
+            .github/workflows/finalize-clean-020-hardening.yml \
+            .github/workflows/prepare-020-version.yml \
+            .github/workflows/release-020-gate.yml \
+            .github/workflows/post-020-release-cleanup.yml
+
+          python3 .github/scripts/verify-version-consistency.py
+          git config user.name 'ai-knowledge-extractor automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m 'docs: record the verified 0.2.0 release'
+            git push --force origin HEAD:release/0.2.0-verification
+            pr_url=$(gh pr list --repo "$REPOSITORY" --head release/0.2.0-verification --base main \
+              --state open --json url --jq '.[0].url // empty')
+            if [[ -z "$pr_url" ]]; then
+              pr_url=$(gh pr create --repo "$REPOSITORY" --base main \
+                --head release/0.2.0-verification \
+                --title 'Record the verified 0.2.0 release' \
+                --body 'Records the audited publish run, tag, release, complete local/consumer verification and explicit exclusion of Git-history change-coupling analysis. Also removes any remaining one-shot transition workflows.')
+            fi
+            gh pr merge "$pr_url" --repo "$REPOSITORY" --squash --delete-branch \
+              --subject 'Record the verified 0.2.0 release' \
+              --body 'Release v0.2.0 and the 0.2.1-SNAPSHOT development line were verified before merge.'
+          fi
+
+      - name: Delete obsolete branches and the orchestrator
+        shell: bash
+        run: |
+          set -euo pipefail
+          branches=(
+            work/javascript-boundary-analysis-bootstrap
+            feature/javascript-typescript-boundary-analysis
+            release/0.2.0-hardening
+            release/0.2.0-preparation-v2
+            release/0.2.0-hardening-clean
+            release/0.2.0-version-prep
+            release/0.2.0-gate
+            cleanup/release-hardening-artifacts
+            cleanup/post-0.2.0-release
+            release/0.2.0-orchestrator
+          )
+          for branch in "${branches[@]}"; do
+            encoded=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$branch")
+            gh api --method DELETE "repos/$REPOSITORY/git/refs/heads/$encoded" >/dev/null 2>&1 || true
+          done

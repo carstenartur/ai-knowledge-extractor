@@ -72,9 +72,10 @@ class RegelsucheEvidenceExtractionTest {
         String claims = Files.readString(output.resolve("claims.json"));
         String evidence = Files.readString(output.resolve("evidence.json"));
 
-        assertTrue(index.contains("\"evidence\":3"));
+        assertTrue(index.contains("\"evidence\":4"));
         assertTrue(capabilities.contains("Rewrite Search"));
         assertTrue(claims.contains("deterministic-discovery"));
+        assertTrue(evidence.contains("source-analysis-configuration"));
         assertTrue(evidence.contains("discovery-evidence"));
         assertTrue(evidence.contains("complete-square-factorization"));
         assertTrue(evidence.contains("benchmark-source"));

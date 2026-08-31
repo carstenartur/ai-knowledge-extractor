@@ -1,0 +1,117 @@
+name: Finalize clean 0.2.0 hardening
+
+on:
+  push:
+    branches:
+      - release/0.2.0-hardening-clean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: finalize-clean-020-hardening
+  cancel-in-progress: false
+
+jobs:
+  verify-and-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-hardening-clean
+          fetch-depth: 0
+
+      - name: Wait for the product-only materialization commit
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            git fetch origin release/0.2.0-hardening-clean
+            git reset --hard origin/release/0.2.0-hardening-clean
+            if [[ -e core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java \
+                  && ! -e .github/workflows/materialize-clean-020-hardening.yml ]]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'The clean hardening materialization did not complete.' >&2
+          exit 1
+
+      - name: Rebase on the current main line
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git rebase origin/main
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Verify exact candidate
+        run: |
+          set -euo pipefail
+          test -e docs/integrator-quickstart.md
+          test -e docs/provider-spi.md
+          test -e docs/schema-v2-contract.md
+          test -e docs/releases/0.2.0.md
+          test -e CHANGELOG.md
+          test -e .github/scripts/verify-release-readiness.sh
+          for forbidden in \
+            .github/scripts/apply-release-hardening.py \
+            .github/workflows/apply-release-hardening.yml \
+            .github/workflows/export-release-hardening-bootstrap.yml \
+            .github/workflows/finalize-release-hardening.yml \
+            .github/workflows/override-finalize-release-hardening.yml \
+            .github/workflows/post-verify-020-cleanup.yml \
+            .github/workflows/post-verify-020-final-cleanup.yml \
+            .github/workflows/verify-020-hardening-main.yml; do
+            test ! -e "$forbidden"
+          done
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+          VERSION=$(sed -n 's/^projectVersion=//p' gradle.properties)
+          mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
+
+      - name: Remove this one-shot workflow and publish the verified branch
+        run: |
+          set -euo pipefail
+          rm .github/workflows/finalize-clean-020-hardening.yml
+          git config user.name "ai-knowledge-extractor automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "chore: finalize clean 0.2.0 hardening"
+          git push --force-with-lease origin HEAD:release/0.2.0-hardening-clean
+
+      - name: Create and squash-merge the verified hardening PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PR_URL=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head release/0.2.0-hardening-clean \
+            --base main \
+            --state open \
+            --json url \
+            --jq '.[0].url')
+          if [[ -z "$PR_URL" || "$PR_URL" == "null" ]]; then
+            PR_URL=$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head release/0.2.0-hardening-clean \
+              --title "Harden 0.2.0 integration and release contracts" \
+              --body "Adds the shared source scan policy, provider SPI and schema-v2 contracts, mixed Java/TypeScript fixtures, JS/TS golden tests, release documentation and publication checks. Temporary materialization automation is excluded. Git history and commit-derived change coupling remain explicitly excluded.")
+          fi
+          gh pr merge "$PR_URL" \
+            --repo "$GITHUB_REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --subject "Harden 0.2.0 integration and release contracts" \
+            --body "Verified with clean Gradle checks, Maven-local publication, Gradle/Maven consumer fixtures, Maven site generation and the release metadata contract."

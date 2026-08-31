@@ -156,6 +156,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          TAG="v${RELEASE_VERSION}"
+
+          restore_draft_on_failure() {
+            if [[ "$DRY_RUN" != 'true' ]]; then
+              echo "Checksum verification failed; returning ${TAG} to draft state." >&2
+              gh release edit "$TAG" --draft=true || true
+            fi
+          }
+          trap restore_draft_on_failure ERR
+
           cd build/release-artifacts
           mapfile -d '' JARS < <(
             find . -maxdepth 1 -type f -name '*.jar' -printf '%f\0' | sort -z
@@ -168,7 +178,6 @@ jobs:
           test -s SHA256SUMS
 
           if [[ "$DRY_RUN" != 'true' ]]; then
-            TAG="v${RELEASE_VERSION}"
             gh release upload "$TAG" SHA256SUMS --clobber
             mapfile -t REMOTE_ASSETS < <(
               gh release view "$TAG" --json assets --jq '.assets[].name' | sort
@@ -178,6 +187,8 @@ jobs:
               printf '%s\n' "${REMOTE_ASSETS[@]}" | grep -Fx "$jar"
             done
           fi
+
+          trap - ERR
 
       - name: Upload release-build diagnostics
         if: always()

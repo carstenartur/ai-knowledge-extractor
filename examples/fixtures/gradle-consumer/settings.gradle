@@ -19,10 +19,22 @@ pluginManagement {
 
     repositories {
         if (publishedPlugin) {
-            mavenLocal()
+            mavenLocal {
+                content {
+                    includeGroup('org.aiknowledge')
+                    includeGroup('org.aiknowledge.extractor')
+                }
+            }
+            mavenCentral {
+                content {
+                    excludeGroup('org.aiknowledge')
+                    excludeGroup('org.aiknowledge.extractor')
+                }
+            }
+        } else {
+            gradlePluginPortal()
+            mavenCentral()
         }
-        gradlePluginPortal()
-        mavenCentral()
     }
 }
 

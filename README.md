@@ -232,7 +232,7 @@ License: Apache-2.0
 ## Release-hardening and integration contracts
 
 JavaScript/TypeScript support is experimental in the 0.2.x line. Start with the
-[ mixed Java/Web integrator quickstart](docs/integrator-quickstart.md), then consult the
+[mixed Java/Web integrator quickstart](docs/integrator-quickstart.md), then consult the
 [provider SPI](docs/provider-spi.md) and [schema-v2 contract](docs/schema-v2-contract.md).
 
 All build integrations share the `aiknowledge.source.*` JVM properties for provider selection,

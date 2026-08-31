@@ -228,3 +228,17 @@ Release execution, `dry_run`, metadata updates, tagging and the follow-up PR flo
 Citation metadata is maintained in `CITATION.cff`. Release metadata is maintained in `.zenodo.json`. See `docs/release.md` for the release checklist.
 
 License: Apache-2.0
+
+## Release-hardening and integration contracts
+
+JavaScript/TypeScript support is experimental in the 0.2.x line. Start with the
+[ mixed Java/Web integrator quickstart](docs/integrator-quickstart.md), then consult the
+[provider SPI](docs/provider-spi.md) and [schema-v2 contract](docs/schema-v2-contract.md).
+
+All build integrations share the `aiknowledge.source.*` JVM properties for provider selection,
+include/exclude globs, source budgets, generated-source policy and error handling. The extractor
+uses the current checkout only; Git history and commit-based change coupling are deliberately
+excluded.
+
+Publication availability is stated on each release. Do not assume Maven Central availability from
+an example version alone; see the [0.2.0 release checklist](docs/release-checklist.md).

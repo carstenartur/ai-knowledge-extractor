@@ -36,6 +36,12 @@ subprojects {
         options.release = 17
     }
 
+    tasks.withType(Javadoc).configureEach {
+        options.encoding = 'UTF-8'
+        options.charSet = 'UTF-8'
+        options.docEncoding = 'UTF-8'
+    }
+
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
     }
@@ -71,6 +77,18 @@ subprojects {
                         developerConnection = 'scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git'
                         url = 'https://github.com/carstenartur/ai-knowledge-extractor'
                     }
+
+developers {
+    developer {
+        id = 'carstenartur'
+        name = 'Carsten Hammer'
+        roles = ['developer', 'maintainer']
+    }
+}
+issueManagement {
+    system = 'GitHub Issues'
+    url = 'https://github.com/carstenartur/ai-knowledge-extractor/issues'
+}
                 }
             }
         }

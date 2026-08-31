@@ -464,3 +464,14 @@ When empirical benchmark mode is enabled, `empirical` contains:
 - `fixtureCount`
 - `results` (per fixture: `id`, `profile`, `tokenUsage`, `latencyMs`, `reviewQuality`, `duplicateSuggestions`, `missedExistingFeatures`, `taskSuccess`)
 - `summary` (`averageTokenUsage`, `averageLatencyMs`, `averageReviewQuality`, `totalDuplicateSuggestions`, `totalMissedExistingFeatures`, `taskSuccessRate`)
+
+## Normative schema-v2 contract
+
+The identity, ordering, null handling, confidence vocabulary and cross-artifact reference rules for
+`source-units.json`, `symbols.json`, `relations.json`, `boundaries.json`, `warnings.json` and
+`boundary-analysis.json` are specified in [`schema-v2-contract.md`](schema-v2-contract.md).
+Consumers must ignore unknown additive fields. A breaking identity or semantic change requires a new
+schema major version.
+
+Boundary analysis is based on the current checkout. `versionControlHistoryUsed` is `false`; Git
+commit history and co-change/change-coupling data are not read.

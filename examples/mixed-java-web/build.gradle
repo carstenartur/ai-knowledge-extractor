@@ -1,0 +1,6 @@
+plugins {
+    id 'java'
+}
+
+// This example is source input for the extractor. It intentionally has no Spring dependency:
+// the Java HTTP provider analyses annotations syntactically through JDT.

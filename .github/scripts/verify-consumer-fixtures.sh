@@ -6,10 +6,13 @@ cd "$ROOT"
 
 GRADLE=${GRADLE:-gradle}
 VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
-PUBLISHED_GRADLE_HOME=''
-PUBLISHED_LOG=''
-MAVEN_LOG=''
+REPORT_DIR=${AI_KNOWLEDGE_CONSUMER_REPORT_DIR:-$ROOT/build/reports/consumer-fixtures}
 TRACKED_GRADLE_DOCS=examples/fixtures/gradle-consumer/docs/ai-knowledge
+PUBLISHED_GRADLE_HOME=''
+PUBLISH_LOG="$REPORT_DIR/publish-to-maven-local.log"
+COMPOSITE_LOG="$REPORT_DIR/gradle-composite-consumer.log"
+PUBLISHED_LOG="$REPORT_DIR/gradle-published-marker-consumer.log"
+MAVEN_LOG="$REPORT_DIR/maven-consumer.log"
 
 fail() {
   echo "consumer-fixtures: $*" >&2
@@ -35,15 +38,18 @@ clean_outputs() {
 cleanup() {
   clean_outputs
   [[ -z "$PUBLISHED_GRADLE_HOME" ]] || rm -rf "$PUBLISHED_GRADLE_HOME"
-  [[ -z "$PUBLISHED_LOG" ]] || rm -f "$PUBLISHED_LOG"
-  [[ -z "$MAVEN_LOG" ]] || rm -f "$MAVEN_LOG"
 }
 trap cleanup EXIT
 
 [[ -n "$VERSION" ]] || fail 'Could not resolve projectVersion from gradle.properties'
+mkdir -p "$REPORT_DIR"
+: > "$PUBLISH_LOG"
+: > "$COMPOSITE_LOG"
+: > "$PUBLISHED_LOG"
+: > "$MAVEN_LOG"
 
 echo "Publishing ${VERSION} artifacts to Maven local for consumer fixtures"
-"$GRADLE" --no-daemon publishToMavenLocal --warning-mode all
+"$GRADLE" --no-daemon publishToMavenLocal --warning-mode all 2>&1 | tee "$PUBLISH_LOG"
 
 assert_artifacts() {
   local directory=$1
@@ -80,14 +86,13 @@ echo 'Verifying Gradle consumer fixture through source composite'
 "$GRADLE" --no-daemon \
   -p examples/fixtures/gradle-consumer \
   --warning-mode all \
-  "${GRADLE_TASKS[@]}"
+  "${GRADLE_TASKS[@]}" 2>&1 | tee "$COMPOSITE_LOG"
 assert_artifacts examples/fixtures/gradle-consumer/build/ai-knowledge
 test -s "$TRACKED_GRADLE_DOCS/index.json" \
   || fail 'published Gradle documentation artifact is missing'
 
 clean_outputs
 PUBLISHED_GRADLE_HOME=$(mktemp -d)
-PUBLISHED_LOG=$(mktemp)
 echo 'Verifying the published Gradle plugin marker without a composite build'
 GRADLE_USER_HOME="$PUBLISHED_GRADLE_HOME" \
   "$GRADLE" --no-daemon --refresh-dependencies \
@@ -95,8 +100,7 @@ GRADLE_USER_HOME="$PUBLISHED_GRADLE_HOME" \
   -PpublishedPlugin=true \
   -PaiKnowledgeVersion="$VERSION" \
   --warning-mode all \
-  "${GRADLE_TASKS[@]}" \
-  | tee "$PUBLISHED_LOG"
+  "${GRADLE_TASKS[@]}" 2>&1 | tee "$PUBLISHED_LOG"
 if grep -Fq ':ai-knowledge-extractor:' "$PUBLISHED_LOG"; then
   fail 'published-plugin verification unexpectedly used the source composite build'
 fi
@@ -106,7 +110,6 @@ test -s "$TRACKED_GRADLE_DOCS/index.json" \
 
 echo 'Verifying every Maven plugin goal through Maven-local coordinates'
 clean_outputs
-MAVEN_LOG=$(mktemp)
 {
   mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
     -DaiKnowledge.version="$VERSION" \
@@ -133,4 +136,4 @@ grep -F 'benchmark (phase: verify)' "$MAVEN_LOG" >/dev/null \
 grep -F 'empiricalBenchmarkFixtureFile [java.io.File]' "$MAVEN_LOG" >/dev/null \
   || fail 'Maven help goal did not document benchmark parameters'
 
-echo 'Consumer fixture verification completed'
+echo "Consumer fixture verification completed; logs: $REPORT_DIR"

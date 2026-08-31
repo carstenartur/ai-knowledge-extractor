@@ -54,9 +54,9 @@ grep -Fq '# 0.2.0 release notes' docs/releases/0.2.0.md \
   || fail '0.2.0 release notes are still marked as a target'
 grep -Fq 'GitHub Packages' docs/releases/0.2.0.md \
   || fail 'the real 0.2.0 package channel is not documented'
-grep -Fq 'not' docs/releases/0.2.0.md \
-  && grep -Fq 'Maven Central' docs/releases/0.2.0.md \
-  || fail 'Maven Central non-availability is not documented'
+grep -Fq 'Version 0.2.0 is **not** published to Maven Central or the Gradle Plugin Portal.' \
+  docs/releases/0.2.0.md \
+  || fail 'the exact Maven Central and Gradle Plugin Portal non-availability statement is missing'
 grep -Fq '## 0.2.0 – 2026-08-31' CHANGELOG.md \
   || fail 'the 0.2.0 changelog entry is not finalized'
 ! grep -Fq 'Unreleased – target 0.2.0' CHANGELOG.md \

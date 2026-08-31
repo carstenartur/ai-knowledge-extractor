@@ -1,4 +1,4 @@
-name: Finalize 0.2.0 preparation v3
+name: Finalize 0.2.0 preparation v4
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: finalize-020-preparation-v2-v3
+  group: finalize-020-preparation-v2-v4
   cancel-in-progress: false
 
 jobs:
@@ -43,36 +43,36 @@ jobs:
           git fetch origin main
           git merge --no-edit origin/main
 
-      - name: Materialize product changes and remove temporary automation
+      - name: Materialize the complete product change
         run: |
           set -euo pipefail
-          if [[ ! -f core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java ]]; then
-            SCRIPT=$(find .github/scripts -maxdepth 1 -type f -name '*materialize*020*hardening*.py' -print -quit)
-            if [[ -z "$SCRIPT" ]]; then
-              echo "No materializer and no materialized source-analysis configuration found" >&2
-              exit 1
-            fi
-            python3 "$SCRIPT"
-          fi
+          git fetch origin release/0.2.0-hardening:refs/remotes/origin/release/0.2.0-hardening
+          git show origin/release/0.2.0-hardening:.github/scripts/apply-release-hardening.py \
+            > /tmp/apply-release-hardening.py
+          python3 /tmp/apply-release-hardening.py
 
           python3 - <<'PY'
           from pathlib import Path
+
           gradle = Path('gradle.properties')
-          text = gradle.read_text(encoding='utf-8')
-          lines = [line for line in text.splitlines() if not line.startswith('projectVersion=')]
+          lines = [
+              line for line in gradle.read_text(encoding='utf-8').splitlines()
+              if not line.startswith('projectVersion=')
+          ]
           lines.append('projectVersion=0.2.0-SNAPSHOT')
           gradle.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
-          release = Path('release.properties')
-          release.write_text(
+          Path('release.properties').write_text(
               '# Managed by the audited release workflow.\nnext.release.version=0.2.0\n',
               encoding='utf-8')
           PY
 
+          rm -rf .release-transfer
           rm -f \
             .github/scripts/materialize-020-hardening-base.py \
             .github/scripts/apply-release-hardening.py \
             .github/workflows/materialize-020-hardening-base.yml \
+            .github/workflows/export-preparation-source.yml \
             .github/workflows/finalize-020-preparation-v2-v3.yml \
             .github/workflows/export-release-hardening-bootstrap.yml \
             .github/workflows/apply-release-hardening.yml \
@@ -93,7 +93,10 @@ jobs:
             .github/scripts/verify-release-readiness.sh
           )
           for path in "${required[@]}"; do
-            test -s "$path" || { echo "Missing required hardening output: $path" >&2; exit 1; }
+            test -s "$path" || {
+              echo "Missing required hardening output: $path" >&2
+              exit 1
+            }
           done
 
           if grep -RInE 'org\.eclipse\.jgit|\bgit log\b|co[- ]?change|changeCouplingIncluded[^\n]*true' \
@@ -103,17 +106,11 @@ jobs:
           fi
 
           chmod +x .github/scripts/verify-release-readiness.sh
-          git add -A
-          git diff --cached --check
-          if ! git diff --cached --quiet; then
-            git commit -m "Harden 0.2.0 integration and provider contracts"
-            git push origin HEAD:release/0.2.0-preparation-v2
-          fi
+          git diff --check
 
-      - name: Verify exact preparation commit
+      - name: Verify the preparation tree
         run: |
           set -euo pipefail
-          test -z "$(git status --porcelain --untracked-files=no)"
           python3 .github/scripts/verify-version-consistency.py
           gradle --no-daemon clean check publishToMavenLocal --warning-mode all
           bash .github/scripts/verify-consumer-fixtures.sh
@@ -121,11 +118,13 @@ jobs:
           mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
           bash .github/scripts/verify-release-readiness.sh --metadata-only
 
-          test ! -e .github/scripts/materialize-020-hardening-base.py
-          test ! -e .github/workflows/materialize-020-hardening-base.yml
-          test ! -e .github/workflows/verify-020-hardening-main.yml
-          test ! -e .github/workflows/post-verify-020-cleanup.yml
-          test ! -e .github/workflows/post-verify-020-final-cleanup.yml
+      - name: Commit verified preparation
+        run: |
+          set -euo pipefail
+          git add -A
+          git diff --cached --check
+          git commit -m "Harden 0.2.0 integration and provider contracts"
+          git push origin HEAD:release/0.2.0-preparation-v2
 
       - name: Create or update pull request and squash-merge
         env:
@@ -163,7 +162,7 @@ jobs:
             --subject "Harden 0.2.0 integration and provider contracts" \
             --body "Verified with the complete Gradle build, Maven-local publication, Gradle and Maven consumer fixtures, Maven site generation and release-contract checks."
 
-      - name: Verify exact merged main tree
+      - name: Verify the exact merged main tree
         run: |
           set -euo pipefail
           git fetch origin main
@@ -171,6 +170,7 @@ jobs:
           test -f core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java
           test ! -e .github/workflows/finalize-020-preparation-v2-v3.yml
           test ! -e .github/workflows/verify-020-hardening-main.yml
+          test ! -e .release-transfer
           python3 .github/scripts/verify-version-consistency.py
           gradle --no-daemon clean check publishToMavenLocal --warning-mode all
           bash .github/scripts/verify-consumer-fixtures.sh

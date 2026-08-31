@@ -21,7 +21,7 @@ in `META-INF/services/org.aiknowledge.core.sourcespi.SourceKnowledgeProvider`.
 - `symbolFacts`: types, fields, values, declarations and executable symbols with `kind=callable`;
 - `relationFacts`: typed directed relations;
 - `boundaryFacts`: client operations or server endpoints;
-- `warnings`: human-readable recoverable limitations.
+- `warningFacts`: human-readable recoverable limitations.
 
 Every fact should contain a stable `id` when it can be referenced, `sourceFile`, `provider`, and
 `confidence`. Source files use repository-relative `/` separators. Confidence vocabulary is

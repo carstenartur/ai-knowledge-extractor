@@ -1,0 +1,120 @@
+name: Prepare 0.2.0 version contract
+
+on:
+  push:
+    branches:
+      - release/0.2.0-version-prep
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: prepare-020-version-contract
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-version-prep
+          fetch-depth: 0
+
+      - name: Wait for verified hardening on main
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 80); do
+            git fetch origin main
+            if git cat-file -e origin/main:core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java 2>/dev/null \
+                && ! git cat-file -e origin/main:.github/workflows/verify-020-hardening-main.yml 2>/dev/null \
+                && ! git cat-file -e origin/main:.github/workflows/post-verify-020-cleanup.yml 2>/dev/null \
+                && ! git cat-file -e origin/main:.github/workflows/post-verify-020-final-cleanup.yml 2>/dev/null; then
+              git reset --hard origin/main
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'A clean verified hardening commit did not reach main.' >&2
+          exit 1
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Set the 0.2.0 snapshot and release cross-check
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          gradle = Path('gradle.properties')
+          text = gradle.read_text(encoding='utf-8')
+          text, count = re.subn(r'(?m)^projectVersion=.*$', 'projectVersion=0.2.0-SNAPSHOT', text, count=1)
+          if count != 1:
+              raise SystemExit('projectVersion is missing or ambiguous')
+          gradle.write_text(text, encoding='utf-8')
+
+          release = Path('release.properties')
+          text = release.read_text(encoding='utf-8')
+          text, count = re.subn(r'(?m)^next\.release\.version=.*$', 'next.release.version=0.2.0', text, count=1)
+          if count != 1:
+              raise SystemExit('next.release.version is missing or ambiguous')
+          release.write_text(text, encoding='utf-8')
+          PY
+          python3 .github/scripts/verify-version-consistency.py
+          test "$(sed -n 's/^projectVersion=//p' gradle.properties)" = '0.2.0-SNAPSHOT'
+          test "$(sed -n 's/^next.release.version=//p' release.properties)" = '0.2.0'
+
+      - name: Verify the complete 0.2.0 candidate contract
+        run: |
+          set -euo pipefail
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+          mvn -B -f site/pom.xml -Drevision=0.2.0-SNAPSHOT process-resources site
+
+      - name: Commit a workflow-free version preparation branch
+        run: |
+          set -euo pipefail
+          rm .github/workflows/prepare-020-version.yml
+          git config user.name "ai-knowledge-extractor automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "chore: prepare 0.2.0 release version"
+          git push --force-with-lease origin HEAD:release/0.2.0-version-prep
+
+      - name: Create and squash-merge the version preparation PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PR_URL=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head release/0.2.0-version-prep \
+            --base main \
+            --state open \
+            --json url \
+            --jq '.[0].url')
+          if [[ -z "$PR_URL" || "$PR_URL" == "null" ]]; then
+            PR_URL=$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head release/0.2.0-version-prep \
+              --title "Prepare the 0.2.0 release version" \
+              --body "Moves the verified development line to 0.2.0-SNAPSHOT and sets the audited release cross-check to 0.2.0. The complete build, Maven-local publication, Gradle/Maven consumer fixtures, site generation and release metadata contract pass before merge.")
+          fi
+          gh pr merge "$PR_URL" \
+            --repo "$GITHUB_REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --subject "Prepare the 0.2.0 release version" \
+            --body "Verified on the complete 0.2.0-SNAPSHOT consumer and metadata contract."

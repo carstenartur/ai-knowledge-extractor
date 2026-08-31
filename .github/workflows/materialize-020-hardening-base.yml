@@ -1,0 +1,40 @@
+name: Materialize 0.2.0 hardening base
+
+on:
+  push:
+    branches:
+      - release/0.2.0-preparation-v2
+
+permissions:
+  contents: read
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-preparation-v2
+          fetch-depth: 0
+      - name: Apply the previously prepared hardening generator
+        run: |
+          git fetch origin release/0.2.0-hardening
+          git show origin/release/0.2.0-hardening:.github/scripts/apply-release-hardening.py > /tmp/apply-release-hardening.py
+          python3 /tmp/apply-release-hardening.py
+          rm -f \
+            .github/scripts/apply-release-hardening.py \
+            .github/workflows/apply-release-hardening.yml \
+            .github/workflows/export-release-hardening-bootstrap.yml \
+            .github/workflows/finalize-release-hardening.yml \
+            .github/workflows/override-finalize-release-hardening.yml \
+            .github/workflows/verify-020-hardening-main.yml \
+            .github/workflows/post-verify-020-cleanup.yml \
+            .github/workflows/post-verify-020-final-cleanup.yml
+      - name: Package materialized source
+        run: |
+          tar --exclude=.git --exclude=build --exclude='*/build' --exclude=target --exclude='*/target' -czf /tmp/materialized-source.tgz .
+      - uses: actions/upload-artifact@v7
+        with:
+          name: materialized-020-hardening-base
+          path: /tmp/materialized-source.tgz
+          if-no-files-found: error

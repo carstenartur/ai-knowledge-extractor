@@ -130,6 +130,9 @@ jobs:
         with:
           gradle-version: '9.5.1'
 
+      - name: Verify the exact release candidate
+        run: bash .github/scripts/verify-release-readiness.sh
+
       - name: Configure git author
         run: |
           git config user.name 'github-actions[bot]'

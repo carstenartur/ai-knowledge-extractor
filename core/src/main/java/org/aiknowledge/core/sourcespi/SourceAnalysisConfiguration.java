@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -70,7 +69,7 @@ public final class SourceAnalysisConfiguration {
     private final long maxTotalBytes;
     private final boolean includeGenerated;
     private final ErrorPolicy errorPolicy;
-    private final Set<String> admittedPaths = new LinkedHashSet<>();
+    private final Map<String, Boolean> admissionDecisions = new LinkedHashMap<>();
     private int admittedFiles;
     private long admittedBytes;
 
@@ -134,19 +133,27 @@ public final class SourceAnalysisConfiguration {
      */
     public synchronized boolean acceptsSource(Path sourceFile, String sourcePath) throws IOException {
         String normalized = normalize(sourcePath);
-        if (admittedPaths.contains(normalized)) return true;
-        if (ignoredDirectory(normalized)) return false;
-        if (!includeGenerated && generated(normalized)) return false;
+        if (admissionDecisions.containsKey(normalized)) return admissionDecisions.get(normalized);
+        if (ignoredDirectory(normalized)) return reject(normalized);
+        if (!includeGenerated && generated(normalized)) return reject(normalized);
         if (!includes.isEmpty() && includes.stream().noneMatch(pattern -> pattern.matcher(normalized).matches())) {
-            return false;
+            return reject(normalized);
         }
-        if (excludes.stream().anyMatch(pattern -> pattern.matcher(normalized).matches())) return false;
+        if (excludes.stream().anyMatch(pattern -> pattern.matcher(normalized).matches())) {
+            return reject(normalized);
+        }
 
-        long size = Files.size(sourceFile);
-        if (size > maxFileBytes || admittedFiles >= maxFiles || admittedBytes + size > maxTotalBytes) {
-            return false;
+        long size;
+        try {
+            size = Files.size(sourceFile);
+        } catch (IOException exception) {
+            admissionDecisions.put(normalized, false);
+            throw exception;
         }
-        admittedPaths.add(normalized);
+        if (size > maxFileBytes || admittedFiles >= maxFiles || admittedBytes + size > maxTotalBytes) {
+            return reject(normalized);
+        }
+        admissionDecisions.put(normalized, true);
         admittedFiles++;
         admittedBytes += size;
         return true;
@@ -170,6 +177,11 @@ public final class SourceAnalysisConfiguration {
         evidence.put("admittedBytes", admittedBytes);
         evidence.put("versionControlHistoryUsed", false);
         return evidence;
+    }
+
+    private boolean reject(String path) {
+        admissionDecisions.put(path, false);
+        return false;
     }
 
     private boolean ignoredDirectory(String path) {

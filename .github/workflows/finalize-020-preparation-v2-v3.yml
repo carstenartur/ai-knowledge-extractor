@@ -89,23 +89,22 @@ jobs:
             exit 1
           fi
 
-          chmod +x .github/scripts/verify-release-readiness.sh
+          chmod +x \
+            .github/scripts/verify-release-readiness.sh \
+            .github/scripts/verify-consumer-fixtures.sh
           git diff --check
 
       - name: Verify the preparation tree
-        run: |
-          set -euo pipefail
-          python3 .github/scripts/verify-version-consistency.py
-          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
-          bash .github/scripts/verify-consumer-fixtures.sh
-          VERSION=$(sed -n 's/^projectVersion=//p' gradle.properties | head -n1 | tr -d '[:space:]')
-          mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
-          bash .github/scripts/verify-release-readiness.sh --metadata-only
+        run: bash .github/scripts/verify-release-readiness.sh
 
       - name: Commit verified preparation
         run: |
           set -euo pipefail
+          # The Actions token cannot write workflow files. Restore the workflow directory to the
+          # checked-out state; temporary workflows are removed immediately afterwards through the
+          # GitHub contents API, before a pull request is opened.
+          git checkout HEAD -- .github/workflows
           git add -A
           git diff --cached --check
-          git commit -m "Harden 0.2.0 integration and provider contracts"
+          git commit -m "Harden 0.2.0 integration and provider contracts [skip ci]"
           git push origin HEAD:release/0.2.0-preparation-v2

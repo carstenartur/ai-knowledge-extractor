@@ -1,0 +1,51 @@
+name: Post-verify 0.2.0 cleanup
+
+on:
+  workflow_run:
+    workflows:
+      - Verify 0.2.0 hardening on main
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Repair and validate workflow YAML
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/ci.yml')
+          text = path.read_text(encoding='utf-8')
+          malformed = "\n- name: Verify release-readiness metadata\n  run: bash .github/scripts/verify-release-readiness.sh --metadata-only\n"
+          repaired = "\n      - name: Verify release-readiness metadata\n        run: bash .github/scripts/verify-release-readiness.sh --metadata-only\n"
+          text = text.replace(malformed, repaired)
+          if '\n- name: Verify release-readiness metadata\n' in text:
+              raise SystemExit('release-readiness metadata step is not nested in a CI job')
+          path.write_text(text, encoding='utf-8')
+          PY
+          for workflow in .github/workflows/*.yml; do
+            ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' "$workflow"
+          done
+
+      - name: Remove post-verification automation
+        run: |
+          rm .github/workflows/post-verify-020-cleanup.yml
+          git config user.name "ai-knowledge-extractor automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git diff --cached --check
+          git commit -m "chore: finalize 0.2.0 release-hardening cleanup"
+          git push origin HEAD:main

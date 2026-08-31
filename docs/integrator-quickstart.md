@@ -15,7 +15,7 @@ support in 0.2.x is experimental: facts include `provider`, `confidence`, `compl
 
 ```groovy
 plugins {
-    id 'org.aiknowledge' version '0.2.0'
+    id 'org.aiknowledge.extractor' version '0.2.0'
 }
 ```
 
@@ -58,7 +58,7 @@ Gradle, Maven and direct core callers use exactly the same JVM properties:
 | `aiknowledge.source.maxFiles` | `100000` | Maximum source files in one extraction. |
 | `aiknowledge.source.maxTotalBytes` | `500000000` | Repository-wide admitted source byte budget. |
 | `aiknowledge.source.includeGenerated` | `false` | Admit recognised generated source paths. |
-| `aiknowledge.source.errorPolicy` | `warn` | `fail`, `warn`, or `skip` provider failures. |
+| `aiknowledge.source.errorPolicy` | `warn` | `fail`, `warn`, or `skip` source-admission and provider failures. |
 
 Example:
 
@@ -72,7 +72,10 @@ Example:
 
 Default exclusions cover `node_modules`, `build`, `target`, `dist`, coverage output, common framework
 caches, minified assets and source maps. Multiple providers may analyse one admitted file without
-consuming the repository budget twice.
+consuming the repository budget twice. With `warn`, file-admission I/O failures are retained in the
+`source-analysis-configuration` evidence under `admissionWarnings`; provider parsing limitations
+continue to appear in `warnings.json`. With `skip`, both categories are skipped without warning;
+with `fail`, either category aborts extraction.
 
 ## Expected evidence
 

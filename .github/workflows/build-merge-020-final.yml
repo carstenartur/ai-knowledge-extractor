@@ -1,0 +1,218 @@
+name: Build and merge final 0.2.0 release candidate
+
+on:
+  push:
+    branches:
+      - release/0.2.0-final
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: build-merge-020-final
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out final branch
+        uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-final
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Materialize product-only hardening diff
+        run: |
+          set -euo pipefail
+          git config user.name "ai-knowledge-extractor automation"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-edit origin/main
+
+          if [[ ! -f core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java ]]; then
+            materialized=false
+            for candidate in release/0.2.0-preparation-v3 release/0.2.0-preparation-v2; do
+              if ! git ls-remote --exit-code origin "refs/heads/$candidate" >/dev/null 2>&1; then
+                continue
+              fi
+              ref="refs/remotes/origin/${candidate}"
+              git fetch origin "$candidate:$ref"
+
+              if git cat-file -e "$ref:core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java" 2>/dev/null; then
+                git diff --binary origin/main..."$ref" -- \
+                  core gradle-plugin maven docs examples site \
+                  README.md CHANGELOG.md build.gradle gradle.properties release.properties \
+                  .github/scripts/verify-release-readiness.sh \
+                  | git apply --3way
+                materialized=true
+                break
+              fi
+
+              script_path=$(git ls-tree -r --name-only "$ref" \
+                | grep -E '^\.github/scripts/.*materialize.*020.*hardening.*\.py$' \
+                | head -n1 || true)
+              if [[ -n "$script_path" ]]; then
+                git show "$ref:$script_path" > /tmp/materialize-020-hardening.py
+                python3 /tmp/materialize-020-hardening.py
+                materialized=true
+                break
+              fi
+            done
+
+            if [[ "$materialized" != true ]]; then
+              echo "Could not obtain materialized hardening files or the deterministic materializer" >&2
+              exit 1
+            fi
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gradle = Path('gradle.properties')
+          lines = [line for line in gradle.read_text(encoding='utf-8').splitlines()
+                   if not line.startswith('projectVersion=')]
+          lines.append('projectVersion=0.2.0-SNAPSHOT')
+          gradle.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+          Path('release.properties').write_text(
+              '# Managed by the audited release workflow.\nnext.release.version=0.2.0\n',
+              encoding='utf-8')
+          PY
+
+          rm -f \
+            .github/workflows/build-merge-020-final.yml \
+            .github/workflows/materialize-020-hardening-base.yml \
+            .github/workflows/finalize-020-preparation-v2-v3.yml \
+            .github/workflows/finalize-020-preparation-v3.yml \
+            .github/workflows/export-release-hardening-bootstrap.yml \
+            .github/workflows/apply-release-hardening.yml \
+            .github/workflows/finalize-release-hardening.yml \
+            .github/workflows/override-finalize-release-hardening.yml \
+            .github/workflows/verify-020-hardening-main.yml \
+            .github/workflows/post-verify-020-cleanup.yml \
+            .github/workflows/post-verify-020-final-cleanup.yml \
+            .github/scripts/materialize-020-hardening-base.py \
+            .github/scripts/apply-release-hardening.py
+
+          required=(
+            core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java
+            docs/integrator-quickstart.md
+            docs/provider-spi.md
+            docs/schema-v2-contract.md
+            docs/releases/0.2.0.md
+            docs/release-checklist.md
+            CHANGELOG.md
+            .github/scripts/verify-release-readiness.sh
+          )
+          for path in "${required[@]}"; do
+            test -s "$path" || { echo "Missing required release-hardening output: $path" >&2; exit 1; }
+          done
+
+          if grep -RInE 'org\.eclipse\.jgit|\bgit log\b|co[- ]?change|changeCouplingIncluded[^\n]*true' \
+              core/src/main gradle-plugin/src/main maven/src/main; then
+            echo "Git-history or commit-derived change coupling entered production scope" >&2
+            exit 1
+          fi
+
+          chmod +x .github/scripts/verify-release-readiness.sh
+          git add -A
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m "Harden 0.2.0 integration and provider contracts"
+            git push origin HEAD:release/0.2.0-final
+          fi
+
+      - name: Verify exact final-branch commit
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain --untracked-files=no)"
+          python3 .github/scripts/verify-version-consistency.py
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          VERSION=$(sed -n 's/^projectVersion=//p' gradle.properties | head -n1 | tr -d '[:space:]')
+          mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+
+          test ! -e .github/workflows/build-merge-020-final.yml
+          test ! -e .github/workflows/verify-020-hardening-main.yml
+          test ! -e .github/workflows/post-verify-020-cleanup.yml
+          test ! -e .github/workflows/post-verify-020-final-cleanup.yml
+
+      - name: Merge only when the product diff is non-empty
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if git diff --quiet origin/main...HEAD; then
+            echo "Current main already contains the verified product tree; no PR is necessary."
+            exit 0
+          fi
+
+          PR_NUMBER=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head release/0.2.0-final \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+          if [[ -z "$PR_NUMBER" || "$PR_NUMBER" == "null" ]]; then
+            PR_URL=$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head release/0.2.0-final \
+              --title "Harden 0.2.0 integration and provider contracts" \
+              --body "Adds the shared source scan policy, Gradle/Maven configuration parity, provider SPI and schema-v2 contracts, mixed Java/TypeScript tests, release documentation and publication checks. Git history and commit-derived change coupling remain explicitly excluded.")
+            PR_NUMBER=${PR_URL##*/}
+          fi
+
+          HEAD_SHA=$(git rev-parse HEAD)
+          gh pr merge "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --match-head-commit "$HEAD_SHA" \
+            --subject "Harden 0.2.0 integration and provider contracts" \
+            --body "Verified with the complete Gradle build, Maven-local publication, Gradle and Maven consumer fixtures, Maven site generation and release-contract checks."
+
+      - name: Verify exact merged main tree
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B verified-main origin/main
+          test -f core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java
+          test ! -e .github/workflows/build-merge-020-final.yml
+          test ! -e .github/workflows/verify-020-hardening-main.yml
+          test ! -e .github/workflows/post-verify-020-cleanup.yml
+          test ! -e .github/workflows/post-verify-020-final-cleanup.yml
+          python3 .github/scripts/verify-version-consistency.py
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          VERSION=$(sed -n 's/^projectVersion=//p' gradle.properties | head -n1 | tr -d '[:space:]')
+          mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+
+      - name: Close obsolete duplicate pull request
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh pr view 104 --repo "$GITHUB_REPOSITORY" --json state --jq .state 2>/dev/null | grep -qx OPEN; then
+            gh pr close 104 \
+              --repo "$GITHUB_REPOSITORY" \
+              --comment "Closed as obsolete: the JavaScript/TypeScript feature was already merged in #95; release hardening is integrated separately."
+          fi

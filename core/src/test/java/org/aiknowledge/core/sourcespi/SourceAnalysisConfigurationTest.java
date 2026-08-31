@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -47,6 +49,27 @@ class SourceAnalysisConfigurationTest {
         Files.delete(oversized);
         assertFalse(configuration.acceptsSource(oversized, "web/src/large.ts"),
                 "a rejected path must keep its original admission decision");
+    }
+
+    @Test
+    void appliesAdmissionErrorPolicyBeforeAProviderRuns() throws Exception {
+        Path missing = temp.resolve("missing.ts");
+
+        SourceAnalysisConfiguration warn = SourceAnalysisConfiguration.from(Map.of(
+                SourceAnalysisConfiguration.PREFIX + "errorPolicy", "warn"));
+        assertFalse(warn.acceptsSource(missing, "missing.ts"));
+        Object warningFacts = warn.asEvidence().get("admissionWarnings");
+        assertTrue(warningFacts instanceof List<?> warnings
+                && warnings.toString().contains("source-admission-failure"));
+
+        SourceAnalysisConfiguration skip = SourceAnalysisConfiguration.from(Map.of(
+                SourceAnalysisConfiguration.PREFIX + "errorPolicy", "skip"));
+        assertFalse(skip.acceptsSource(missing, "missing.ts"));
+        assertTrue(((List<?>) skip.asEvidence().get("admissionWarnings")).isEmpty());
+
+        SourceAnalysisConfiguration fail = SourceAnalysisConfiguration.from(Map.of(
+                SourceAnalysisConfiguration.PREFIX + "errorPolicy", "fail"));
+        assertThrows(IOException.class, () -> fail.acceptsSource(missing, "missing.ts"));
     }
 
     @Test

@@ -1,0 +1,88 @@
+name: Materialize clean 0.2.0 hardening
+
+on:
+  push:
+    branches:
+      - release/0.2.0-hardening-clean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: materialize-clean-020-hardening
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: release/0.2.0-hardening-clean
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Import only product hardening changes
+        run: |
+          set -euo pipefail
+          git fetch origin release/0.2.0-hardening:refs/remotes/origin/release/0.2.0-hardening
+          BASE=$(git merge-base HEAD origin/release/0.2.0-hardening)
+          git diff --name-only "$BASE" origin/release/0.2.0-hardening \
+            | grep -v '^\.github/workflows/' \
+            | grep -v '^\.github/scripts/apply-release-hardening\.py$' \
+            | sort -u > /tmp/product-paths.txt
+
+          while IFS= read -r path; do
+            [[ -n "$path" ]] || continue
+            if git cat-file -e "origin/release/0.2.0-hardening:$path" 2>/dev/null; then
+              git checkout origin/release/0.2.0-hardening -- "$path"
+            else
+              rm -f -- "$path"
+            fi
+          done < /tmp/product-paths.txt
+
+          rm -f \
+            .github/workflows/materialize-clean-020-hardening.yml \
+            .github/workflows/post-verify-020-cleanup.yml \
+            .github/workflows/post-verify-020-final-cleanup.yml \
+            .github/workflows/verify-020-hardening-main.yml \
+            .github/workflows/apply-release-hardening.yml \
+            .github/workflows/export-release-hardening-bootstrap.yml \
+            .github/workflows/finalize-release-hardening.yml \
+            .github/workflows/override-finalize-release-hardening.yml \
+            .github/scripts/apply-release-hardening.py
+
+          test -e core/src/main/java/org/aiknowledge/core/sourcespi/SourceAnalysisConfiguration.java
+          test -e docs/integrator-quickstart.md
+          test -e docs/provider-spi.md
+          test -e docs/schema-v2-contract.md
+          test -e docs/releases/0.2.0.md
+          test -e CHANGELOG.md
+          test -e .github/scripts/verify-release-readiness.sh
+          git diff --check
+
+      - name: Verify complete product and consumer contract
+        run: |
+          set -euo pipefail
+          gradle --no-daemon clean check publishToMavenLocal --warning-mode all
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-release-readiness.sh --metadata-only
+          mvn -B -f site/pom.xml -Drevision="$(sed -n 's/^projectVersion=//p' gradle.properties)" process-resources site
+
+      - name: Commit clean hardening result
+        run: |
+          set -euo pipefail
+          git config user.name "ai-knowledge-extractor automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "chore: harden 0.2.0 integration and release contracts"
+          git push origin HEAD:release/0.2.0-hardening-clean

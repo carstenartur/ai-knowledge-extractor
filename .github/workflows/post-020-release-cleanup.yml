@@ -1,0 +1,86 @@
+name: Post-0.2.0 release cleanup
+
+on:
+  push:
+    branches:
+      - cleanup/post-0.2.0-release
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: post-020-release-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: cleanup/post-0.2.0-release
+          fetch-depth: 0
+
+      - name: Wait for the audited 0.2.0 release and next development line
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 200); do
+            git fetch origin main
+            VERSION=$(git show origin/main:gradle.properties 2>/dev/null \
+              | sed -n 's/^projectVersion=//p' || true)
+            if gh api "repos/$GITHUB_REPOSITORY/releases/tags/v0.2.0" >/tmp/release.json 2>/dev/null \
+                && [[ "$VERSION" == '0.2.1-SNAPSHOT' ]]; then
+              jq -e '.draft == false and .prerelease == false' /tmp/release.json >/dev/null
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'Release v0.2.0 or the expected 0.2.1-SNAPSHOT development line did not appear.' >&2
+          exit 1
+
+      - name: Confirm main contains no one-shot transition workflows
+        run: |
+          set -euo pipefail
+          git reset --hard origin/main
+          for path in \
+            .github/workflows/verify-020-hardening-main.yml \
+            .github/workflows/post-verify-020-cleanup.yml \
+            .github/workflows/post-verify-020-final-cleanup.yml \
+            .github/workflows/materialize-clean-020-hardening.yml \
+            .github/workflows/finalize-clean-020-hardening.yml \
+            .github/workflows/prepare-020-version.yml \
+            .github/workflows/release-020-gate.yml; do
+            test ! -e "$path"
+          done
+          test "$(sed -n 's/^projectVersion=//p' gradle.properties)" = '0.2.1-SNAPSHOT'
+
+      - name: Close obsolete duplicate PR and delete stale branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh pr close 104 \
+            --repo "$GITHUB_REPOSITORY" \
+            --comment 'Obsolete after the complete implementation was merged in #95 and hardened for 0.2.0.' \
+            2>/dev/null || true
+
+          for branch in \
+            work/javascript-boundary-analysis-bootstrap \
+            feature/javascript-typescript-boundary-analysis \
+            release/0.2.0-hardening \
+            release/0.2.0-preparation-v2 \
+            release/0.2.0-hardening-clean \
+            release/0.2.0-version-prep \
+            cleanup/release-hardening-artifacts; do
+            encoded=${branch//\//%2F}
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$encoded" 2>/dev/null || true
+          done
+
+      - name: Delete this cleanup branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/cleanup%2Fpost-0.2.0-release"

@@ -29,6 +29,10 @@ fail() {
 
 mkdir -p "$REPORT_DIR/release-assets"
 
+git describe --tags --exact-match HEAD 2>/dev/null \
+  | grep -Fx "v${VERSION}" \
+  || fail "verification scripts are not checked out from tag v${VERSION}"
+
 assert_output() {
   local directory=$1
   for file in \
@@ -145,21 +149,36 @@ pluginManagement {
                 username = System.getenv('GITHUB_ACTOR')
                 password = System.getenv('GITHUB_TOKEN')
             }
+            content {
+                includeGroup('org.aiknowledge')
+                includeGroup('org.aiknowledge.extractor')
+            }
         }
-        gradlePluginPortal()
-        mavenCentral()
+        mavenCentral {
+            content {
+                excludeGroup('org.aiknowledge')
+                excludeGroup('org.aiknowledge.extractor')
+            }
+        }
     }
 }
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        mavenCentral()
         maven {
             url = uri('${PACKAGE_URL}')
             credentials {
                 username = System.getenv('GITHUB_ACTOR')
                 password = System.getenv('GITHUB_TOKEN')
+            }
+            content {
+                includeGroup('org.aiknowledge')
+            }
+        }
+        mavenCentral {
+            content {
+                excludeGroup('org.aiknowledge')
             }
         }
     }
@@ -190,6 +209,7 @@ GRADLE_USER_HOME="$EMPTY_GRADLE_HOME" \
   "$GRADLE" --no-daemon --refresh-dependencies \
   -p "$GRADLE_PROJECT" \
   --warning-mode all \
+  --info \
   aiKnowledgeCheck 2>&1 | tee "$REPORT_DIR/gradle-published-release.log"
 assert_output "$GRADLE_PROJECT/build/ai-knowledge"
 cp -R "$GRADLE_PROJECT/build/ai-knowledge" "$REPORT_DIR/gradle-output"
@@ -269,13 +289,20 @@ mvn -B -e \
   org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":help \
   -Ddetail=true 2>&1 | tee "$REPORT_DIR/maven-published-release.log"
 assert_output "$MAVEN_PROJECT/target/ai-knowledge"
+MAVEN_PLUGIN_REMOTE="$EMPTY_MAVEN_REPOSITORY/org/aiknowledge/ai-knowledge-maven-plugin/$VERSION/_remote.repositories"
+test -s "$MAVEN_PLUGIN_REMOTE" \
+  || fail 'Maven did not record the remote source for the published plugin'
+grep -Fq 'github-ai-knowledge-extractor' "$MAVEN_PLUGIN_REMOTE" \
+  || fail 'Maven plugin was not resolved from authenticated GitHub Packages'
 cp -R "$MAVEN_PROJECT/target/ai-knowledge" "$REPORT_DIR/maven-output"
 
 cat > "$REPORT_DIR/summary.json" <<EOF
 {
   "version": "${VERSION}",
   "repository": "${GITHUB_REPOSITORY}",
+  "verificationTag": "v${VERSION}",
   "distribution": "GitHub Packages",
+  "gradleInternalGroupsRestrictedToGitHubPackages": true,
   "gradleCompositeBuildUsed": false,
   "mavenLocalUsed": false,
   "versionControlHistoryUsed": false,

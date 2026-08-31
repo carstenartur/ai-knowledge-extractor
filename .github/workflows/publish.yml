@@ -148,3 +148,42 @@ jobs:
           METADATA_HELPER: .github/scripts/update-release-metadata.py
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash .github/scripts/release.sh
+
+      - name: Generate and verify release checksums
+        env:
+          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd build/release-artifacts
+          mapfile -d '' JARS < <(
+            find . -maxdepth 1 -type f -name '*.jar' -printf '%f\0' | sort -z
+          )
+          if [[ ${#JARS[@]} -eq 0 ]]; then
+            echo 'No release JARs were produced.' >&2
+            exit 1
+          fi
+          sha256sum "${JARS[@]}" > SHA256SUMS
+          test -s SHA256SUMS
+
+          if [[ "$DRY_RUN" != 'true' ]]; then
+            TAG="v${RELEASE_VERSION}"
+            gh release upload "$TAG" SHA256SUMS --clobber
+            mapfile -t REMOTE_ASSETS < <(
+              gh release view "$TAG" --json assets --jq '.assets[].name' | sort
+            )
+            printf '%s\n' "${REMOTE_ASSETS[@]}" | grep -Fx 'SHA256SUMS'
+            for jar in "${JARS[@]}"; do
+              printf '%s\n' "${REMOTE_ASSETS[@]}" | grep -Fx "$jar"
+            done
+          fi
+
+      - name: Upload release-build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-build-${{ steps.versions.outputs.release_version }}
+          path: build/release-artifacts
+          if-no-files-found: warn
+          retention-days: 30

@@ -9,17 +9,27 @@ VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -
 PUBLISHED_GRADLE_HOME=''
 PUBLISHED_LOG=''
 MAVEN_LOG=''
+TRACKED_GRADLE_DOCS=examples/fixtures/gradle-consumer/docs/ai-knowledge
 
 fail() {
   echo "consumer-fixtures: $*" >&2
   exit 1
 }
 
+restore_tracked_gradle_docs() {
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git restore --source=HEAD --worktree -- "$TRACKED_GRADLE_DOCS" 2>/dev/null || true
+    git clean -fd -- "$TRACKED_GRADLE_DOCS" >/dev/null 2>&1 || true
+  else
+    rm -rf "$TRACKED_GRADLE_DOCS"
+  fi
+}
+
 clean_outputs() {
   rm -rf \
     examples/fixtures/gradle-consumer/build \
-    examples/fixtures/gradle-consumer/docs/ai-knowledge \
     examples/fixtures/maven-consumer/target
+  restore_tracked_gradle_docs
 }
 
 cleanup() {
@@ -72,7 +82,7 @@ echo 'Verifying Gradle consumer fixture through source composite'
   --warning-mode all \
   "${GRADLE_TASKS[@]}"
 assert_artifacts examples/fixtures/gradle-consumer/build/ai-knowledge
-test -s examples/fixtures/gradle-consumer/docs/ai-knowledge/index.json \
+test -s "$TRACKED_GRADLE_DOCS/index.json" \
   || fail 'published Gradle documentation artifact is missing'
 
 clean_outputs
@@ -91,7 +101,7 @@ if grep -Fq ':ai-knowledge-extractor:' "$PUBLISHED_LOG"; then
   fail 'published-plugin verification unexpectedly used the source composite build'
 fi
 assert_artifacts examples/fixtures/gradle-consumer/build/ai-knowledge
-test -s examples/fixtures/gradle-consumer/docs/ai-knowledge/index.json \
+test -s "$TRACKED_GRADLE_DOCS/index.json" \
   || fail 'published Gradle documentation artifact is missing in marker mode'
 
 echo 'Verifying every Maven plugin goal through Maven-local coordinates'

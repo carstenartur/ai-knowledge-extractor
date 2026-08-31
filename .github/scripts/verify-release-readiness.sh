@@ -27,6 +27,19 @@ for temporary in "${TEMPORARY_PATHS[@]}"; do
   [[ ! -e "$temporary" ]] || fail "temporary integration file remains: $temporary"
 done
 
+for script in \
+  .github/scripts/release.sh \
+  .github/scripts/prepare-next.sh \
+  .github/scripts/verify-consumer-fixtures.sh \
+  .github/scripts/verify-release-readiness.sh \
+  .github/scripts/verify-published-release.sh; do
+  test -s "$script" || fail "required release script is missing: $script"
+  bash -n "$script"
+done
+
+test -s .github/workflows/verify-published-release.yml \
+  || fail 'published-release verification workflow is missing'
+
 grep -Fq 'aiknowledge.source.enabledProviders' docs/integrator-quickstart.md \
   || fail 'shared source configuration is not documented'
 grep -Fq "id 'org.aiknowledge.extractor'" docs/integrator-quickstart.md \
@@ -35,8 +48,23 @@ grep -Fq "id 'org.aiknowledge.extractor'" docs/integrator-quickstart.md \
   || fail 'the integrator quickstart still contains the obsolete Gradle plugin id'
 grep -Fq 'versionControlHistoryUsed' docs/schema-v2-contract.md \
   || fail 'Git-history exclusion is not part of the schema contract'
-grep -Fq 'Maven Central' docs/releases/0.2.0.md \
-  || fail 'publication status is not documented'
+grep -Fq '# 0.2.0 release notes' docs/releases/0.2.0.md \
+  || fail 'final 0.2.0 release notes are missing'
+! grep -Fq '(target)' docs/releases/0.2.0.md \
+  || fail '0.2.0 release notes are still marked as a target'
+grep -Fq 'GitHub Packages' docs/releases/0.2.0.md \
+  || fail 'the real 0.2.0 package channel is not documented'
+grep -Fq 'not' docs/releases/0.2.0.md \
+  && grep -Fq 'Maven Central' docs/releases/0.2.0.md \
+  || fail 'Maven Central non-availability is not documented'
+grep -Fq '## 0.2.0 – 2026-08-31' CHANGELOG.md \
+  || fail 'the 0.2.0 changelog entry is not finalized'
+! grep -Fq 'Unreleased – target 0.2.0' CHANGELOG.md \
+  || fail 'the changelog still presents 0.2.0 as unreleased'
+! grep -Fq 'Maven Central staging closes' docs/release-checklist.md \
+  || fail 'the release checklist still requires an unused Maven Central channel'
+grep -Fq 'SHA256SUMS' .github/workflows/publish.yml \
+  || fail 'the Release workflow does not publish a checksum manifest'
 ! grep -Fq 'plugin-info.html' site/src/site/site.xml \
   || fail 'site navigation still points to the removed plugin report'
 

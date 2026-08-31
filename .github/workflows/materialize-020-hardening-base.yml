@@ -16,28 +16,20 @@ jobs:
         with:
           ref: release/0.2.0-preparation-v2
           fetch-depth: 0
-      - name: Apply the previously prepared hardening generator
+      - name: Export the previously prepared hardening generator
         run: |
           set -euxo pipefail
           git fetch origin release/0.2.0-hardening:refs/remotes/origin/release/0.2.0-hardening
           git show origin/release/0.2.0-hardening:.github/scripts/apply-release-hardening.py > /tmp/apply-release-hardening.py
-          python3 /tmp/apply-release-hardening.py
-          rm -f \
-            .github/scripts/apply-release-hardening.py \
-            .github/workflows/apply-release-hardening.yml \
-            .github/workflows/export-release-hardening-bootstrap.yml \
-            .github/workflows/finalize-release-hardening.yml \
-            .github/workflows/override-finalize-release-hardening.yml \
-            .github/workflows/verify-020-hardening-main.yml \
-            .github/workflows/post-verify-020-cleanup.yml \
-            .github/workflows/post-verify-020-final-cleanup.yml
-      - name: Package materialized source
-        if: always()
+          python3 -m py_compile /tmp/apply-release-hardening.py
+      - name: Package generator and tracked source
         run: |
-          tar --exclude=.git --exclude=build --exclude='*/build' --exclude=target --exclude='*/target' -czf /tmp/materialized-source.tgz .
+          tar --exclude=.git --exclude=build --exclude='*/build' --exclude=target --exclude='*/target' -czf /tmp/source-before-hardening.tgz .
+          cp /tmp/apply-release-hardening.py /tmp/exported-apply-release-hardening.py
       - uses: actions/upload-artifact@v7
-        if: always()
         with:
-          name: materialized-020-hardening-base
-          path: /tmp/materialized-source.tgz
+          name: exported-020-hardening-generator
+          path: |
+            /tmp/exported-apply-release-hardening.py
+            /tmp/source-before-hardening.tgz
           if-no-files-found: error

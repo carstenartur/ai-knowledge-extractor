@@ -2,26 +2,32 @@
 
 ## Code and contracts
 
-- [ ] `gradle clean check` succeeds on the exact release commit.
-- [ ] Gradle and Maven consumer fixtures run against locally published artifacts.
-- [ ] The mixed Java/TypeScript integration test links at least one operation.
-- [ ] Schema-v2 examples and artifact verifier agree.
-- [ ] JavaScript/TypeScript remains marked experimental.
-- [ ] No bootstrap, transfer archive or absolute runner path is published.
-- [ ] No Git-history or co-change analysis is introduced.
+- [x] `gradle clean check` succeeds on the exact release-candidate source tree.
+- [x] Gradle and Maven consumer fixtures run against locally published artifacts.
+- [x] The mixed Java/TypeScript integration test links at least one operation.
+- [x] Schema-v2 examples and artifact verifier agree.
+- [x] JavaScript/TypeScript remains marked experimental.
+- [x] No bootstrap, transfer archive or absolute runner path is published.
+- [x] No Git-history or co-change analysis is introduced.
+- [x] CI and Pages use the same warning-free Maven Site contract.
 
 ## Publication
 
-- [ ] `0.2.0` is consistent in Gradle, Maven site, `CITATION.cff`, Zenodo metadata and release notes.
-- [ ] Core, Sources, Javadocs, Gradle plugin marker and Maven plugin are signed.
-- [ ] Maven Central staging closes and the coordinates resolve from a clean consumer environment.
-- [ ] Checksums are generated for release artifacts.
-- [ ] GitHub tag and release point to the verified commit.
+- [ ] `0.2.0` is consistent in Gradle, Maven Site, `CITATION.cff`, Zenodo metadata and release notes.
+- [ ] Core, Sources, Javadocs, the Gradle plugin marker and the Maven plugin resolve from GitHub Packages.
+- [ ] The GitHub Release contains all built JARs and a `SHA256SUMS` manifest.
+- [ ] GitHub tag and release point to the verified release commit.
 - [ ] Zenodo metadata describes JavaScript/TypeScript support as experimental.
+- [ ] The release page and documentation state that Maven Central and the Gradle Plugin Portal are not 0.2.0 channels.
 
 ## Post-publication smoke test
 
-- [ ] Run the Gradle fixture without a composite build.
-- [ ] Run the Maven fixture without `mavenLocal()`.
-- [ ] Generate `source-units.json`, `boundaries.json` and `boundary-analysis.json` from the mixed example.
-- [ ] Verify the published documentation names the real distribution channel.
+- [ ] Run the Gradle fixture from an empty Gradle user home, without a composite build or `mavenLocal()`.
+- [ ] Run the Maven fixture from an empty Maven local repository, without `mavenLocal()`.
+- [ ] Resolve all artifacts from authenticated GitHub Packages coordinates.
+- [ ] Generate `source-units.json`, `boundaries.json` and `boundary-analysis.json` from a mixed Java/TypeScript example.
+- [ ] Verify the published documentation names GitHub Packages as the real distribution channel.
+
+The checkboxes in the publication and post-publication sections are evidence requirements, not
+claims made in advance. They are completed only after the real workflow and remote consumer test
+have succeeded.

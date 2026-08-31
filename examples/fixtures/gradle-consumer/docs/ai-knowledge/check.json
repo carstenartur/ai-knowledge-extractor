@@ -1,0 +1,1 @@
+{"passed":true,"aiCognitiveDebt":1.1600000000000001,"maxCognitiveDebt":1000.0,"warningCount":1,"failOnWarnings":false,"trendViolationCount":0,"trendPassed":true,"trendThresholds":{"maxCognitiveDebtIncrease":1.7976931348623157E308,"maxConceptRadiusIncrease":1.7976931348623157E308,"maxContextTokenIncrease":1.7976931348623157E308,"failOnWarnings":false}}

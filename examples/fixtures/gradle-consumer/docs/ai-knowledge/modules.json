@@ -1,0 +1,1 @@
+{"modules":[{"name":"gradle-consumer","path":"","buildFile":"build.gradle","buildSystem":"gradle","sourceSets":["main/java"],"mainPackages":["example.consumer"],"projectDependencies":[],"externalDependencies":[]}]}

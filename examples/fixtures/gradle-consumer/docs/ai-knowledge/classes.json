@@ -1,0 +1,1 @@
+{"classes":[{"class":"example.consumer.GradleConsumerApp","sourceFile":"src/main/java/example/consumer/GradleConsumerApp.java","package":"example.consumer","publicApiMethods":["public String message"],"kind":"class","imports":[],"superclass":"","interfaces":[],"referencedProjectClasses":[]}]}

@@ -16,6 +16,11 @@ SKIP_TESTS=$(trim "${SKIP_TESTS:-false}")
 DRY_RUN=$(trim "${DRY_RUN:-false}")
 SOURCE_BRANCH=$(trim "${SOURCE_BRANCH:-main}")
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=.github/scripts/release-source-policy.sh
+source "$SCRIPT_DIR/release-source-policy.sh"
+resolve_release_source_policy "$SOURCE_BRANCH" "$DRY_RUN"
+
 TAG_NAME="v${RELEASE_VERSION}"
 RELEASE_BRANCH="release/${TAG_NAME}"
 MAVEN_PLUGIN_DESCRIPTOR="maven/src/main/resources/META-INF/maven/plugin.xml"
@@ -35,11 +40,6 @@ VERSIONED_METADATA_FILES=(
 
 if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "::error::release_version must use X.Y.Z without a leading v; got '${RELEASE_VERSION}'"
-  exit 1
-fi
-
-if [[ "$SOURCE_BRANCH" != "main" && "$DRY_RUN" != "true" ]]; then
-  echo "::error::Real releases must be dispatched from main, not ${SOURCE_BRANCH}"
   exit 1
 fi
 
@@ -227,8 +227,10 @@ else
 fi
 
 echo "Release state: ${STATE}"
+echo "Release source lane: ${RELEASE_SOURCE_LANE}"
 echo "Release version: ${RELEASE_VERSION}"
 echo "Next development version: ${NEXT_VERSION}"
+echo "Next development PR base: ${RELEASE_NEXT_PR_BASE}"
 
 if [[ "$STATE" == "new" ]]; then
   set_project_version "$RELEASE_VERSION"
@@ -288,7 +290,10 @@ if [[ "$DRY_RUN" != "true" && "$STATE" == "draft" ]]; then
   if [[ ${#ARTIFACTS[@]} -gt 0 ]]; then
     gh release upload "$TAG_NAME" "${ARTIFACTS[@]}" --clobber
   fi
-  gh release edit "$TAG_NAME" --draft=false --latest
+  gh release edit \
+    "$TAG_NAME" \
+    --draft=false \
+    "$RELEASE_LATEST_ARGUMENT"
   STATE=published
 fi
 
@@ -332,8 +337,12 @@ Automated follow-up after release ${RELEASE_VERSION}.
 - Update release.properties for the next release cycle
 EOF
 
-  EXISTING_PR=$(gh pr list --base main --head "$NEXT_BRANCH" \
-    --state open --json number --jq '.[0].number // empty')
+  EXISTING_PR=$(gh pr list \
+    --base "$RELEASE_NEXT_PR_BASE" \
+    --head "$NEXT_BRANCH" \
+    --state open \
+    --json number \
+    --jq '.[0].number // empty')
   if [[ -n "$EXISTING_PR" ]]; then
     gh pr edit "$EXISTING_PR" \
       --title "Prepare next development version ${NEXT_VERSION}" \
@@ -342,7 +351,7 @@ EOF
     gh pr create \
       --title "Prepare next development version ${NEXT_VERSION}" \
       --body-file /tmp/next-development-pr.md \
-      --base main \
+      --base "$RELEASE_NEXT_PR_BASE" \
       --head "$NEXT_BRANCH"
   fi
 else

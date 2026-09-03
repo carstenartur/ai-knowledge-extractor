@@ -2,8 +2,12 @@ package org.aiknowledge.core.repositoryscan;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -16,13 +20,40 @@ public final class RepositoryFileInventoryScanner {
             "node_modules", "dist", "coverage", ".next", ".nuxt", ".cache", ".parcel-cache");
 
     public List<Path> scan(Path root) throws IOException {
-        try (var stream = Files.walk(root)) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .filter(file -> !ignored(rel(root, file)))
-                    .sorted(Comparator.comparing(file -> rel(root, file)))
-                    .toList();
-        }
+        List<Path> result = new ArrayList<>();
+        Files.walkFileTree(root, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult preVisitDirectory(
+                    Path directory,
+                    BasicFileAttributes attributes) {
+                if (!directory.equals(root) && ignored(rel(root, directory))) {
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(
+                    Path file,
+                    BasicFileAttributes attributes) {
+                if (attributes.isRegularFile() && !ignored(rel(root, file))) {
+                    result.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(
+                    Path file,
+                    IOException failure) throws IOException {
+                if (ignored(rel(root, file))) {
+                    return FileVisitResult.CONTINUE;
+                }
+                throw failure;
+            }
+        });
+        result.sort(Comparator.comparing(file -> rel(root, file)));
+        return List.copyOf(result);
     }
 
     public String rel(Path root, Path file) {

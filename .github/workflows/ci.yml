@@ -21,6 +21,8 @@ jobs:
           java-version: '17'
       - name: Verify version consistency
         run: python3 .github/scripts/verify-version-consistency.py
+      - name: Verify release source policy
+        run: bash .github/scripts/test-release-source-policy.sh
       - uses: gradle/actions/setup-gradle@v6.1.0
         with:
           gradle-version: '9.5.1'

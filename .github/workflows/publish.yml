@@ -77,9 +77,13 @@ jobs:
             mapfile -t changed_paths < <(
               git diff --name-only "$qualified_commit" "$GITHUB_SHA"
             )
-            if [[ ${#changed_paths[@]} -ne 1 \
-                || "${changed_paths[0]}" \
-                  != ".github/release-requests/0.1.x.json" ]]; then
+            if [[ ${#changed_paths[@]} -ne 1 ]]; then
+              echo "::error::Exactly one request path must differ from qualifiedCommit" >&2
+              printf 'changed path: %s\n' "${changed_paths[@]}" >&2
+              exit 1
+            fi
+            if [[ "${changed_paths[0]}" \
+                != ".github/release-requests/0.1.x.json" ]]; then
               echo "::error::Only the maintenance release request may differ from qualifiedCommit" >&2
               printf 'changed path: %s\n' "${changed_paths[@]}" >&2
               exit 1

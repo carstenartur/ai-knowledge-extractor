@@ -51,4 +51,7 @@ if resolve_release_source_policy "feature/not-authorized" "false"; then
   fail "an arbitrary branch was authorized for a real release"
 fi
 
+bash "$ROOT_DIR/.github/scripts/test-maintenance-release-request.sh"
+bash "$ROOT_DIR/.github/scripts/test-maintenance-release-workflow.sh"
+
 echo "release-source-policy=VERIFIED"

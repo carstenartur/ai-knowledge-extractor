@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta http-equiv="x-ua-compatible" content="IE=edge"/>
-<title>Test results - org.aiknowledge.core.repositoryscan.BuildModuleScannerPackageJsonTest</title>
+<title>Test results - org.aiknowledge.core.repositoryscan.RepositoryFileInventoryScannerTest</title>
 <link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
 <link href="../css/style.css" rel="stylesheet" type="text/css"/>
 <script src="../js/report.js" type="text/javascript"></script>
@@ -12,7 +12,7 @@
 <div id="content">
 <div class="breadcrumbs">
 <a class="breadcrumb" href="../index.html">all</a> &gt; 
-<span class="breadcrumb">org.aiknowledge.core.repositoryscan.BuildModuleScannerPackageJsonTest</span>
+<span class="breadcrumb">org.aiknowledge.core.repositoryscan.RepositoryFileInventoryScannerTest</span>
 </div>
 <div class="tab-container">
 <ul class="tabLinks">
@@ -22,7 +22,7 @@
 </ul>
 <div class="tab">
 <h2>Gradle Test Run :core:test</h2>
-<h1>BuildModuleScannerPackageJsonTest</h1>
+<h1>RepositoryFileInventoryScannerTest</h1>
 <div class="tab-container">
 <ul class="tabLinks">
 <li>
@@ -41,7 +41,7 @@
 <tr>
 <td>
 <div class="infoBox">
-<div class="counter">1</div>
+<div class="counter">3</div>
 <p>tests</p>
 </div>
 </td>
@@ -59,7 +59,7 @@
 </td>
 <td>
 <div class="infoBox duration">
-<div class="counter">0.005s</div>
+<div class="counter">0.018s</div>
 <p>duration</p>
 </div>
 </td>
@@ -89,12 +89,30 @@
 </tr>
 </thead>
 <tr>
-<td class="success">extractsNpmModuleScriptsAndDependencyScopes()</td>
-<td class="path" hidden="">extractsNpmModuleScriptsAndDependencyScopes()</td>
+<td class="success">doesNotEnterAnInaccessibleIgnoredBuildSubtree()</td>
+<td class="path" hidden="">doesNotEnterAnInaccessibleIgnoredBuildSubtree()</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0.007s</td>
+<td class="success">100%</td>
+</tr>
+<tr>
+<td class="success">remainsFailClosedForAnInaccessibleSourceSubtree()</td>
+<td class="path" hidden="">remainsFailClosedForAnInaccessibleSourceSubtree()</td>
 <td>1</td>
 <td>0</td>
 <td>0</td>
 <td>0.004s</td>
+<td class="success">100%</td>
+</tr>
+<tr>
+<td class="success">returnsDeterministicSourceInventoryWithoutGeneratedTrees()</td>
+<td class="path" hidden="">returnsDeterministicSourceInventoryWithoutGeneratedTrees()</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0.005s</td>
 <td class="success">100%</td>
 </tr>
 </table>

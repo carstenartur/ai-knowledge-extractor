@@ -2,10 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - 'maintenance/**'
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - 'maintenance/**'
   workflow_dispatch:
+    inputs:
+      target_branch:
+        description: Supported target branch for an explicitly dispatched release-follow-up CI run
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -20,6 +30,24 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Verify supported release-line policy
+        env:
+          DISPATCH_TARGET_BRANCH: ${{ inputs.target_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/test_release_line_policy.py
+          target_branch="$DISPATCH_TARGET_BRANCH"
+          if [[ -z "$target_branch" ]]; then
+            target_branch="${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
+          fi
+          version=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d= -f2 | tr -d '[:space:]')
+          python3 .github/scripts/release_line_policy.py \
+            verify-branch-version \
+            --branch "$target_branch" \
+            --project-version "$version"
+          echo "AI_KNOWLEDGE_TARGET_BRANCH=$target_branch" >> "$GITHUB_ENV"
 
       - name: Verify version consistency
         run: python3 .github/scripts/verify-version-consistency.py

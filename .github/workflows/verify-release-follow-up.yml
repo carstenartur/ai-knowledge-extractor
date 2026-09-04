@@ -202,10 +202,11 @@ jobs:
           gh pr comment "$PR_NUMBER" \
             --repo "$REPOSITORY" \
             --body "Exact-head CI passed: ${CI_URL}. The metadata-only follow-up is being merged into \`${SOURCE_BRANCH}\`."
+          # Keep the head ref until branch-scoped dependency submission and other
+          # post-push checks have completed. Immediate deletion can race their checkout.
           gh pr merge "$PR_NUMBER" \
             --repo "$REPOSITORY" \
             --squash \
-            --delete-branch \
             --match-head-commit "$HEAD_SHA"
 
       - name: Record failed exact-head CI

@@ -92,19 +92,20 @@ def main() -> None:
     except PolicyError as exc:
         raise SystemExit(f"Supported release-line contract is invalid: {exc}") from exc
 
-    readme = read("README.md")
-    if project_version in readme:
-        raise SystemExit(
-            "README.md contains the concrete development version; use <version>, a release "
-            "line such as 0.2.x, or link to the release documentation instead."
-        )
-    if "docs/version-support.md" not in readme:
-        raise SystemExit("README.md must link to docs/version-support.md")
-    for line in policy.lines:
-        if line.releasable and line.branch not in readme:
+    if not target_branch or target_branch == "main":
+        readme = read("README.md")
+        if project_version in readme:
             raise SystemExit(
-                f"README.md must name supported branch {line.branch!r} from release-lines.json"
+                "README.md contains the concrete development version; use <version>, a release "
+                "line such as 0.2.x, or link to the release documentation instead."
             )
+        if "docs/version-support.md" not in readme:
+            raise SystemExit("README.md must link to docs/version-support.md")
+        for line in policy.lines:
+            if line.releasable and line.branch not in readme:
+                raise SystemExit(
+                    f"README.md must name supported branch {line.branch!r} from release-lines.json"
+                )
 
 
 if __name__ == "__main__":

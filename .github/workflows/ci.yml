@@ -47,7 +47,18 @@ jobs:
             verify-branch-version \
             --branch "$target_branch" \
             --project-version "$version"
+          policy_env=$(mktemp)
+          python3 .github/scripts/release_line_policy.py \
+            resolve \
+            --branch "$target_branch" \
+            --release-version "${version%-SNAPSHOT}" \
+            --dry-run false \
+            --env-file "$policy_env"
+          # shellcheck disable=SC1090
+          source "$policy_env"
+          rm -f "$policy_env"
           echo "AI_KNOWLEDGE_TARGET_BRANCH=$target_branch" >> "$GITHUB_ENV"
+          echo "AI_KNOWLEDGE_ARTIFACT_CONTRACT=$RELEASE_ARTIFACT_CONTRACT" >> "$GITHUB_ENV"
 
       - name: Verify version consistency
         run: python3 .github/scripts/verify-version-consistency.py
@@ -104,13 +115,15 @@ jobs:
           mkdir -p build/reports/release-readiness
           SITE_LOG=build/reports/release-readiness/maven-site.log
           mvn -B -f site/pom.xml -Drevision="$VERSION" process-resources site 2>&1 | tee "$SITE_LOG"
-          if grep -F '[WARNING]' "$SITE_LOG"; then
-            echo 'Maven site generation emitted warnings' >&2
-            exit 1
-          fi
-          if grep -E 'NoSuchMethodError|LinkageError|An issue has occurred|old pre-version' "$SITE_LOG"; then
-            echo 'Maven site generation skipped or failed a report' >&2
-            exit 1
+          if [[ "$AI_KNOWLEDGE_ARTIFACT_CONTRACT" == "schema-v2" ]]; then
+            if grep -F '[WARNING]' "$SITE_LOG"; then
+              echo 'Maven site generation emitted warnings' >&2
+              exit 1
+            fi
+            if grep -E 'NoSuchMethodError|LinkageError|An issue has occurred|old pre-version' "$SITE_LOG"; then
+              echo 'Maven site generation skipped or failed a report' >&2
+              exit 1
+            fi
           fi
           for page in \
             index \
@@ -122,7 +135,14 @@ jobs:
             help-mojo; do
             test -s "site/target/site/${page}.html"
           done
-          test ! -e site/target/site/plugin-info.html
+          if [[ "$AI_KNOWLEDGE_ARTIFACT_CONTRACT" == "schema-v2" ]]; then
+            test ! -e site/target/site/plugin-info.html
+          elif [[ "$AI_KNOWLEDGE_ARTIFACT_CONTRACT" == "schema-v1" ]]; then
+            test -s site/target/site/plugin-info.html
+          else
+            echo "Unsupported artifact contract: $AI_KNOWLEDGE_ARTIFACT_CONTRACT" >&2
+            exit 1
+          fi
           if grep -R "/home/runner/" site/target/site/; then
             echo 'Found forbidden absolute paths in generated site' >&2
             exit 1

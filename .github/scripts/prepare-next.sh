@@ -3,6 +3,13 @@ set -euo pipefail
 
 : "${RELEASED_VERSION:?RELEASED_VERSION is required}"
 : "${NEXT_DEVELOPMENT_VERSION:?NEXT_DEVELOPMENT_VERSION is required}"
+: "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+RELEASE_LINES_FILE=${RELEASE_LINES_FILE:-.github/release-lines.json}
+SOURCE_BRANCH=${SOURCE_BRANCH:-main}
+METADATA_HELPER=${METADATA_HELPER:-.github/scripts/update-release-metadata.py}
+DRY_RUN=${DRY_RUN:-false}
 
 trim() {
   local value=${1-}
@@ -11,87 +18,157 @@ trim() {
 
 RELEASED_VERSION=$(trim "$RELEASED_VERSION")
 NEXT_DEVELOPMENT_VERSION=$(trim "$NEXT_DEVELOPMENT_VERSION")
-TAG_NAME="v${RELEASED_VERSION}"
-NEXT_RELEASE_VERSION="${NEXT_DEVELOPMENT_VERSION%-SNAPSHOT}"
-NEXT_BRANCH="release/prepare-next-${NEXT_DEVELOPMENT_VERSION}"
+SOURCE_BRANCH=$(trim "$SOURCE_BRANCH")
+DRY_RUN=$(trim "$DRY_RUN")
 
 if ! [[ "$RELEASED_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "::error::released_version must use X.Y.Z without a leading v; got '${RELEASED_VERSION}'"
+  echo "::error::released_version must use X.Y.Z without a leading v; got '${RELEASED_VERSION}'" >&2
   exit 1
 fi
 if ! [[ "$NEXT_DEVELOPMENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
-  echo "::error::next_development_version must use X.Y.Z-SNAPSHOT; got '${NEXT_DEVELOPMENT_VERSION}'"
+  echo "::error::next_development_version must use X.Y.Z-SNAPSHOT; got '${NEXT_DEVELOPMENT_VERSION}'" >&2
   exit 1
 fi
-IFS='.' read -r NEXT_MAJOR NEXT_MINOR NEXT_PATCH <<< "$NEXT_RELEASE_VERSION"
-AFTER_NEXT_VERSION="${NEXT_MAJOR}.${NEXT_MINOR}.$((NEXT_PATCH + 1))-SNAPSHOT"
+if [[ "$DRY_RUN" != "true" && "$DRY_RUN" != "false" ]]; then
+  echo "::error::DRY_RUN must be true or false" >&2
+  exit 1
+fi
+
+POLICY_ENV=$(mktemp)
+trap 'rm -f "$POLICY_ENV"' EXIT
+python3 "$SCRIPT_DIR/release_line_policy.py" \
+  --policy "$RELEASE_LINES_FILE" \
+  resolve \
+  --branch "$SOURCE_BRANCH" \
+  --release-version "$RELEASED_VERSION" \
+  --dry-run "$DRY_RUN" \
+  --env-file "$POLICY_ENV"
+# shellcheck disable=SC1090
+source "$POLICY_ENV"
+python3 "$SCRIPT_DIR/release_line_policy.py" \
+  --policy "$RELEASE_LINES_FILE" \
+  validate-next \
+  --branch "$SOURCE_BRANCH" \
+  --release-version "$RELEASED_VERSION" \
+  --next-version "$NEXT_DEVELOPMENT_VERSION" \
+  --dry-run "$DRY_RUN"
 
 CURRENT_VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
 EXPECTED_CURRENT="${RELEASED_VERSION}-SNAPSHOT"
 if [[ "$CURRENT_VERSION" != "$EXPECTED_CURRENT" ]]; then
-  echo "::error::main must still be on ${EXPECTED_CURRENT}, but gradle.properties contains ${CURRENT_VERSION}"
+  echo "::error::${SOURCE_BRANCH} must still be on ${EXPECTED_CURRENT}, but contains ${CURRENT_VERSION}" >&2
   exit 1
 fi
 
+TAG_NAME="v${RELEASED_VERSION}"
 if ! gh release view "$TAG_NAME" --json isDraft --jq '.isDraft == false' | grep -q true; then
-  echo "::error::GitHub release ${TAG_NAME} must exist and be published"
+  echo "::error::GitHub release ${TAG_NAME} must exist and be published" >&2
   exit 1
 fi
 
-python3 - "$NEXT_DEVELOPMENT_VERSION" "$NEXT_RELEASE_VERSION" "$AFTER_NEXT_VERSION" <<'PY'
+set_project_version() {
+  local version=$1
+  python3 - "$version" <<'PY'
 from pathlib import Path
-import json
 import re
 import sys
 
-next_snapshot = sys.argv[1]
-next_release = sys.argv[2]
-after_next = sys.argv[3]
-
-
-def rewrite(path, callback):
-    p = Path(path)
-    text = p.read_text(encoding="utf-8")
-    new_text = callback(text)
-    if new_text != text:
-        p.write_text(new_text, encoding="utf-8")
-
-
-rewrite("gradle.properties", lambda text: re.sub(r"^projectVersion=.*$", f"projectVersion={next_snapshot}", text, count=1, flags=re.MULTILINE))
-rewrite("release.properties", lambda text: re.sub(r"^next\.release\.version=.*$", f"next.release.version={next_release}", text, count=1, flags=re.MULTILINE))
-rewrite("build.gradle", lambda text: re.sub(r"(findProperty\('projectVersion'\) \?: ')[^']+(')", rf"\g<1>{next_snapshot}\g<2>", text, count=1))
-rewrite("CITATION.cff", lambda text: re.sub(r'^version:\s*"[^"]+"$', f'version: "{next_snapshot}"', text, count=1, flags=re.MULTILINE))
-
-zenodo_path = Path(".zenodo.json")
-zenodo = json.loads(zenodo_path.read_text(encoding="utf-8"))
-zenodo["version"] = next_snapshot
-zenodo.pop("publication_date", None)
-zenodo_path.write_text(json.dumps(zenodo, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-rewrite("maven/src/main/resources/META-INF/maven/plugin.xml", lambda text: re.sub(r"(<version>)[^<]+(</version>)", rf"\g<1>{next_snapshot}\g<2>", text, count=1))
-rewrite("site/pom.xml", lambda text: re.sub(r"(<revision>)[^<]+(</revision>)", rf"\g<1>{next_snapshot}\g<2>", text, count=1))
-for path in ("examples/maven-consumer/pom.xml", "examples/fixtures/maven-consumer/pom.xml"):
-    rewrite(path, lambda text: re.sub(r"(<aiKnowledge\.version>)[^<]+(</aiKnowledge\.version>)", rf"\g<1>{next_snapshot}\g<2>", text, count=1))
-
-def update_publish(text):
-    text = re.sub(r"Release version to publish, without leading v, e\.g\. [0-9]+\.[0-9]+\.[0-9]+", f"Release version to publish, without leading v, e.g. {next_release}", text, count=1)
-    text = re.sub(r"default: [0-9]+\.[0-9]+\.[0-9]+", f"default: {next_release}", text, count=1)
-    text = re.sub(r"Optional next development version, e\.g\. [0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT", f"Optional next development version, e.g. {after_next}", text, count=1)
-    return text
-rewrite(".github/workflows/publish.yml", update_publish)
+version = sys.argv[1]
+path = Path("gradle.properties")
+text = path.read_text(encoding="utf-8")
+text, count = re.subn(r"^projectVersion=.*$", f"projectVersion={version}", text, count=1, flags=re.MULTILINE)
+if count != 1:
+    raise SystemExit("Could not update projectVersion")
+path.write_text(text, encoding="utf-8")
 PY
+}
 
-python3 .github/scripts/verify-version-consistency.py
+set_release_property() {
+  local version=$1
+  python3 - "$version" <<'PY'
+from pathlib import Path
+import re
+import sys
 
+version = sys.argv[1]
+path = Path("release.properties")
+text = path.read_text(encoding="utf-8")
+text, count = re.subn(r"^next\.release\.version=.*$", f"next.release.version={version}", text, count=1, flags=re.MULTILINE)
+if count != 1:
+    raise SystemExit("Could not update next.release.version")
+path.write_text(text, encoding="utf-8")
+PY
+}
+
+set_maven_plugin_descriptor_version() {
+  local version=$1
+  python3 - "$version" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+version = sys.argv[1]
+path = Path("maven/src/main/resources/META-INF/maven/plugin.xml")
+text = path.read_text(encoding="utf-8")
+text, count = re.subn(r"(<version>)[^<]+(</version>)", rf"\g<1>{version}\g<2>", text, count=1)
+if count != 1:
+    raise SystemExit("Could not update Maven plugin descriptor version")
+path.write_text(text, encoding="utf-8")
+PY
+}
+
+set_build_fallback_version() {
+  local version=$1
+  python3 - "$version" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+version = sys.argv[1]
+path = Path("build.gradle")
+text = path.read_text(encoding="utf-8")
+updated, count = re.subn(
+    r"(findProperty\('projectVersion'\) \?: ')[^']+(')",
+    rf"\g<1>{version}\g<2>",
+    text,
+    count=1,
+)
+if count == 1:
+    path.write_text(updated, encoding="utf-8")
+PY
+}
+
+NEXT_RELEASE_VERSION=${NEXT_DEVELOPMENT_VERSION%-SNAPSHOT}
+set_project_version "$NEXT_DEVELOPMENT_VERSION"
+set_release_property "$NEXT_RELEASE_VERSION"
+set_maven_plugin_descriptor_version "$NEXT_DEVELOPMENT_VERSION"
+set_build_fallback_version "$NEXT_DEVELOPMENT_VERSION"
+python3 "$METADATA_HELPER" "$NEXT_DEVELOPMENT_VERSION"
+
+if [[ "$RELEASE_SOURCE_STATUS" == "dry-run" ]]; then
+  python3 "$SCRIPT_DIR/verify-version-consistency.py"
+else
+  AI_KNOWLEDGE_TARGET_BRANCH="$RELEASE_NEXT_PR_BASE" \
+    python3 "$SCRIPT_DIR/verify-version-consistency.py"
+fi
+
+SAFE_LINE=${RELEASE_SOURCE_LINE//[^A-Za-z0-9._-]/-}
+NEXT_BRANCH="release/${SAFE_LINE}/prepare-next-${NEXT_DEVELOPMENT_VERSION}"
 git switch -C "$NEXT_BRANCH"
-git add gradle.properties release.properties build.gradle CITATION.cff .zenodo.json \
-  maven/src/main/resources/META-INF/maven/plugin.xml site/pom.xml \
-  examples/maven-consumer/pom.xml examples/fixtures/maven-consumer/pom.xml \
-  .github/workflows/publish.yml
+git add \
+  gradle.properties \
+  release.properties \
+  build.gradle \
+  CITATION.cff \
+  .zenodo.json \
+  maven/src/main/resources/META-INF/maven/plugin.xml \
+  site/pom.xml \
+  examples/maven-consumer/pom.xml \
+  examples/fixtures/maven-consumer/pom.xml
 
-git commit -m "Prepare next development version ${NEXT_DEVELOPMENT_VERSION}"
+git commit -m "Prepare ${RELEASE_NEXT_PR_BASE} for ${NEXT_DEVELOPMENT_VERSION}"
 
-if [[ "${DRY_RUN:-false}" == "true" ]]; then
+if [[ "$DRY_RUN" == "true" ]]; then
   echo "Dry run completed; no branch or PR was pushed."
   exit 0
 fi
@@ -104,17 +181,35 @@ else
 fi
 
 cat > /tmp/prepare-next-pr.md <<EOF
-Automated follow-up after release ${RELEASED_VERSION}.
+Manually requested next-development transition for the supported **${RELEASE_SOURCE_LINE}** line.
 
-## Changes
-- Bump development metadata to ${NEXT_DEVELOPMENT_VERSION}
-- Set release.properties to ${NEXT_RELEASE_VERSION}
-- Remove release-only publication date metadata from .zenodo.json
+- Target branch: \`${RELEASE_NEXT_PR_BASE}\`
+- Released version: \`${RELEASED_VERSION}\`
+- Next development version: \`${NEXT_DEVELOPMENT_VERSION}\`
+- Support status: \`${RELEASE_SOURCE_STATUS}\`
+
+This transition affects only \`${RELEASE_NEXT_PR_BASE}\`; it cannot downgrade another supported
+line. The generated PR is verified and merged by the same release-follow-up workflow used after a
+normal release.
+
+<!-- release-follow-up-run: ${GITHUB_RUN_ID:-local} -->
 EOF
 
-EXISTING_PR=$(gh pr list --base main --head "$NEXT_BRANCH" --state open --json number --jq '.[0].number // empty')
+EXISTING_PR=$(gh pr list \
+  --base "$RELEASE_NEXT_PR_BASE" \
+  --head "$NEXT_BRANCH" \
+  --state open \
+  --json number \
+  --jq '.[0].number // empty')
 if [[ -n "$EXISTING_PR" ]]; then
-  gh pr edit "$EXISTING_PR" --title "Prepare next development version ${NEXT_DEVELOPMENT_VERSION}" --body-file /tmp/prepare-next-pr.md
+  gh pr edit "$EXISTING_PR" \
+    --title "Prepare ${RELEASE_NEXT_PR_BASE} for ${NEXT_DEVELOPMENT_VERSION}" \
+    --body-file /tmp/prepare-next-pr.md
 else
-  gh pr create --title "Prepare next development version ${NEXT_DEVELOPMENT_VERSION}" --body-file /tmp/prepare-next-pr.md --base main --head "$NEXT_BRANCH"
+  gh pr create \
+    --draft \
+    --title "Prepare ${RELEASE_NEXT_PR_BASE} for ${NEXT_DEVELOPMENT_VERSION}" \
+    --body-file /tmp/prepare-next-pr.md \
+    --base "$RELEASE_NEXT_PR_BASE" \
+    --head "$NEXT_BRANCH"
 fi

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "releaseLines": [
+    {
+      "series": "0.2",
+      "branch": "main",
+      "status": "active",
+      "releaseLatest": true,
+      "nextVersionPolicy": "same-series",
+      "artifactContract": "schema-v2",
+      "supportPolicy": "Features, correctness fixes, security fixes and documentation"
+    },
+    {
+      "series": "0.1",
+      "branch": "maintenance/0.1.x",
+      "status": "maintenance",
+      "releaseLatest": false,
+      "nextVersionPolicy": "same-series",
+      "artifactContract": "schema-v1",
+      "supportPolicy": "Critical correctness, security and downstream compatibility fixes"
+    }
+  ]
+}

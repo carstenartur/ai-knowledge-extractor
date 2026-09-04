@@ -5,7 +5,21 @@ minor releases may add new artifact families but must document schema changes.
 
 ## Unreleased
 
-No changes recorded yet.
+### Added
+
+- machine-readable policy for simultaneously supported active, maintenance and end-of-life release
+  lines;
+- branch/version validation in CI and release workflows;
+- exact-head verification and automatic merge of generated post-release metadata PRs;
+- documented compatibility, backport and end-of-life rules for supported version lines.
+
+### Changed
+
+- release and prepare-next workflows operate on the selected configured branch instead of assuming
+  `main`;
+- automated next-development transitions stay in the same X.Y series; starting a new minor or major
+  line requires an explicit reviewed policy change;
+- maintenance releases cannot replace the active line as GitHub “Latest”.
 
 ## 0.2.0 – 2026-08-31
 

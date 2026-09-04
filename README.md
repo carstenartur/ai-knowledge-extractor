@@ -64,6 +64,28 @@ These thresholds are disabled by default and must be calibrated for the reposito
 
 The complete lifecycle generates index, context, complexity, trend, optimization, benchmark and quality-gate outputs, then verifies their structural and cross-document integrity. It rejects missing or empty files, malformed or duplicate-field JSON, count drift, broken context-pack references and internally inconsistent v3 context metrics. Repository-specific thresholds remain controlled by the normal quality-gate configuration.
 
+## Supported release lines
+
+Several release lines may be supported simultaneously. The branch is part of the version contract:
+
+| Line | Branch | Status | Compatibility contract | Intended changes |
+| --- | --- | --- | --- | --- |
+| `0.2.x` | `main` | Active | `schema-v2` | Features, correctness fixes, security fixes and current documentation |
+| `0.1.x` | `maintenance/0.1.x` | Maintenance | `schema-v1` | Critical correctness, security and downstream compatibility fixes only |
+
+A development snapshot in the `0.1.x` series advances only the `maintenance/0.1.x` branch; it
+is not an attempt to downgrade `main`. Maintenance releases are never marked as GitHub “Latest”, and their
+next versions are required to stay in the same X.Y series. Consumers should pin an exact released
+version and choose a line by its compatibility contract before comparing patch numbers.
+
+The machine-readable source of truth is [`.github/release-lines.json`](.github/release-lines.json).
+CI and release automation validate branch/version matching, latest-release ownership, maintenance
+line naming and end-of-life restrictions. Generated post-release metadata PRs are tested on their
+exact head and merged without creating a second duplicate PR. Releases may be started either by
+workflow dispatch or by a strictly validated, request-only `.github/release-request.json` change.
+The complete support, backport and end-of-life policy is in
+[`docs/version-support.md`](docs/version-support.md).
+
 ## Gradle
 
 Plugin id: `org.aiknowledge.extractor`

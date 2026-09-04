@@ -60,7 +60,7 @@ Within one supported X.Y line:
   line rather than a maintenance patch.
 
 The current contracts are identified in `.github/release-lines.json`. For the active 0.2.x line,
-see also [`schema-v2-contract.md`](schema-v2-contract.md).
+see the authoritative [`schema-v2` contract on `main`](https://github.com/carstenartur/ai-knowledge-extractor/blob/main/docs/schema-v2-contract.md).
 
 ## Backport policy
 

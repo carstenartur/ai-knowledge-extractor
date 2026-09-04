@@ -3,14 +3,11 @@ name: Prepare next development version
 on:
   workflow_dispatch:
     inputs:
-      released_version:
-        description: Published release version without leading v, e.g. 0.1.2
-        required: true
-        type: string
       next_development_version:
-        description: Next development version, e.g. 0.1.3-SNAPSHOT
-        required: true
+        description: Optional exact next patch snapshot in the selected supported line; leave empty for the next patch
+        required: false
         type: string
+        default: ''
       dry_run:
         description: Validate and update locally, but do not push or create a PR
         required: false
@@ -21,23 +18,75 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: prepare-next-${{ github.repository }}-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   prepare-next:
     name: Prepare next development version
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - name: Checkout selected supported release line
+        uses: actions/checkout@v7
         with:
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
+
+      - name: Resolve versions from repository state
+        id: versions
+        env:
+          EXACT_NEXT_VERSION: ${{ inputs.next_development_version }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          current=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' || true)
+          if ! [[ "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
+            echo "::error::gradle.properties must contain projectVersion=X.Y.Z-SNAPSHOT, found '$current'"
+            exit 1
+          fi
+          released=${current%-SNAPSHOT}
+          suggested=$(grep -E '^next\.release\.version=' release.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' || true)
+          if [[ -z "$suggested" || "$suggested" != "$released" ]]; then
+            echo "::error::release.properties must contain next.release.version=$released for $SOURCE_BRANCH"
+            exit 1
+          fi
+
+          exact=$(python3 - <<'PY'
+          import os
+          print(os.environ.get('EXACT_NEXT_VERSION', '').strip())
+          PY
+          )
+          if [[ -n "$exact" ]]; then
+            next="$exact"
+          else
+            IFS='.' read -r major minor patch <<< "$released"
+            next="$major.$minor.$((patch + 1))-SNAPSHOT"
+          fi
+
+          python3 .github/scripts/release_line_policy.py \
+            validate-next \
+            --branch "$SOURCE_BRANCH" \
+            --release-version "$released" \
+            --next-version "$next" \
+            --dry-run "$DRY_RUN"
+          echo "released_version=$released" >> "$GITHUB_OUTPUT"
+          echo "next_development_version=$next" >> "$GITHUB_OUTPUT"
+
       - name: Configure git author
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
+
       - name: Prepare next development version
         env:
-          RELEASED_VERSION: ${{ inputs.released_version }}
-          NEXT_DEVELOPMENT_VERSION: ${{ inputs.next_development_version }}
+          RELEASED_VERSION: ${{ steps.versions.outputs.released_version }}
+          NEXT_DEVELOPMENT_VERSION: ${{ steps.versions.outputs.next_development_version }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
           DRY_RUN: ${{ inputs.dry_run }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          METADATA_HELPER: .github/scripts/update-release-metadata.py
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prepare-next.sh

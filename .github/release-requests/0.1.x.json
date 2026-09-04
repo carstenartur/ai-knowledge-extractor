@@ -1,9 +1,0 @@
-{
-  "schema": "ai-knowledge-maintenance-release-request/v1",
-  "releaseVersion": "0.1.9",
-  "nextDevelopmentVersion": "0.1.10-SNAPSHOT",
-  "skipTests": false,
-  "dryRun": false,
-  "requestId": "0.1.9-inventory-pruning-release",
-  "qualifiedCommit": "4464295c4c6b9f557ebdc39790069c29e679ad64"
-}

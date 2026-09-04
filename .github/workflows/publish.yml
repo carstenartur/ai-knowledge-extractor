@@ -2,22 +2,20 @@ name: Release
 
 on:
   push:
-    branches: [ 'maintenance/0.1.x' ]
+    branches:
+      - main
+      - 'maintenance/**'
     paths:
-      - '.github/release-requests/0.1.x.json'
+      - '.github/release-request.json'
   workflow_dispatch:
     inputs:
-      release_version:
-        description: Release version to publish, without leading v, e.g. 0.1.9
-        required: true
-        type: string
-        default: 0.1.9
       next_development_version:
-        description: Optional next development version, e.g. 0.1.10-SNAPSHOT
+        description: Optional exact next patch snapshot in the selected supported line; leave empty for the next patch
         required: false
         type: string
+        default: ''
       skip_tests:
-        description: Skip tests during release build
+        description: Skip the duplicate release-version test run; the release-line and readiness gates still run
         required: false
         type: boolean
         default: false
@@ -32,102 +30,170 @@ permissions:
   pull-requests: write
   packages: write
 
-concurrency:
-  group: release-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: false
-
 env:
   GH_TOKEN: ${{ github.token }}
+
+concurrency:
+  group: release-${{ github.repository }}-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - name: Checkout selected supported release line
+        uses: actions/checkout@v7
         with:
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - name: Resolve and validate release request
-        id: request
+      - name: Resolve release plan from repository state
+        id: versions
         env:
           EVENT_NAME: ${{ github.event_name }}
-          DISPATCH_RELEASE_VERSION: ${{ inputs.release_version }}
-          DISPATCH_NEXT_VERSION: ${{ inputs.next_development_version }}
+          EXACT_NEXT_VERSION: ${{ inputs.next_development_version }}
           DISPATCH_SKIP_TESTS: ${{ inputs.skip_tests }}
           DISPATCH_DRY_RUN: ${{ inputs.dry_run }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        shell: bash
         run: |
           set -euo pipefail
-          if [[ "$EVENT_NAME" == "push" ]]; then
-            request_output=$(mktemp)
-            python3 .github/scripts/resolve-maintenance-release-request.py \
-              --request .github/release-requests/0.1.x.json \
-              --output "$request_output"
-            cat "$request_output" >> "$GITHUB_OUTPUT"
-            # Values are safe to source only after strict parser validation.
-            source "$request_output"
 
-            git cat-file -e "${qualified_commit}^{commit}"
-            if ! git merge-base --is-ancestor \
-                "$qualified_commit" "$GITHUB_SHA"; then
+          current=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' || true)
+          if ! [[ "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
+            echo "::error::gradle.properties must contain projectVersion=X.Y.Z-SNAPSHOT, found '$current'"
+            exit 1
+          fi
+
+          repository_release=${current%-SNAPSHOT}
+          suggested=$(grep -E '^next\.release\.version=' release.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' || true)
+          if [[ -z "$suggested" || "$suggested" != "$repository_release" ]]; then
+            echo "::error::release.properties must contain next.release.version=$repository_release for $SOURCE_BRANCH"
+            exit 1
+          fi
+
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            request_env=$(mktemp)
+            trap 'rm -f "$request_env"' EXIT
+            python3 .github/scripts/release_line_policy.py \
+              resolve-request \
+              --request .github/release-request.json \
+              --branch "$SOURCE_BRANCH" \
+              --current-version "$current" \
+              --env-file "$request_env"
+            # shellcheck disable=SC1090
+            source "$request_env"
+
+            release="$REQUEST_RELEASE_VERSION"
+            next="$REQUEST_NEXT_DEVELOPMENT_VERSION"
+            skip_tests="$REQUEST_SKIP_TESTS"
+            dry_run="$REQUEST_DRY_RUN"
+            source="reviewed-request:${REQUEST_ID}"
+
+            git cat-file -e "${REQUEST_QUALIFIED_COMMIT}^{commit}"
+            if ! git merge-base --is-ancestor "$REQUEST_QUALIFIED_COMMIT" "$GITHUB_SHA"; then
               echo "::error::qualifiedCommit is not an ancestor of the request commit" >&2
               exit 1
             fi
             mapfile -t changed_paths < <(
-              git diff --name-only "$qualified_commit" "$GITHUB_SHA"
+              git diff --name-only "$REQUEST_QUALIFIED_COMMIT" "$GITHUB_SHA"
             )
-            if [[ ${#changed_paths[@]} -ne 1 ]]; then
-              echo "::error::Exactly one request path must differ from qualifiedCommit" >&2
-              printf 'changed path: %s\n' "${changed_paths[@]}" >&2
-              exit 1
-            fi
-            if [[ "${changed_paths[0]}" \
-                != ".github/release-requests/0.1.x.json" ]]; then
-              echo "::error::Only the maintenance release request may differ from qualifiedCommit" >&2
+            if [[ ${#changed_paths[@]} -ne 1 \
+                || "${changed_paths[0]}" != '.github/release-request.json' ]]; then
+              echo "::error::Exactly .github/release-request.json may differ from qualifiedCommit" >&2
               printf 'changed path: %s\n' "${changed_paths[@]}" >&2
               exit 1
             fi
           else
-            if ! [[ "$DISPATCH_RELEASE_VERSION" =~ ^0\.1\.[0-9]+$ ]]; then
-              echo "::error::release_version must use 0.1.X" >&2
-              exit 1
+            release="$repository_release"
+            exact=$(python3 - <<'PY'
+            import os
+            print(os.environ.get('EXACT_NEXT_VERSION', '').strip())
+            PY
+            )
+            if [[ -n "$exact" ]]; then
+              next="$exact"
+              source=exact
+            else
+              IFS='.' read -r major minor patch <<< "$release"
+              next="$major.$minor.$((patch + 1))-SNAPSHOT"
+              source=default-patch
             fi
-            if [[ -n "$DISPATCH_NEXT_VERSION" \
-                && ! "$DISPATCH_NEXT_VERSION" =~ ^0\.1\.[0-9]+-SNAPSHOT$ ]]; then
-              echo "::error::next_development_version must use 0.1.X-SNAPSHOT" >&2
-              exit 1
-            fi
-            if [[ "$DISPATCH_SKIP_TESTS" != "true" \
-                && "$DISPATCH_SKIP_TESTS" != "false" ]]; then
-              echo "::error::skip_tests must be boolean" >&2
-              exit 1
-            fi
-            if [[ "$DISPATCH_DRY_RUN" != "true" \
-                && "$DISPATCH_DRY_RUN" != "false" ]]; then
-              echo "::error::dry_run must be boolean" >&2
-              exit 1
-            fi
-            {
-              printf 'release_version=%s\n' "$DISPATCH_RELEASE_VERSION"
-              printf 'next_version=%s\n' "$DISPATCH_NEXT_VERSION"
-              printf 'skip_tests=%s\n' "$DISPATCH_SKIP_TESTS"
-              printf 'dry_run=%s\n' "$DISPATCH_DRY_RUN"
-              printf 'request_id=workflow-dispatch-%s\n' "$GITHUB_RUN_ID"
-              printf 'qualified_commit=%s\n' "$GITHUB_SHA"
-            } >> "$GITHUB_OUTPUT"
+            skip_tests=${DISPATCH_SKIP_TESTS:-false}
+            dry_run=${DISPATCH_DRY_RUN:-false}
           fi
 
+          if [[ "$release" != "$repository_release" ]]; then
+            echo "::error::Resolved release $release does not match repository version $current" >&2
+            exit 1
+          fi
+          for pair in "skip_tests:$skip_tests" "dry_run:$dry_run"; do
+            name=${pair%%:*}
+            value=${pair#*:}
+            if [[ "$value" != true && "$value" != false ]]; then
+              echo "::error::${name} must be true or false" >&2
+              exit 1
+            fi
+          done
+
+          policy_env=$(mktemp)
+          trap 'rm -f "$policy_env" "${request_env:-}"' EXIT
+          python3 .github/scripts/release_line_policy.py \
+            resolve \
+            --branch "$SOURCE_BRANCH" \
+            --release-version "$release" \
+            --dry-run "$dry_run" \
+            --env-file "$policy_env"
+          # shellcheck disable=SC1090
+          source "$policy_env"
+          python3 .github/scripts/release_line_policy.py \
+            validate-next \
+            --branch "$SOURCE_BRANCH" \
+            --release-version "$release" \
+            --next-version "$next" \
+            --dry-run "$dry_run"
+
+          echo "release_version=$release" >> "$GITHUB_OUTPUT"
+          echo "next_development_version=$next" >> "$GITHUB_OUTPUT"
+          echo "skip_tests=$skip_tests" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+          {
+            echo '## Release version plan'
+            echo
+            echo "- Source branch: \`$SOURCE_BRANCH\`"
+            echo "- Supported line: \`$RELEASE_SOURCE_LINE\` (\`$RELEASE_SOURCE_STATUS\`)"
+            echo "- Artifact contract: \`$RELEASE_ARTIFACT_CONTRACT\`"
+            echo "- Current repository version: \`$current\`"
+            echo "- Release version: \`$release\`"
+            echo "- Next development version: \`$next\`"
+            echo "- Invocation: \`$source\`"
+            echo "- Dry run: \`$dry_run\`"
+            echo "- GitHub latest flag: \`$RELEASE_LATEST_ARGUMENT\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6.1.0
+        uses: gradle/actions/setup-gradle@v6.3.0
         with:
           gradle-version: '9.5.1'
+
+      - name: Verify the exact release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -x .github/scripts/verify-release-readiness.sh ]]; then
+            bash .github/scripts/verify-release-readiness.sh
+          else
+            python3 .github/scripts/verify-version-consistency.py
+            python3 .github/scripts/test_release_line_policy.py
+            gradle --no-daemon clean build publishToMavenLocal --warning-mode all
+          fi
 
       - name: Configure git author
         run: |
@@ -136,11 +202,62 @@ jobs:
 
       - name: Run release workflow
         env:
-          RELEASE_VERSION: ${{ steps.request.outputs.release_version }}
-          NEXT_VERSION_INPUT: ${{ steps.request.outputs.next_version }}
-          SKIP_TESTS: ${{ steps.request.outputs.skip_tests }}
-          DRY_RUN: ${{ steps.request.outputs.dry_run }}
+          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
+          NEXT_VERSION_INPUT: ${{ steps.versions.outputs.next_development_version }}
+          SKIP_TESTS: ${{ steps.versions.outputs.skip_tests }}
+          DRY_RUN: ${{ steps.versions.outputs.dry_run }}
           SOURCE_BRANCH: ${{ github.ref_name }}
           METADATA_HELPER: .github/scripts/update-release-metadata.py
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash .github/scripts/release.sh
+
+      - name: Generate and verify release checksums
+        env:
+          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
+          DRY_RUN: ${{ steps.versions.outputs.dry_run }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v${RELEASE_VERSION}"
+
+          restore_draft_on_failure() {
+            if [[ "$DRY_RUN" != 'true' ]]; then
+              echo "Checksum verification failed; returning ${TAG} to draft state." >&2
+              gh release edit "$TAG" --draft=true || true
+            fi
+          }
+          trap restore_draft_on_failure ERR
+
+          cd build/release-artifacts
+          mapfile -d '' JARS < <(
+            find . -maxdepth 1 -type f -name '*.jar' -printf '%f\0' | sort -z
+          )
+          if [[ ${#JARS[@]} -eq 0 ]]; then
+            echo 'No release JARs were produced.' >&2
+            exit 1
+          fi
+          sha256sum "${JARS[@]}" > SHA256SUMS
+          test -s SHA256SUMS
+
+          if [[ "$DRY_RUN" != 'true' ]]; then
+            gh release upload "$TAG" SHA256SUMS --clobber
+            mapfile -t REMOTE_ASSETS < <(
+              gh release view "$TAG" --json assets --jq '.assets[].name' | sort
+            )
+            printf '%s\n' "${REMOTE_ASSETS[@]}" | grep -Fx 'SHA256SUMS'
+            for jar in "${JARS[@]}"; do
+              printf '%s\n' "${REMOTE_ASSETS[@]}" | grep -Fx "$jar"
+            done
+          fi
+
+          trap - ERR
+
+      - name: Upload release-build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-build-${{ steps.versions.outputs.release_version }}
+          path: build/release-artifacts
+          if-no-files-found: warn
+          retention-days: 30

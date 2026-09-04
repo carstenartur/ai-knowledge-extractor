@@ -5,21 +5,49 @@ set -euo pipefail
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 : "${METADATA_HELPER:?METADATA_HELPER is required}"
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+RELEASE_LINES_FILE=${RELEASE_LINES_FILE:-.github/release-lines.json}
+SOURCE_BRANCH=${SOURCE_BRANCH:-main}
+NEXT_VERSION_INPUT=${NEXT_VERSION_INPUT:-}
+SKIP_TESTS=${SKIP_TESTS:-false}
+DRY_RUN=${DRY_RUN:-false}
+
 trim() {
   local value=${1-}
   printf '%s' "$value" | tr -d '\r' | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//'
 }
 
 RELEASE_VERSION=$(trim "$RELEASE_VERSION")
-NEXT_VERSION_INPUT=$(trim "${NEXT_VERSION_INPUT:-}")
-SKIP_TESTS=$(trim "${SKIP_TESTS:-false}")
-DRY_RUN=$(trim "${DRY_RUN:-false}")
-SOURCE_BRANCH=$(trim "${SOURCE_BRANCH:-main}")
+SOURCE_BRANCH=$(trim "$SOURCE_BRANCH")
+NEXT_VERSION_INPUT=$(trim "$NEXT_VERSION_INPUT")
+SKIP_TESTS=$(trim "$SKIP_TESTS")
+DRY_RUN=$(trim "$DRY_RUN")
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck source=.github/scripts/release-source-policy.sh
-source "$SCRIPT_DIR/release-source-policy.sh"
-resolve_release_source_policy "$SOURCE_BRANCH" "$DRY_RUN"
+if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "::error::release_version must use X.Y.Z without a leading v; got '${RELEASE_VERSION}'" >&2
+  exit 1
+fi
+for pair in "SKIP_TESTS:$SKIP_TESTS" "DRY_RUN:$DRY_RUN"; do
+  name=${pair%%:*}
+  value=${pair#*:}
+  if [[ "$value" != "true" && "$value" != "false" ]]; then
+    echo "::error::${name} must be true or false; got '${value}'" >&2
+    exit 1
+  fi
+done
+
+POLICY_ENV=$(mktemp)
+trap 'rm -f "$POLICY_ENV"' EXIT
+python3 "$SCRIPT_DIR/release_line_policy.py" \
+  --policy "$RELEASE_LINES_FILE" \
+  resolve \
+  --branch "$SOURCE_BRANCH" \
+  --release-version "$RELEASE_VERSION" \
+  --dry-run "$DRY_RUN" \
+  --env-file "$POLICY_ENV"
+# The file contains only shlex-quoted values emitted by the validated policy parser.
+# shellcheck disable=SC1090
+source "$POLICY_ENV"
 
 TAG_NAME="v${RELEASE_VERSION}"
 RELEASE_BRANCH="release/${TAG_NAME}"
@@ -31,17 +59,13 @@ MAVEN_EXAMPLE_POMS=(
 )
 VERSIONED_METADATA_FILES=(
   "gradle.properties"
+  "release.properties"
   "CITATION.cff"
   ".zenodo.json"
   "$MAVEN_PLUGIN_DESCRIPTOR"
   "$SITE_POM"
   "${MAVEN_EXAMPLE_POMS[@]}"
 )
-
-if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "::error::release_version must use X.Y.Z without a leading v; got '${RELEASE_VERSION}'"
-  exit 1
-fi
 
 current_project_version() {
   grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]'
@@ -56,13 +80,11 @@ import sys
 version = sys.argv[1]
 path = Path("gradle.properties")
 lines = path.read_text(encoding="utf-8").splitlines()
-updated = False
 for index, line in enumerate(lines):
     if line.startswith("projectVersion="):
         lines[index] = f"projectVersion={version}"
-        updated = True
         break
-if not updated:
+else:
     lines.append(f"projectVersion={version}")
 path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
@@ -78,7 +100,9 @@ import sys
 version = sys.argv[1]
 path = Path(sys.argv[2])
 text = path.read_text(encoding="utf-8")
-text, count = re.subn(r"(<version>)[^<]+(</version>)", rf"\g<1>{version}\g<2>", text, count=1)
+text, count = re.subn(
+    r"(<version>)[^<]+(</version>)", rf"\g<1>{version}\g<2>", text, count=1
+)
 if count != 1:
     raise SystemExit(f"Could not update version in {path}")
 path.write_text(text, encoding="utf-8")
@@ -86,22 +110,20 @@ PY
 }
 
 set_next_release_version() {
-  local next_release=$1
-  python3 - "$next_release" <<'PY'
+  local version=$1
+  python3 - "$version" <<'PY'
 from pathlib import Path
 import sys
 
-next_release = sys.argv[1]
+version = sys.argv[1]
 path = Path("release.properties")
 lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
-updated = False
 for index, line in enumerate(lines):
     if line.startswith("next.release.version="):
-        lines[index] = f"next.release.version={next_release}"
-        updated = True
+        lines[index] = f"next.release.version={version}"
         break
-if not updated:
-    lines.append(f"next.release.version={next_release}")
+else:
+    lines.append(f"next.release.version={version}")
 path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 }
@@ -112,29 +134,25 @@ verify_metadata() {
   local project_version
   project_version=$(current_project_version)
 
-  if [[ "$project_version" != "$expected" ]]; then
-    echo "::error::gradle.properties projectVersion '${project_version}' does not match expected '${expected}'"
+  [[ "$project_version" == "$expected" ]] || {
+    echo "::error::gradle.properties projectVersion '${project_version}' does not match '${expected}'" >&2
     exit 1
-  fi
-
+  }
   grep -q "^version: \"${expected}\"$" CITATION.cff || {
-    echo "::error::CITATION.cff version does not match ${expected}"
+    echo "::error::CITATION.cff version does not match ${expected}" >&2
     exit 1
   }
-
   grep -q "<version>${expected}</version>" "$MAVEN_PLUGIN_DESCRIPTOR" || {
-    echo "::error::Maven plugin descriptor version does not match ${expected}"
+    echo "::error::Maven plugin descriptor version does not match ${expected}" >&2
     exit 1
   }
-
   grep -q "<revision>${expected}</revision>" "$SITE_POM" || {
-    echo "::error::Maven site pom revision does not match ${expected}"
+    echo "::error::Maven site revision does not match ${expected}" >&2
     exit 1
   }
-
   for pom in "${MAVEN_EXAMPLE_POMS[@]}"; do
     grep -q "<aiKnowledge.version>${expected}</aiKnowledge.version>" "$pom" || {
-      echo "::error::${pom} aiKnowledge.version does not match ${expected}"
+      echo "::error::${pom} aiKnowledge.version does not match ${expected}" >&2
       exit 1
     }
   done
@@ -159,17 +177,18 @@ PY
 
 CURRENT_VERSION=$(current_project_version)
 if [[ "$CURRENT_VERSION" != *-SNAPSHOT ]]; then
-  echo "::error::Current project version must be a SNAPSHOT, but was ${CURRENT_VERSION}"
+  echo "::error::Current project version must be a SNAPSHOT, but was ${CURRENT_VERSION}" >&2
   exit 1
 fi
 if [[ "${CURRENT_VERSION%-SNAPSHOT}" != "$RELEASE_VERSION" ]]; then
-  echo "::error::Release ${RELEASE_VERSION} does not match current project version ${CURRENT_VERSION}"
+  echo "::error::Release ${RELEASE_VERSION} does not match current version ${CURRENT_VERSION}" >&2
   exit 1
 fi
 
-EXPECTED_RELEASE=$(grep -E '^next.release.version=' release.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' || true)
+EXPECTED_RELEASE=$(grep -E '^next\.release\.version=' release.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' || true)
 if [[ -n "$EXPECTED_RELEASE" && "$EXPECTED_RELEASE" != "$RELEASE_VERSION" ]]; then
-  echo "::warning::release_version ${RELEASE_VERSION} differs from release.properties suggestion ${EXPECTED_RELEASE}"
+  echo "::error::release.properties suggests ${EXPECTED_RELEASE}, but this line contains ${CURRENT_VERSION}" >&2
+  exit 1
 fi
 
 if [[ -n "$NEXT_VERSION_INPUT" ]]; then
@@ -179,12 +198,21 @@ else
   NEXT_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))-SNAPSHOT"
 fi
 NEXT_VERSION=$(trim "$NEXT_VERSION")
-if ! [[ "$NEXT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
-  echo "::error::next_development_version must use X.Y.Z-SNAPSHOT; got '${NEXT_VERSION}'"
-  exit 1
-fi
+python3 "$SCRIPT_DIR/release_line_policy.py" \
+  --policy "$RELEASE_LINES_FILE" \
+  validate-next \
+  --branch "$SOURCE_BRANCH" \
+  --release-version "$RELEASE_VERSION" \
+  --next-version "$NEXT_VERSION" \
+  --dry-run "$DRY_RUN"
 
 verify_metadata "$CURRENT_VERSION" false
+if [[ "$RELEASE_SOURCE_STATUS" == "dry-run" ]]; then
+  python3 "$SCRIPT_DIR/verify-version-consistency.py"
+else
+  AI_KNOWLEDGE_TARGET_BRANCH="$SOURCE_BRANCH" \
+    python3 "$SCRIPT_DIR/verify-version-consistency.py"
+fi
 gradle help
 
 git fetch origin --tags --force
@@ -202,20 +230,20 @@ RELEASE_STATE=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
   | head -n 1 || true)
 
 if [[ -n "$RELEASE_STATE" && "$TAG_EXISTS" != "true" ]]; then
-  echo "::error::A GitHub release exists for ${TAG_NAME}, but its tag is missing"
+  echo "::error::A GitHub release exists for ${TAG_NAME}, but its tag is missing" >&2
   exit 1
 fi
 if [[ "$TAG_EXISTS" == "false" && "$BRANCH_EXISTS" == "true" ]]; then
-  echo "::error::Release branch ${RELEASE_BRANCH} exists without tag ${TAG_NAME}"
+  echo "::error::Release branch ${RELEASE_BRANCH} exists without tag ${TAG_NAME}" >&2
   exit 1
 fi
 if [[ "$TAG_EXISTS" == "true" && "$BRANCH_EXISTS" == "true" ]]; then
   TAG_COMMIT=$(git rev-parse "${TAG_NAME}^{commit}")
   BRANCH_COMMIT=$(git rev-parse "origin/${RELEASE_BRANCH}^{commit}")
-  if [[ "$TAG_COMMIT" != "$BRANCH_COMMIT" ]]; then
-    echo "::error::${TAG_NAME} and ${RELEASE_BRANCH} point to different commits"
+  [[ "$TAG_COMMIT" == "$BRANCH_COMMIT" ]] || {
+    echo "::error::${TAG_NAME} and ${RELEASE_BRANCH} point to different commits" >&2
     exit 1
-  fi
+  }
 fi
 
 if [[ -n "$RELEASE_STATE" ]]; then
@@ -226,11 +254,13 @@ else
   STATE=new
 fi
 
-echo "Release state: ${STATE}"
-echo "Release source lane: ${RELEASE_SOURCE_LANE}"
-echo "Release version: ${RELEASE_VERSION}"
-echo "Next development version: ${NEXT_VERSION}"
-echo "Next development PR base: ${RELEASE_NEXT_PR_BASE}"
+printf 'Release state: %s\n' "$STATE"
+printf 'Release line: %s (%s)\n' "$RELEASE_SOURCE_LINE" "$RELEASE_SOURCE_STATUS"
+printf 'Release branch: %s\n' "$SOURCE_BRANCH"
+printf 'Release version: %s\n' "$RELEASE_VERSION"
+printf 'Artifact contract: %s\n' "$RELEASE_ARTIFACT_CONTRACT"
+printf 'Next development version: %s\n' "$NEXT_VERSION"
+printf 'Next development PR base: %s\n' "$RELEASE_NEXT_PR_BASE"
 
 if [[ "$STATE" == "new" ]]; then
   set_project_version "$RELEASE_VERSION"
@@ -290,16 +320,13 @@ if [[ "$DRY_RUN" != "true" && "$STATE" == "draft" ]]; then
   if [[ ${#ARTIFACTS[@]} -gt 0 ]]; then
     gh release upload "$TAG_NAME" "${ARTIFACTS[@]}" --clobber
   fi
-  gh release edit \
-    "$TAG_NAME" \
-    --draft=false \
-    "$RELEASE_LATEST_ARGUMENT"
+  gh release edit "$TAG_NAME" --draft=false "$RELEASE_LATEST_ARGUMENT"
   STATE=published
 fi
 
 if [[ "$DRY_RUN" != "true" ]]; then
   IS_DRAFT=$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft')
-  test "$IS_DRAFT" = false
+  [[ "$IS_DRAFT" == "false" ]]
 fi
 
 set_project_version "$NEXT_VERSION"
@@ -307,53 +334,74 @@ set_maven_plugin_descriptor_version "$NEXT_VERSION"
 python3 "$METADATA_HELPER" "$NEXT_VERSION"
 set_next_release_version "${NEXT_VERSION%-SNAPSHOT}"
 verify_metadata "$NEXT_VERSION" false
+if [[ "$RELEASE_SOURCE_STATUS" == "dry-run" ]]; then
+  python3 "$SCRIPT_DIR/verify-version-consistency.py"
+else
+  AI_KNOWLEDGE_TARGET_BRANCH="$RELEASE_NEXT_PR_BASE" \
+    python3 "$SCRIPT_DIR/verify-version-consistency.py"
+fi
 
-NEXT_BRANCH="release/prepare-next-${NEXT_VERSION}"
+SAFE_LINE=${RELEASE_SOURCE_LINE//[^A-Za-z0-9._-]/-}
+NEXT_BRANCH="release/${SAFE_LINE}/prepare-next-${NEXT_VERSION}"
 git switch -C "$NEXT_BRANCH"
-git add "${VERSIONED_METADATA_FILES[@]}" release.properties
-git commit -m "Prepare next development version ${NEXT_VERSION}"
+git add "${VERSIONED_METADATA_FILES[@]}"
+git commit -m "Prepare ${RELEASE_NEXT_PR_BASE} for ${NEXT_VERSION}"
 
-if [[ "$DRY_RUN" != "true" ]]; then
-  REMOTE_SHA=$(git ls-remote --heads origin "refs/heads/${NEXT_BRANCH}" | awk '{print $1}')
-  if [[ -n "$REMOTE_SHA" ]]; then
-    git push \
-      --force-with-lease="refs/heads/${NEXT_BRANCH}:${REMOTE_SHA}" \
-      origin "HEAD:refs/heads/${NEXT_BRANCH}"
-  else
-    git push origin "HEAD:refs/heads/${NEXT_BRANCH}"
-  fi
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo 'Dry run completed; no remote refs, release or PR were changed.'
+  exit 0
+fi
 
-  cat > /tmp/next-development-pr.md <<EOF
-Automated follow-up after release ${RELEASE_VERSION}.
+REMOTE_SHA=$(git ls-remote --heads origin "refs/heads/${NEXT_BRANCH}" | awk '{print $1}')
+if [[ -n "$REMOTE_SHA" ]]; then
+  git push \
+    --force-with-lease="refs/heads/${NEXT_BRANCH}:${REMOTE_SHA}" \
+    origin "HEAD:refs/heads/${NEXT_BRANCH}"
+else
+  git push origin "HEAD:refs/heads/${NEXT_BRANCH}"
+fi
+
+cat > /tmp/next-development-pr.md <<EOF
+Automated follow-up after release ${RELEASE_VERSION} from the supported **${RELEASE_SOURCE_LINE}** line.
+
+## Scope
+
+- Target branch: \`${RELEASE_NEXT_PR_BASE}\`
+- Next development version: \`${NEXT_VERSION}\`
+- Support status: \`${RELEASE_SOURCE_STATUS}\`
+- Artifact contract: \`${RELEASE_ARTIFACT_CONTRACT}\`
+
+This changes only the ${RELEASE_SOURCE_LINE} release line. In particular, a maintenance-line
+transition does not downgrade or modify \`main\`.
 
 ## Changes
-- Bump Gradle projectVersion to ${NEXT_VERSION}
-- Update Maven plugin descriptor to ${NEXT_VERSION}
-- Update Maven site revision to ${NEXT_VERSION}
-- Update Maven consumer examples to ${NEXT_VERSION}
-- Update CITATION.cff to ${NEXT_VERSION}
-- Update .zenodo.json to ${NEXT_VERSION}
-- Remove release-only date metadata from the development snapshot
-- Update release.properties for the next release cycle
+
+- align all versioned Gradle, Maven, citation and Zenodo metadata;
+- remove release-only date metadata from the development snapshot;
+- update \`release.properties\` for the next release in this line;
+- keep the next development version inside the same explicitly supported X.Y series.
+
+The repository workflow \`Verify release follow-up PR\` validates the exact head, runs CI by
+explicit workflow dispatch, and merges this metadata-only PR only after success.
+
+<!-- release-follow-up-run: ${GITHUB_RUN_ID:-local} -->
 EOF
 
-  EXISTING_PR=$(gh pr list \
-    --base "$RELEASE_NEXT_PR_BASE" \
-    --head "$NEXT_BRANCH" \
-    --state open \
-    --json number \
-    --jq '.[0].number // empty')
-  if [[ -n "$EXISTING_PR" ]]; then
-    gh pr edit "$EXISTING_PR" \
-      --title "Prepare next development version ${NEXT_VERSION}" \
-      --body-file /tmp/next-development-pr.md
-  else
-    gh pr create \
-      --title "Prepare next development version ${NEXT_VERSION}" \
-      --body-file /tmp/next-development-pr.md \
-      --base "$RELEASE_NEXT_PR_BASE" \
-      --head "$NEXT_BRANCH"
-  fi
+EXISTING_PR=$(gh pr list \
+  --base "$RELEASE_NEXT_PR_BASE" \
+  --head "$NEXT_BRANCH" \
+  --state open \
+  --json number \
+  --jq '.[0].number // empty')
+if [[ -n "$EXISTING_PR" ]]; then
+  gh pr edit "$EXISTING_PR" \
+    --title "Prepare ${RELEASE_NEXT_PR_BASE} for ${NEXT_VERSION}" \
+    --body-file /tmp/next-development-pr.md
 else
-  echo 'Dry run completed; no remote refs, release or PR were changed.'
+  gh pr create \
+    --draft \
+    --title "Prepare ${RELEASE_NEXT_PR_BASE} for ${NEXT_VERSION}" \
+    --body-file /tmp/next-development-pr.md \
+    --base "$RELEASE_NEXT_PR_BASE" \
+    --head "$NEXT_BRANCH"
 fi

@@ -1,0 +1,239 @@
+name: Verify release follow-up PR
+
+on:
+  workflow_run:
+    workflows: [ Release, Prepare next development version ]
+    types: [ completed ]
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: release-follow-up-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  verify-and-merge:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release-control files
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: control
+
+      - name: Locate the exact generated follow-up PR
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          marker="<!-- release-follow-up-run: ${RELEASE_RUN_ID} -->"
+          candidates=$(gh pr list \
+            --repo "$REPOSITORY" \
+            --state open \
+            --base "$SOURCE_BRANCH" \
+            --limit 50 \
+            --json number,body,headRefName,headRefOid,isCrossRepository,isDraft,url \
+            --jq "[.[] | select(.body != null and (.body | contains(\"${marker}\"))) ]")
+          count=$(jq 'length' <<< "$candidates")
+          if [[ "$count" -eq 0 ]]; then
+            echo "No generated follow-up PR belongs to release run ${RELEASE_RUN_ID}; this is expected for a dry run."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$count" -ne 1 ]]; then
+            echo "::error::Expected exactly one generated follow-up PR for release run ${RELEASE_RUN_ID}, found ${count}" >&2
+            jq . <<< "$candidates" >&2
+            exit 1
+          fi
+
+          cross_repository=$(jq -r '.[0].isCrossRepository' <<< "$candidates")
+          is_draft=$(jq -r '.[0].isDraft' <<< "$candidates")
+          head_ref=$(jq -r '.[0].headRefName' <<< "$candidates")
+          if [[ "$cross_repository" != "false" ]]; then
+            echo "::error::Release follow-up PR must come from this repository" >&2
+            exit 1
+          fi
+          if [[ "$is_draft" != "true" ]]; then
+            echo "::error::Generated release follow-up PR must remain draft until exact-head CI passes" >&2
+            exit 1
+          fi
+          if [[ "$head_ref" != release/*/prepare-next-*-SNAPSHOT ]]; then
+            echo "::error::Unexpected release follow-up branch: ${head_ref}" >&2
+            exit 1
+          fi
+
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "number=$(jq -r '.[0].number' <<< "$candidates")" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$head_ref" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$(jq -r '.[0].headRefOid' <<< "$candidates")" >> "$GITHUB_OUTPUT"
+          echo "source_branch=$SOURCE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "url=$(jq -r '.[0].url' <<< "$candidates")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the metadata-only change boundary
+        if: ${{ steps.candidate.outputs.found == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.candidate.outputs.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          allowed=$(cat <<'EOF'
+          .zenodo.json
+          CITATION.cff
+          build.gradle
+          examples/fixtures/maven-consumer/pom.xml
+          examples/maven-consumer/pom.xml
+          gradle.properties
+          maven/src/main/resources/META-INF/maven/plugin.xml
+          release.properties
+          site/pom.xml
+          EOF
+          )
+          mapfile -t changed < <(gh pr diff "$PR_NUMBER" --repo "$REPOSITORY" --name-only | sort -u)
+          if [[ ${#changed[@]} -eq 0 ]]; then
+            echo "::error::Generated release follow-up PR has no changes" >&2
+            exit 1
+          fi
+          for path in "${changed[@]}"; do
+            if ! grep -Fxq "$path" <<< "$allowed"; then
+              echo "::error::Generated release follow-up PR changes forbidden path: $path" >&2
+              exit 1
+            fi
+          done
+
+      - name: Check out the exact follow-up head
+        if: ${{ steps.candidate.outputs.found == 'true' }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.candidate.outputs.head_sha }}
+          path: candidate
+          fetch-depth: 0
+
+      - name: Validate support policy and branch version
+        if: ${{ steps.candidate.outputs.found == 'true' }}
+        env:
+          SOURCE_BRANCH: ${{ steps.candidate.outputs.source_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(grep -E '^projectVersion=' candidate/gradle.properties | head -n 1 | cut -d= -f2 | tr -d '[:space:]')
+          python3 control/.github/scripts/release_line_policy.py \
+            --policy control/.github/release-lines.json \
+            verify-branch-version \
+            --branch "$SOURCE_BRANCH" \
+            --project-version "$version"
+
+      - name: Dispatch exact-head CI
+        if: ${{ steps.candidate.outputs.found == 'true' }}
+        id: ci
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_REF: ${{ steps.candidate.outputs.head_ref }}
+          HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+          SOURCE_BRANCH: ${{ steps.candidate.outputs.source_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run ci.yml \
+            --repo "$REPOSITORY" \
+            --ref "$HEAD_REF" \
+            -f target_branch="$SOURCE_BRANCH"
+
+          run_id=''
+          run_url=''
+          for _ in $(seq 1 60); do
+            run_id=$(gh run list \
+              --repo "$REPOSITORY" \
+              --workflow ci.yml \
+              --branch "$HEAD_REF" \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId,headSha,url \
+              --jq ".[] | select(.headSha == \"${HEAD_SHA}\") | .databaseId" \
+              | head -n 1)
+            if [[ -n "$run_id" ]]; then
+              run_url=$(gh run view "$run_id" --repo "$REPOSITORY" --json url --jq '.url')
+              break
+            fi
+            sleep 5
+          done
+          if [[ -z "$run_id" ]]; then
+            echo "::error::Could not locate dispatched CI for ${HEAD_SHA}" >&2
+            exit 1
+          fi
+
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "run_url=$run_url" >> "$GITHUB_OUTPUT"
+          gh run watch "$run_id" --repo "$REPOSITORY" --exit-status
+
+      - name: Record success and merge the generated PR
+        if: ${{ steps.candidate.outputs.found == 'true' && steps.ci.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.candidate.outputs.number }}
+          HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+          CI_URL: ${{ steps.ci.outputs.run_url }}
+          SOURCE_BRANCH: ${{ steps.candidate.outputs.source_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            --method POST \
+            "repos/${REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state=success \
+            -f context='release/follow-up-ci' \
+            -f description='Exact generated follow-up head passed CI' \
+            -f target_url="$CI_URL"
+          gh pr ready "$PR_NUMBER" --repo "$REPOSITORY"
+          gh pr comment "$PR_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "Exact-head CI passed: ${CI_URL}. The metadata-only follow-up is being merged into \`${SOURCE_BRANCH}\`."
+          gh pr merge "$PR_NUMBER" \
+            --repo "$REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --match-head-commit "$HEAD_SHA"
+
+      - name: Record failed exact-head CI
+        if: ${{ steps.candidate.outputs.found == 'true' && steps.ci.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.candidate.outputs.number }}
+          HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+          CI_URL: ${{ steps.ci.outputs.run_url }}
+        shell: bash
+        run: |
+          status_args=(
+            --method POST
+            "repos/${REPOSITORY}/statuses/${HEAD_SHA}"
+            -f state=failure
+            -f context='release/follow-up-ci'
+            -f description='Exact generated follow-up head failed CI'
+          )
+          if [[ -n "$CI_URL" ]]; then
+            status_args+=( -f target_url="$CI_URL" )
+          fi
+          gh api "${status_args[@]}"
+          detail=${CI_URL:-"No CI run URL was produced."}
+          gh pr comment "$PR_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "Exact-head CI failed: ${detail} This PR remains draft and was not merged."
+
+      - name: Fail after recording an exact-head CI failure
+        if: ${{ steps.candidate.outputs.found == 'true' && steps.ci.outcome == 'failure' }}
+        run: exit 1

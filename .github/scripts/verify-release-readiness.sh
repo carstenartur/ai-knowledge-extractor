@@ -37,8 +37,23 @@ for script in \
   bash -n "$script"
 done
 
-test -s .github/workflows/verify-published-release.yml \
-  || fail 'published-release verification workflow is missing'
+for script in \
+  .github/scripts/release_line_policy.py \
+  .github/scripts/test_release_line_policy.py \
+  .github/scripts/verify-version-consistency.py; do
+  test -s "$script" || fail "required Python release script is missing: $script"
+  python3 -m py_compile "$script"
+done
+
+for workflow in \
+  .github/workflows/verify-published-release.yml \
+  .github/workflows/verify-release-follow-up.yml; do
+  test -s "$workflow" || fail "required release workflow is missing: $workflow"
+done
+
+test -s .github/release-lines.json || fail 'release-line policy is missing'
+test -s docs/version-support.md || fail 'version support documentation is missing'
+python3 .github/scripts/test_release_line_policy.py
 
 grep -Fq 'aiknowledge.source.enabledProviders' docs/integrator-quickstart.md \
   || fail 'shared source configuration is not documented'
@@ -67,6 +82,30 @@ grep -Fq 'SHA256SUMS' .github/workflows/publish.yml \
   || fail 'the Release workflow does not publish a checksum manifest'
 ! grep -Fq 'plugin-info.html' site/src/site/site.xml \
   || fail 'site navigation still points to the removed plugin report'
+grep -Fq 'maintenance/0.1.x' README.md \
+  || fail 'README does not explain the maintenance release line'
+grep -Fq 'docs/version-support.md' README.md \
+  || fail 'README does not link to the version-support policy'
+grep -Fq 'release/follow-up-ci' .github/workflows/verify-release-follow-up.yml \
+  || fail 'generated follow-up PRs do not record exact-head CI status'
+
+grep -Fq 'workflow_run:' .github/workflows/verify-release-follow-up.yml \
+  || fail 'release follow-up verification is not triggered from completed workflows'
+grep -Fq -- '--match-head-commit' .github/workflows/verify-release-follow-up.yml \
+  || fail 'release follow-up merge does not pin the verified head commit'
+! grep -Fq 'next_version_increment' .github/workflows/publish.yml \
+  || fail 'release workflow still permits an implicit cross-series increment'
+! grep -Fq 'next_version_increment' .github/workflows/prepare-next.yml \
+  || fail 'prepare-next workflow still permits an implicit cross-series increment'
+grep -Fq 'machine-readable policy for simultaneously supported' CHANGELOG.md \
+  || fail 'the multi-version support change is missing from CHANGELOG.md'
+
+grep -Fq '.github/release-request.json' .github/workflows/publish.yml \
+  || fail 'reviewed release requests are not wired into the Release workflow'
+grep -Fq 'resolve-request' .github/workflows/publish.yml \
+  || fail 'the Release workflow does not use the strict request parser'
+grep -Fq '.github/release-request.json' docs/release.md \
+  || fail 'reviewed release requests are not documented'
 
 git diff --check
 python3 .github/scripts/verify-version-consistency.py

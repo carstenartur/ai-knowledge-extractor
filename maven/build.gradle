@@ -3,6 +3,7 @@ description = 'Maven plugin module.'
 def pluginVersion = version.toString()
 
 processResources {
+    inputs.property('pluginVersion', pluginVersion)
     filesMatching('META-INF/maven/plugin.xml') {
         filter { line ->
             def replacement = java.util.regex.Matcher.quoteReplacement('<version>' + pluginVersion + '</version>')

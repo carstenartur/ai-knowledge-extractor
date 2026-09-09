@@ -29,6 +29,9 @@ minor releases may add new artifact families but must document schema changes.
 
 ### Fixed
 
+- Maven plugin descriptors now rebuild when the release version changes, preventing a cached
+  snapshot descriptor from being packaged under stable release coordinates;
+
 - quoted JavaScript API-call examples no longer create phantom boundary calls; executable nested
   template expressions remain visible;
 - module-level calls in different files no longer combine into false callable fan-out.

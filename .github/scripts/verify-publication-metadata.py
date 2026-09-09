@@ -52,6 +52,10 @@ def verify(repository, version):
                 with zipfile.ZipFile(jar) as archive:
                     if len(archive.namelist()) < 2 or archive.testzip():
                         raise ValueError(f"empty or corrupt JAR: {jar}")
+                    if artifact == "ai-knowledge-maven-plugin" and not classifier:
+                        descriptor = ET.fromstring(archive.read("META-INF/maven/plugin.xml"))
+                        if descriptor.findtext("version") != version:
+                            raise ValueError(f"stale Maven plugin descriptor version in {jar}")
             if artifact != "ai-knowledge-core" and (
                 "org.aiknowledge", "ai-knowledge-core", version
             ) not in dependencies:

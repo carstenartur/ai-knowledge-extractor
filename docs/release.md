@@ -5,6 +5,10 @@ between an X.Y series, its branch and its support status is
 [`.github/release-lines.json`](../.github/release-lines.json). Read
 [`version-support.md`](version-support.md) before preparing or publishing a release.
 
+Public Maven Central and Gradle Plugin Portal distribution is a separate opt-in step after a
+qualified GitHub release. Follow the [public distribution runbook](public-distribution.md) for
+account setup, the signed CI rehearsal, publication and anonymous consumer verification.
+
 ## Release-line invariants
 
 The policy and CI enforce the following rules:

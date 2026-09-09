@@ -1,0 +1,163 @@
+name: Public distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing stable GitHub release, X.Y.Z, containing the public publishing tooling
+        required: true
+        type: string
+      mode:
+        description: Validate first; publish each missing channel separately; verify-public never uploads
+        type: choice
+        default: validate
+        options:
+          - validate
+          - publish-central
+          - publish-portal
+          - verify-public
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: public-distribution-${{ github.repository }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.candidate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Qualify the immutable release with current support policy
+        id: candidate
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p qualification
+          set -o pipefail
+          python3 .github/scripts/verify-public-release-candidate.py | tee qualification/candidate.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: public-release-candidate
+          path: qualification/candidate.json
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.candidate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+          cache-disabled: true
+      - name: Build and validate signed publications without uploading
+        if: inputs.mode != 'verify-public'
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          gradle --no-daemon build
+          bash .github/scripts/verify-consumer-fixtures.sh
+          bash .github/scripts/verify-public-distribution.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: public-distribution-rehearsal
+          path: |
+            build/reports/public-distribution/**
+            build/reports/public-consumers/**
+          if-no-files-found: ignore
+
+  publish:
+    needs: qualify
+    if: inputs.mode == 'publish-central' || inputs.mode == 'publish-portal'
+    environment: public-distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.qualify.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+          cache-disabled: true
+      - name: Publish signed artifacts to Maven Central and wait for PUBLISHED
+        if: inputs.mode == 'publish-central'
+        env:
+          VERIFIED_NAMESPACE: ${{ vars.CENTRAL_NAMESPACE_VERIFIED }}
+          VERSION: ${{ inputs.version }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ "$VERIFIED_NAMESPACE" == org.aiknowledge ]] || { echo 'Verify ownership of org.aiknowledge first'; exit 1; }
+          : "${ORG_GRADLE_PROJECT_mavenCentralUsername:?Central token username is missing}"
+          : "${ORG_GRADLE_PROJECT_mavenCentralPassword:?Central token password is missing}"
+          : "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Signing key is missing}"
+          gradle --no-daemon -PpublicDistribution=true -PreleaseVersion="$VERSION" publishAndReleaseToMavenCentral
+      - name: Publish Gradle plugin to the Plugin Portal
+        if: inputs.mode == 'publish-portal'
+        env:
+          VERSION: ${{ inputs.version }}
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${GRADLE_PUBLISH_KEY:?Portal key is missing}"
+          : "${GRADLE_PUBLISH_SECRET:?Portal secret is missing}"
+          : "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Signing key is missing}"
+          # The plugin implementation and Core must already resolve on Central.
+          for artifact in ai-knowledge-core gradle-plugin; do
+            curl --fail --silent --show-error --output /dev/null \
+              "https://repo.maven.apache.org/maven2/org/aiknowledge/$artifact/$VERSION/$artifact-$VERSION.pom"
+          done
+          gradle --no-daemon -PpublicDistribution=true -PreleaseVersion="$VERSION" :gradle-plugin:publishPlugins
+
+  verify-public:
+    needs: [qualify, publish]
+    if: always() && needs.qualify.result == 'success' && (inputs.mode == 'verify-public' || (inputs.mode == 'publish-portal' && needs.publish.result == 'success'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.qualify.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '9.5.1'
+          cache-disabled: true
+      - name: Verify anonymous consumers on both public channels
+        env:
+          VERSION: ${{ inputs.version }}
+        run: bash .github/scripts/verify-public-consumers.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: anonymous-public-consumers
+          path: build/reports/public-consumers/**
+      - name: Record public availability
+        run: |
+          cat build/reports/public-consumers/summary.json >> "$GITHUB_STEP_SUMMARY"

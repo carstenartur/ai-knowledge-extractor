@@ -1,3 +1,8 @@
+plugins {
+    id 'com.vanniktech.maven.publish.base' version '0.37.0' apply false
+    id 'com.gradle.plugin-publish' version '2.1.1' apply false
+}
+
 group = 'org.aiknowledge'
 version = findProperty('releaseVersion') ?: findProperty('projectVersion') ?: '0.1.5-SNAPSHOT'
 
@@ -62,33 +67,35 @@ subprojects {
             mavenJava(MavenPublication) {
                 from components.java
                 artifactId = publishedArtifactId
-                pom {
-                    name = publishedArtifactId
-                    description = 'Deterministic build-integrated knowledge extraction for AI-assisted code understanding.'
+            }
+        }
+        publications.withType(MavenPublication).configureEach {
+            pom {
+                name = publishedArtifactId
+                description = 'Deterministic build-integrated knowledge extraction for AI-assisted code understanding.'
+                url = 'https://github.com/carstenartur/ai-knowledge-extractor'
+                licenses {
+                    license {
+                        name = 'Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git'
+                    developerConnection = 'scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git'
                     url = 'https://github.com/carstenartur/ai-knowledge-extractor'
-                    licenses {
-                        license {
-                            name = 'Apache License, Version 2.0'
-                            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                        }
-                    }
-                    scm {
-                        connection = 'scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git'
-                        developerConnection = 'scm:git:https://github.com/carstenartur/ai-knowledge-extractor.git'
-                        url = 'https://github.com/carstenartur/ai-knowledge-extractor'
-                    }
+                }
 
-developers {
-    developer {
-        id = 'carstenartur'
-        name = 'Carsten Hammer'
-        roles = ['developer', 'maintainer']
-    }
-}
-issueManagement {
-    system = 'GitHub Issues'
-    url = 'https://github.com/carstenartur/ai-knowledge-extractor/issues'
-}
+                developers {
+                    developer {
+                        id = 'carstenartur'
+                        name = 'Carsten Hammer'
+                        roles = ['developer', 'maintainer']
+                    }
+                }
+                issueManagement {
+                    system = 'GitHub Issues'
+                    url = 'https://github.com/carstenartur/ai-knowledge-extractor/issues'
                 }
             }
         }
@@ -101,6 +108,24 @@ issueManagement {
                     password = findProperty('gpr.key') ?: System.getenv('TOKEN') ?: System.getenv('GITHUB_TOKEN') ?: ''
                 }
             }
+        }
+    }
+
+    // Public publishing is deliberately opt-in; normal builds and GitHub
+    // Packages releases do not require public-channel credentials or signing.
+    if (providers.gradleProperty('publicDistribution').orNull == 'true') {
+        if (!(version.toString() ==~ /\d+\.\d+\.\d+/)) {
+            throw new GradleException('Public distribution requires a stable X.Y.Z releaseVersion')
+        }
+        apply plugin: 'com.vanniktech.maven.publish.base'
+        mavenPublishing {
+            publishToMavenCentral(false,
+                com.vanniktech.maven.publish.DeploymentValidation.PUBLISHED)
+            signAllPublications()
+        }
+        publishing.repositories.maven {
+            name = 'PublicValidation'
+            url = rootProject.layout.buildDirectory.dir('public-validation-repository')
         }
     }
 }

@@ -27,8 +27,15 @@ class SourceFactContractTest {
                     () -> SourceFactContract.requireCompatible("example", version));
         }
         var missing = new SourceKnowledgeResult(List.of(Map.of("kind", "file")), null, null, null, null);
-        assertThrows(SourceFactContract.ContractException.class,
+        var error = assertThrows(SourceFactContract.ContractException.class,
                 () -> SourceFactContract.normalize(missing, "example", "src/a.txt"));
+        assertTrue(error.getMessage().contains("src/a.txt"));
+        var absolute = new SourceKnowledgeResult(List.of(Map.of("kind", "file", "id", "s",
+                "language", "text", "sourceFile", "/outside/a.txt")), null, null, null, null);
+        var pathError = assertThrows(SourceFactContract.ContractException.class,
+                () -> SourceFactContract.normalize(absolute, "example", "src/a.txt"));
+        assertTrue(pathError.getMessage().contains("src/a.txt"));
+        assertTrue(pathError.getMessage().contains("/outside/a.txt"));
         var invalid = new SourceKnowledgeResult(List.of(Map.of("kind", "file", "id", "s",
                 "language", "text", "ast", new Object())), null, null, null, null);
         assertThrows(SourceFactContract.ContractException.class,

@@ -58,7 +58,7 @@ PROVIDER_ROOT="$ROOT/examples/fixtures/source-provider"
 mvn -B -f "$PROVIDER_ROOT/pom.xml" -DaiKnowledge.version="$VERSION" install \
   dependency:build-classpath -Dmdep.outputFile="$PROVIDER_ROOT/target/classpath.txt" \
   2>&1 | tee "$REPORT_DIR/source-provider.log"
-java -cp "$(cat "$PROVIDER_ROOT/target/classpath.txt")" \
+java -cp "$CORE_JAR:$(cat "$PROVIDER_ROOT/target/classpath.txt")" \
   .github/fixtures/VerifyProviderContract.java \
   "$PROVIDER_ROOT/target/text-source-provider-1.0.jar"
 

@@ -38,7 +38,7 @@ public final class SourceFactContract {
     /** Validates every category before admitting any facts; preserves unknown additive fields. */
     public static SourceKnowledgeResult normalize(
             SourceKnowledgeResult result, String providerId, String sourcePath) {
-        if (result == null) throw new ContractException("Source provider " + providerId + " returned null");
+        if (result == null) throw new ContractException("Source provider " + providerId + " returned null while analyzing " + sourcePath);
         return new SourceKnowledgeResult(
                 facts(result.sourceUnitFacts(), providerId, sourcePath, ID, KIND, LANGUAGE),
                 facts(result.symbolFacts(), providerId, sourcePath, ID, KIND),
@@ -51,20 +51,22 @@ public final class SourceFactContract {
             String providerId, String sourcePath, String... required) {
         List<Map<String, Object>> normalized = new ArrayList<>();
         for (Map<String, Object> raw : facts) {
+            String context = providerId + " while analyzing '" + sourcePath + "' (sourceFile="
+                    + raw.getOrDefault(SOURCE_FILE, sourcePath) + ")";
             Map<String, Object> fact = new LinkedHashMap<>(raw);
             fact.putIfAbsent(SOURCE_FILE, sourcePath);
             fact.putIfAbsent(PROVIDER, providerId);
             fact.putIfAbsent(CONFIDENCE, "provider-defined");
-            for (String key : required) requireText(fact, key, providerId);
-            for (String key : List.of(SOURCE_FILE, PROVIDER, CONFIDENCE)) requireText(fact, key, providerId);
+            for (String key : required) requireText(fact, key, context);
+            for (String key : List.of(SOURCE_FILE, PROVIDER, CONFIDENCE)) requireText(fact, key, context);
             String path = (String) fact.get(SOURCE_FILE);
             if (path.startsWith("/") || path.contains("\\") || path.matches("^[A-Za-z]:.*")
                     || List.of(path.split("/", -1)).contains("..")) {
-                throw new ContractException("Source provider " + providerId
+                throw new ContractException("Source provider " + context
                         + " must emit repository-relative sourceFile paths");
             }
             @SuppressWarnings("unchecked")
-            Map<String, Object> copy = (Map<String, Object>) json(fact, providerId, 0);
+            Map<String, Object> copy = (Map<String, Object>) json(fact, context, 0);
             normalized.add(copy);
         }
         return List.copyOf(normalized);

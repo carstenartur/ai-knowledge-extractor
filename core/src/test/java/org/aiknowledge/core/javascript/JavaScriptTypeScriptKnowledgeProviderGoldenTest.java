@@ -68,6 +68,18 @@ class JavaScriptTypeScriptKnowledgeProviderGoldenTest {
         }
     }
 
+    @Test
+    void distinguishesQuotedExamplesFromExecutableTemplateExpressions() throws Exception {
+        SourceKnowledgeResult result = extract("web/src/templates.ts", """
+                const quoted = "fetch('/not-a-call')";
+                const example = `axios.get('/also-not-a-call')`;
+                const rendered = `Result: ${await fetch('/api/actual')}`;
+                const nested = `Result: ${`Nested: ${await fetch('/api/nested')}`}`;
+                """);
+        assertEquals(java.util.Set.of("/api/actual", "/api/nested"), result.boundaryFacts().stream()
+                .map(fact -> fact.get("normalizedPath")).collect(java.util.stream.Collectors.toSet()));
+    }
+
     private SourceKnowledgeResult extract(String relative, String source) throws Exception {
         Path file = temp.resolve(relative);
         Files.createDirectories(file.getParent());

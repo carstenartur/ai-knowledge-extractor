@@ -183,3 +183,5 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
   <goals><goal>check</goal></goals>
 </execution>
 ```
+
+See [boundary quality gates](boundary-quality-gates.md) for opt-in policy and [corpus validation](boundary-corpus.md) for the scoring model and empirical limits.

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.aiknowledge.core.AiKnowledgeRunner;
 import org.aiknowledge.core.ExtractionOptions;
+import org.aiknowledge.core.analysis.BoundaryGateOptions;
 import org.apache.maven.plugins.annotations.Parameter;
 
 public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.AbstractMojo {
@@ -51,6 +52,22 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     protected int maxMethodsAboveCognitiveThreshold;
     @Parameter(defaultValue = "2147483647")
     protected int maxMethodsAboveCyclomaticThreshold;
+    @Parameter(property = "aiKnowledge.maxBoundaryScore", defaultValue = "-1.0")
+    protected double maxBoundaryScore = -1.0d;
+    @Parameter(property = "aiKnowledge.maxBoundaryUnresolvedCalls", defaultValue = "-1")
+    protected int maxBoundaryUnresolvedCalls = -1;
+    @Parameter(property = "aiKnowledge.maxBoundaryUnresolvedRatio", defaultValue = "-1.0")
+    protected double maxBoundaryUnresolvedRatio = -1.0d;
+    @Parameter(property = "aiKnowledge.maxBoundaryDynamicCalls", defaultValue = "-1")
+    protected int maxBoundaryDynamicCalls = -1;
+    @Parameter(property = "aiKnowledge.maxBoundaryEndpointFanOut", defaultValue = "-1")
+    protected int maxBoundaryEndpointFanOut = -1;
+    @Parameter(property = "aiKnowledge.maxBoundaryDependencySurfaceScore", defaultValue = "-1.0")
+    protected double maxBoundaryDependencySurfaceScore = -1.0d;
+    @Parameter(property = "aiKnowledge.maxBoundaryStateInterpretations", defaultValue = "-1")
+    protected int maxBoundaryStateInterpretations = -1;
+    @Parameter(property = "aiKnowledge.failOnHighSeverityBoundaryFindings", defaultValue = "false")
+    protected boolean failOnHighSeverityBoundaryFindings = false;
     @Parameter(defaultValue = "basic")
     protected String javaProvider;
     @Parameter(defaultValue = "ast")
@@ -92,6 +109,8 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
                 systemInt("aiKnowledge.maxMethodsAboveCognitiveThreshold", maxMethodsAboveCognitiveThreshold),
                 systemInt("aiKnowledge.maxMethodsAboveCyclomaticThreshold", maxMethodsAboveCyclomaticThreshold),
                 List.of());
+        base = base.withBoundaryGates(new BoundaryGateOptions(
+                maxBoundaryScore, maxBoundaryUnresolvedCalls, maxBoundaryUnresolvedRatio, maxBoundaryDynamicCalls, maxBoundaryEndpointFanOut, maxBoundaryDependencySurfaceScore, maxBoundaryStateInterpretations, failOnHighSeverityBoundaryFindings));
         List<Path> classpathPaths = resolveClasspath();
         return classpathPaths.isEmpty() ? base : base.withClasspathEntries(classpathPaths);
     }

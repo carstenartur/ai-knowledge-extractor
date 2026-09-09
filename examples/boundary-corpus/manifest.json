@@ -1,0 +1,171 @@
+{
+  "corpusVersion": "1.0",
+  "labelSource": "Hand-labelled synthetic sources; no human cognitive-load measurements",
+  "cases": [
+    {
+      "id": "clean-typed",
+      "framework": "spring/fetch",
+      "clients": [
+        "web/client.ts|3|GET|/api/view"
+      ],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/view"
+      ],
+      "links": [
+        "web/client.ts|3|GET /api/view|linked"
+      ]
+    },
+    {
+      "id": "frontend-orchestration",
+      "framework": "spring/fetch",
+      "clients": [
+        "web/client.ts|2|GET|/api/user",
+        "web/client.ts|3|GET|/api/items",
+        "web/client.ts|4|GET|/api/actions"
+      ],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/user",
+        "backend/Resource.java|GET|/api/items",
+        "backend/Resource.java|GET|/api/actions"
+      ],
+      "links": [
+        "web/client.ts|2|GET /api/user|linked",
+        "web/client.ts|3|GET /api/items|linked",
+        "web/client.ts|4|GET /api/actions|linked"
+      ]
+    },
+    {
+      "id": "backend-facade",
+      "framework": "spring/fetch",
+      "clients": [
+        "web/client.ts|2|GET|/api/workflow-view"
+      ],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/workflow-view"
+      ],
+      "links": [
+        "web/client.ts|2|GET /api/workflow-view|linked"
+      ]
+    },
+    {
+      "id": "manual-translation",
+      "framework": "spring/fetch",
+      "clients": [
+        "web/client.ts|2|GET|/api/items"
+      ],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/items"
+      ],
+      "links": [
+        "web/client.ts|2|GET /api/items|linked"
+      ]
+    },
+    {
+      "id": "backend-state",
+      "framework": "spring/fetch",
+      "clients": [
+        "web/client.ts|2|GET|/api/order"
+      ],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/order"
+      ],
+      "links": [
+        "web/client.ts|2|GET /api/order|linked"
+      ]
+    },
+    {
+      "id": "inconsistent-errors",
+      "framework": "spring/axios",
+      "clients": [
+        "web/client.ts|4|GET|/api/items",
+        "web/client.ts|8|GET|/api/items"
+      ],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/items"
+      ],
+      "links": [
+        "web/client.ts|4|GET /api/items|linked",
+        "web/client.ts|8|GET /api/items|linked"
+      ]
+    },
+    {
+      "id": "dynamic-url",
+      "framework": "spring/fetch",
+      "clients": [
+        "web/client.ts|2|GET|<dynamic>"
+      ],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/view"
+      ],
+      "links": [
+        "web/client.ts|2|GET <dynamic>|unresolved-dynamic"
+      ]
+    },
+    {
+      "id": "frontend-only",
+      "framework": "external/fetch",
+      "clients": [
+        "web/client.ts|2|GET|/remote/items"
+      ],
+      "endpoints": [],
+      "links": [
+        "web/client.ts|2|GET /remote/items|unresolved"
+      ]
+    },
+    {
+      "id": "java-only",
+      "framework": "spring/no-client",
+      "clients": [],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/items"
+      ],
+      "links": []
+    },
+    {
+      "id": "jax-rs",
+      "framework": "jax-rs/fetch",
+      "clients": [
+        "web/client.ts|2|GET|/api/items"
+      ],
+      "endpoints": [
+        "backend/Resource.java|GET|/api/items"
+      ],
+      "links": [
+        "web/client.ts|2|GET /api/items|linked"
+      ]
+    },
+    {
+      "id": "non-code-examples",
+      "framework": "none/fetch",
+      "clients": [],
+      "endpoints": [],
+      "links": []
+    }
+  ],
+  "rankings": [
+    [
+      "clean-typed",
+      "frontend-orchestration"
+    ],
+    [
+      "backend-facade",
+      "frontend-orchestration"
+    ],
+    [
+      "clean-typed",
+      "manual-translation"
+    ],
+    [
+      "clean-typed",
+      "backend-state"
+    ],
+    [
+      "clean-typed",
+      "inconsistent-errors"
+    ],
+    [
+      "clean-typed",
+      "dynamic-url"
+    ]
+  ]
+}

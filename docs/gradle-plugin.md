@@ -199,3 +199,5 @@ aiKnowledge {
     empiricalBenchmarkFixtureFile = layout.projectDirectory.file('ai-knowledge/benchmark-fixtures.yaml')
 }
 ```
+
+See [boundary quality gates](boundary-quality-gates.md) for opt-in policy and [corpus validation](boundary-corpus.md) for the scoring model and empirical limits.

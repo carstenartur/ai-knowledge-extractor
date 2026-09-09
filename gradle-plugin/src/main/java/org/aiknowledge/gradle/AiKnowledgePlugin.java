@@ -9,6 +9,7 @@ import java.util.List;
 import org.aiknowledge.core.AiKnowledgeArtifactVerifier;
 import org.aiknowledge.core.AiKnowledgeRunner;
 import org.aiknowledge.core.ExtractionOptions;
+import org.aiknowledge.core.analysis.BoundaryGateOptions;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -203,6 +204,15 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                 extension.getMaxMethodsAboveCognitiveThreshold().get(),
                 extension.getMaxMethodsAboveCyclomaticThreshold().get(),
                 List.of());
+            options = options.withBoundaryGates(new BoundaryGateOptions(
+                extension.getMaxBoundaryScore().get(),
+                extension.getMaxBoundaryUnresolvedCalls().get(),
+                extension.getMaxBoundaryUnresolvedRatio().get(),
+                extension.getMaxBoundaryDynamicCalls().get(),
+                extension.getMaxBoundaryEndpointFanOut().get(),
+                extension.getMaxBoundaryDependencySurfaceScore().get(),
+                extension.getMaxBoundaryStateInterpretations().get(),
+                extension.getFailOnHighSeverityBoundaryFindings().get()));
             List<Path> classpathEntries = resolveClasspath(project);
             if (!classpathEntries.isEmpty()) {
                 options = options.withClasspathEntries(classpathEntries);

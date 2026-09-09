@@ -349,3 +349,5 @@ The first release of this architecture does not fully resolve:
 - browser-to-backend calls hidden behind generated code that is excluded from scanning.
 
 These are coverage limitations, not reasons to use a different scoring model. Future providers should improve evidence precision while keeping common fact and metric semantics.
+
+See [boundary quality gates](boundary-quality-gates.md) for opt-in policy and [corpus validation](boundary-corpus.md) for the scoring model and empirical limits.

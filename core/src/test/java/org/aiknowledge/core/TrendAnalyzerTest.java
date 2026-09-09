@@ -1,5 +1,7 @@
 package org.aiknowledge.core;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,10 +61,32 @@ class TrendAnalyzerTest {
         assertTrue(check.contains("\"passed\":false"));
         String trend = Files.readString(output.resolve("trend.json"));
         assertTrue(trend.contains("\"baselinePresent\":true"));
-        assertTrue(trend.contains("\"baseline\":{\"estimatedContextTokens\":0"));
+        var trendValue = (java.util.Map<?, ?>) StrictJsonReader.read(output.resolve("trend.json"));
+        var baselineValue = (java.util.Map<?, ?>) trendValue.get("baseline");
+        assertEquals(0, ((Number) baselineValue.get("estimatedContextTokens")).intValue());
         assertTrue(trend.contains("\"conceptRadius\":1"));
         assertTrue(trend.contains("\"aiCognitiveDebt\":0.0"));
         assertTrue(trend.contains("AI cognitive debt increased"));
+    }
+
+    @Test
+    void boundaryDeltasRequirePresentMetricsAndTheSameModelVersion() throws Exception {
+        Path project = project("boundary-trend");
+        var options = ExtractionOptions.defaults(project, project.resolve("build/ai-knowledge"));
+        var current = java.util.Map.of("boundaryAnalysis", java.util.Map.of("score", 12,
+                "scoringModelVersion", "1.0", "clientCallCount", 1));
+        Path baseline = project.resolve("ai-knowledge/complexity-baseline.json");
+        Files.writeString(baseline, "{\"schemaVersion\":1, \"boundaryScore\" : 2, \"boundaryScoringModelVersion\":\"1.0\"}");
+        var comparable = TrendAnalyzer.trend(options, current);
+        var deltas = (java.util.Map<?, ?>) comparable.get("deltas");
+        assertEquals(10.0, ((java.util.Map<?, ?>) deltas.get("boundaryScore")).get("absolute"));
+        assertFalse(deltas.containsKey("boundaryDynamicCalls"));
+        Files.writeString(baseline, "{\"boundaryScore\":2,\"boundaryScoringModelVersion\":\"2.0\"}");
+        var incompatible = TrendAnalyzer.trend(options, current);
+        assertFalse(((java.util.Map<?, ?>) incompatible.get("deltas")).containsKey("boundaryScore"));
+        assertTrue(incompatible.get("warnings").toString().contains("scoring-model version"));
+        Files.writeString(baseline, "{\"schemaVersion\":1}");
+        assertFalse(((java.util.Map<?, ?>) TrendAnalyzer.trend(options, current).get("deltas")).containsKey("boundaryScore"));
     }
 
     private Path project(String name) throws Exception {

@@ -7,6 +7,11 @@ minor releases may add new artifact families but must document schema changes.
 
 ### Added
 
+- opt-in signed Maven Central / Gradle Plugin Portal publishing, a protected release workflow,
+  publication metadata validation and clean anonymous consumer verification;
+- a CI rehearsal using disposable signing keys; real public availability still requires account
+  setup and successful publication to both services;
+
 - opt-in boundary policies with equivalent Gradle/Maven parameters, failure evidence and HTML reports;
 - stable boundary trend measurements and an independently versioned, inspectable scoring model;
 - a labelled eleven-scenario corpus with extraction precision/recall, ranking and weight-sensitivity reports;
@@ -23,6 +28,9 @@ minor releases may add new artifact families but must document schema changes.
 - documented compatibility, backport and end-of-life rules for supported version lines.
 
 ### Fixed
+
+- Maven plugin descriptors now rebuild when the release version changes, preventing a cached
+  snapshot descriptor from being packaged under stable release coordinates;
 
 - quoted JavaScript API-call examples no longer create phantom boundary calls; executable nested
   template expressions remain visible;

@@ -2,6 +2,10 @@ plugins {
     id 'java-gradle-plugin'
 }
 
+if (providers.gradleProperty('publicDistribution').orNull == 'true') {
+    apply plugin: 'com.gradle.plugin-publish'
+}
+
 description = 'Gradle plugin for AI knowledge extraction and complexity analysis.'
 
 dependencies {
@@ -9,12 +13,15 @@ dependencies {
 }
 
 gradlePlugin {
+    website = 'https://github.com/carstenartur/ai-knowledge-extractor'
+    vcsUrl = 'https://github.com/carstenartur/ai-knowledge-extractor.git'
     plugins {
         aiKnowledge {
             id = 'org.aiknowledge.extractor'
             displayName = 'AI Knowledge Extractor'
             description = 'Generates deterministic machine-readable repository knowledge indexes and AI-oriented complexity reports.'
             implementationClass = 'org.aiknowledge.gradle.AiKnowledgePlugin'
+            tags.addAll('code-analysis', 'ai', 'architecture', 'knowledge-extraction')
         }
     }
 }

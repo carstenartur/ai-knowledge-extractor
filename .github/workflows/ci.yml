@@ -63,6 +63,9 @@ jobs:
       - name: Verify version consistency
         run: python3 .github/scripts/verify-version-consistency.py
 
+      - name: Verify public release qualification rules
+        run: python3 .github/scripts/test_public_release_candidate.py
+
       - name: Verify release-readiness metadata
         run: bash .github/scripts/verify-release-readiness.sh --metadata-only
 
@@ -114,6 +117,19 @@ jobs:
         with:
           name: consumer-fixture-diagnostics
           path: build/reports/consumer-fixtures/*.log
+          if-no-files-found: ignore
+
+      - name: Rehearse signed public distribution and clean consumers
+        run: bash .github/scripts/verify-public-distribution.sh
+
+      - name: Upload public distribution diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-distribution-rehearsal
+          path: |
+            build/reports/public-distribution/**
+            build/reports/public-consumers/**
           if-no-files-found: ignore
 
       - name: Verify Maven site generation

@@ -5,7 +5,8 @@ import re
 
 ROOT = Path(__file__).resolve().parents[2]
 for name in ("README.md", "CHANGELOG.md", "docs/release.md", "docs/releases/0.2.0.md",
-             "docs/provider-spi.md", "docs/schema-v2-migration.md", "docs/boundary-quality-gates.md", "docs/boundary-corpus.md"):
+             "docs/provider-spi.md", "docs/schema-v2-migration.md", "docs/boundary-quality-gates.md",
+             "docs/boundary-corpus.md", "docs/public-distribution.md"):
     source = ROOT / name
     for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", source.read_text()):
         if target.startswith(("https:", "http:", "mailto:", "#")):

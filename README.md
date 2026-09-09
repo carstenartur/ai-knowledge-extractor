@@ -264,6 +264,8 @@ excluded.
 
 Publication availability is stated on each release. Do not assume Maven Central availability from
 an example version alone; see the [0.2.0 release checklist](docs/release-checklist.md).
+The [public distribution runbook](docs/public-distribution.md) describes the opt-in Central/Plugin
+Portal workflow, account prerequisites and anonymous verification required for future releases.
 
 See the [changelog](CHANGELOG.md) and the [schema-v2 migration guide](docs/schema-v2-migration.md) for upgrade and baseline instructions.
 

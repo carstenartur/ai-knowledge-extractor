@@ -58,7 +58,9 @@ pom = f'''<project xmlns="http://maven.apache.org/POM/4.0.0">
 <modelVersion>4.0.0</modelVersion><groupId>fixture</groupId>
 <artifactId>anonymous-public-consumer</artifactId><version>1.0</version>{repos}
 <dependencies><dependency><groupId>org.aiknowledge</groupId>
-<artifactId>ai-knowledge-core</artifactId><version>{version}</version></dependency></dependencies>
+<artifactId>ai-knowledge-core</artifactId><version>{version}</version></dependency>
+<dependency><groupId>org.aiknowledge</groupId><artifactId>ai-knowledge-gradle-plugin</artifactId>
+<version>{version}</version><scope>runtime</scope></dependency></dependencies>
 <build><plugins><plugin><groupId>org.aiknowledge</groupId>
 <artifactId>ai-knowledge-maven-plugin</artifactId><version>{version}</version>
 <configuration><failOnWarnings>false</failOnWarnings><maxCognitiveDebt>1000.0</maxCognitiveDebt>
@@ -115,6 +117,7 @@ import json, sys
 from pathlib import Path
 data = {'version': sys.argv[2], 'publicAvailabilityVerified': sys.argv[3] == 'true',
         'credentialsUsed': False, 'sourceCompositeUsed': False, 'mavenLocalUsed': False,
-        'verifiedConsumers': ['gradle-plugin-marker', 'maven-plugin', 'core-api']}
+        'verifiedConsumers': ['gradle-plugin-marker', 'maven-plugin', 'core-api'],
+        'explicitGradleImplementationAliasResolved': True}
 (Path(sys.argv[1]) / 'summary.json').write_text(json.dumps(data, indent=2) + '\n')
 PY

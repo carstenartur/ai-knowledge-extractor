@@ -123,9 +123,29 @@ subprojects {
                 com.vanniktech.maven.publish.DeploymentValidation.PUBLISHED)
             signAllPublications()
         }
+        // The explicit Gradle artifact and pluginMaven share their input JARs.
+        // Separate signature outputs preserve Gradle's producer dependencies.
+        tasks.withType(org.gradle.plugins.signing.Sign).configureEach {
+            def signatureDirectory = layout.buildDirectory.dir("signatures/${name}").get().asFile
+            signatureType = new PublicationSignatureType(signatureDirectory)
+            doFirst { signatureDirectory.mkdirs() }
+        }
         publishing.repositories.maven {
             name = 'PublicValidation'
             url = rootProject.layout.buildDirectory.dir('public-validation-repository')
         }
+    }
+}
+
+class PublicationSignatureType extends org.gradle.plugins.signing.type.pgp.ArmoredSignatureType {
+    private final File directory
+
+    PublicationSignatureType(File directory) {
+        this.directory = directory
+    }
+
+    @Override
+    File fileFor(File toSign) {
+        return new File(directory, super.fileFor(toSign).name)
     }
 }

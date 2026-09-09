@@ -27,11 +27,12 @@ concurrency:
 
 jobs:
   qualify:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.candidate.outputs.sha }}
     steps:
+      - name: Require the workflow from main
+        run: test "$GITHUB_REF" = refs/heads/main
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0

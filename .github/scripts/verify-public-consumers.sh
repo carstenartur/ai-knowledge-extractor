@@ -41,7 +41,11 @@ portal = """exclusiveContent {
   filter { includeGroup('org.aiknowledge.extractor') }
 }""" if not repository else ''
 (work / 'gradle/settings.gradle').write_text(f'''pluginManagement {{
-    repositories {{ {local} {portal} mavenCentral() }}
+    repositories {{
+        {local}
+        {portal}
+        mavenCentral()
+    }}
 }}
 rootProject.name = 'anonymous-public-consumer'
 ''')

@@ -34,6 +34,15 @@ class CandidateEvidenceTest(unittest.TestCase):
         self.runs = []
         with self.assertRaises(ValueError): self.verify()
 
+    def test_qualifies_only_the_exact_source_and_ci_workflow(self):
+        parent = "a" * 40
+        right = {"id": 1, "head_sha": parent, "path": ".github/workflows/ci.yml", "conclusion": "failure"}
+        wrong_head = dict(right, id=2, head_sha="b" * 40, conclusion="success")
+        wrong_workflow = dict(right, id=3, path=".github/workflows/publish.yml", conclusion="success")
+        self.runs = candidate.qualified_ci_runs([right, wrong_head, wrong_workflow], parent)
+        self.assertEqual([right], self.runs)
+        with self.assertRaises(ValueError): self.verify()
+
     def test_rejects_unpublished_and_wrong_tag(self):
         for key, value in [("draft", True), ("prerelease", True), ("tag_name", "v0.2.0"), ("assets", [])]:
             with self.subTest(key=key):

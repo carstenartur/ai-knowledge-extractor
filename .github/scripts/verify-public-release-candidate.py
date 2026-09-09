@@ -18,6 +18,13 @@ def run(*args):
     return subprocess.check_output(args, text=True).strip()
 
 
+def qualified_ci_runs(runs, parent):
+    # Verify response fields as well as the request filter. Another workflow's
+    # success or another commit's green CI must never qualify this source.
+    return [item for item in runs if item.get("head_sha") == parent
+            and item.get("path") == ".github/workflows/ci.yml"]
+
+
 def validate_release_evidence(version, release, changed, runs):
     if not VERSION_RE.fullmatch(version):
         raise ValueError("version must be canonical X.Y.Z")
@@ -55,9 +62,10 @@ def main():
                     f"refs/remotes/origin/{line.branch}"], check=True)
     repo = os.environ["GITHUB_REPOSITORY"]
     release = json.loads(run("gh", "api", f"repos/{repo}/releases/tags/v{version}"))
-    runs = json.loads(run("gh", "api", f"repos/{repo}/actions/workflows/ci.yml/runs?head_sha={parent}&per_page=100"))
+    runs = json.loads(run("gh", "api", f"repos/{repo}/actions/runs?head_sha={parent}&per_page=100"))
     changed = run("git", "diff", "--name-only", parent, sha).splitlines()
-    validate_release_evidence(version, release, changed, runs["workflow_runs"])
+    validate_release_evidence(version, release, changed,
+                              qualified_ci_runs(runs["workflow_runs"], parent))
     properties = run("git", "show", f"{sha}:gradle.properties").splitlines()
     if f"projectVersion={version}" not in properties:
         raise ValueError("tag version metadata disagrees")

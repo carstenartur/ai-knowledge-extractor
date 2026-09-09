@@ -78,9 +78,12 @@ PY
 CLEAN_ENV=(env -i "PATH=$PATH" "JAVA_HOME=${JAVA_HOME:?JDK required}" LANG=C.UTF-8)
 "${CLEAN_ENV[@]}" GRADLE_USER_HOME="$WORK/gradle-home" \
   "$GRADLE" --no-daemon --refresh-dependencies -p "$WORK/gradle" \
-  aiKnowledgeCheck 2>&1 | tee "$REPORT_DIR/gradle.log"
+  optimizeAiKnowledge benchmarkAiKnowledge aiKnowledgeCheck \
+  2>&1 | tee "$REPORT_DIR/gradle.log"
 "${CLEAN_ENV[@]}" mvn -B -U -s "$WORK/settings.xml" -gs "$WORK/settings.xml" \
   -Dmaven.repo.local="$WORK/maven-cache" -f "$WORK/maven/pom.xml" \
+  org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":optimize \
+  org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":benchmark \
   org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check \
   org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":help \
   org.apache.maven.plugins:maven-dependency-plugin:3.8.1:build-classpath \
@@ -93,14 +96,18 @@ import org.aiknowledge.core.ExtractionOptions;
 class PublicCoreConsumer {
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]);
-        new AiKnowledgeRunner().check(ExtractionOptions.defaults(root, root.resolve("output")));
+        var options = ExtractionOptions.defaults(root, root.resolve("build/ai-knowledge"));
+        var runner = new AiKnowledgeRunner();
+        runner.optimize(options);
+        runner.benchmark(options);
+        runner.check(options);
     }
 }
 JAVA
 "${CLEAN_ENV[@]}" java -cp "$(cat "$WORK/classpath.txt")" \
   "$WORK/PublicCoreConsumer.java" "$WORK/core" 2>&1 | tee "$REPORT_DIR/core.log"
 CORE_JAR="$WORK/maven-cache/org/aiknowledge/ai-knowledge-core/$VERSION/ai-knowledge-core-$VERSION.jar"
-for output in "$WORK/gradle/build/ai-knowledge" "$WORK/maven/target/ai-knowledge" "$WORK/core/output"; do
+for output in "$WORK/gradle/build/ai-knowledge" "$WORK/maven/target/ai-knowledge" "$WORK/core/build/ai-knowledge"; do
   "${CLEAN_ENV[@]}" java -cp "$CORE_JAR" "$ROOT/.github/fixtures/VerifyRetainedArtifacts.java" "$output"
   python3 - "$output" <<'PY'
 import json, sys
@@ -115,7 +122,7 @@ PY
 done
 cp -R "$WORK/gradle/build/ai-knowledge" "$REPORT_DIR/gradle-output"
 cp -R "$WORK/maven/target/ai-knowledge" "$REPORT_DIR/maven-output"
-cp -R "$WORK/core/output" "$REPORT_DIR/core-output"
+cp -R "$WORK/core/build/ai-knowledge" "$REPORT_DIR/core-output"
 python3 - "$REPORT_DIR" "$VERSION" "$PUBLIC" <<'PY'
 import json, sys
 from pathlib import Path

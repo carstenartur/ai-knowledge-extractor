@@ -29,6 +29,14 @@ public abstract class AiKnowledgeExtension {
     private final Property<Double> maxAverageMethodCyclomaticComplexity;
     private final Property<Integer> maxMethodsAboveCognitiveThreshold;
     private final Property<Integer> maxMethodsAboveCyclomaticThreshold;
+    private final Property<Double> maxBoundaryScore;
+    private final Property<Integer> maxBoundaryUnresolvedCalls;
+    private final Property<Double> maxBoundaryUnresolvedRatio;
+    private final Property<Integer> maxBoundaryDynamicCalls;
+    private final Property<Integer> maxBoundaryEndpointFanOut;
+    private final Property<Double> maxBoundaryDependencySurfaceScore;
+    private final Property<Integer> maxBoundaryStateInterpretations;
+    private final Property<Boolean> failOnHighSeverityBoundaryFindings;
     private final Property<String> javaProvider;
     private final Property<String> jdtMode;
     private final Property<String> jdtWorkspaceMode;
@@ -61,6 +69,14 @@ public abstract class AiKnowledgeExtension {
         this.maxAverageMethodCyclomaticComplexity = objects.property(Double.class).convention(Double.MAX_VALUE);
         this.maxMethodsAboveCognitiveThreshold = objects.property(Integer.class).convention(Integer.MAX_VALUE);
         this.maxMethodsAboveCyclomaticThreshold = objects.property(Integer.class).convention(Integer.MAX_VALUE);
+        this.maxBoundaryScore = objects.property(Double.class).convention(project.getProviders().gradleProperty("aiKnowledge.maxBoundaryScore").map(Double::valueOf).orElse(-1.0d));
+        this.maxBoundaryUnresolvedCalls = objects.property(Integer.class).convention(project.getProviders().gradleProperty("aiKnowledge.maxBoundaryUnresolvedCalls").map(Integer::valueOf).orElse(-1));
+        this.maxBoundaryUnresolvedRatio = objects.property(Double.class).convention(project.getProviders().gradleProperty("aiKnowledge.maxBoundaryUnresolvedRatio").map(Double::valueOf).orElse(-1.0d));
+        this.maxBoundaryDynamicCalls = objects.property(Integer.class).convention(project.getProviders().gradleProperty("aiKnowledge.maxBoundaryDynamicCalls").map(Integer::valueOf).orElse(-1));
+        this.maxBoundaryEndpointFanOut = objects.property(Integer.class).convention(project.getProviders().gradleProperty("aiKnowledge.maxBoundaryEndpointFanOut").map(Integer::valueOf).orElse(-1));
+        this.maxBoundaryDependencySurfaceScore = objects.property(Double.class).convention(project.getProviders().gradleProperty("aiKnowledge.maxBoundaryDependencySurfaceScore").map(Double::valueOf).orElse(-1.0d));
+        this.maxBoundaryStateInterpretations = objects.property(Integer.class).convention(project.getProviders().gradleProperty("aiKnowledge.maxBoundaryStateInterpretations").map(Integer::valueOf).orElse(-1));
+        this.failOnHighSeverityBoundaryFindings = objects.property(Boolean.class).convention(project.getProviders().gradleProperty("aiKnowledge.failOnHighSeverityBoundaryFindings").map(Boolean::valueOf).orElse(false));
         this.javaProvider = objects.property(String.class).convention(System.getProperty("aiknowledge.javaProvider", "basic"));
         this.jdtMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.mode", "ast"));
         this.jdtWorkspaceMode = objects.property(String.class).convention(System.getProperty("aiknowledge.jdt.workspace.mode", "create"));
@@ -91,6 +107,14 @@ public abstract class AiKnowledgeExtension {
     public Property<Double> getMaxAverageMethodCyclomaticComplexity() { return maxAverageMethodCyclomaticComplexity; }
     public Property<Integer> getMaxMethodsAboveCognitiveThreshold() { return maxMethodsAboveCognitiveThreshold; }
     public Property<Integer> getMaxMethodsAboveCyclomaticThreshold() { return maxMethodsAboveCyclomaticThreshold; }
+    public Property<Double> getMaxBoundaryScore() { return maxBoundaryScore; }
+    public Property<Integer> getMaxBoundaryUnresolvedCalls() { return maxBoundaryUnresolvedCalls; }
+    public Property<Double> getMaxBoundaryUnresolvedRatio() { return maxBoundaryUnresolvedRatio; }
+    public Property<Integer> getMaxBoundaryDynamicCalls() { return maxBoundaryDynamicCalls; }
+    public Property<Integer> getMaxBoundaryEndpointFanOut() { return maxBoundaryEndpointFanOut; }
+    public Property<Double> getMaxBoundaryDependencySurfaceScore() { return maxBoundaryDependencySurfaceScore; }
+    public Property<Integer> getMaxBoundaryStateInterpretations() { return maxBoundaryStateInterpretations; }
+    public Property<Boolean> getFailOnHighSeverityBoundaryFindings() { return failOnHighSeverityBoundaryFindings; }
     public Property<String> getJavaProvider() { return javaProvider; }
     public Property<String> getJdtMode() { return jdtMode; }
     public Property<String> getJdtWorkspaceMode() { return jdtWorkspaceMode; }

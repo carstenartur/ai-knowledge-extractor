@@ -7,6 +7,10 @@ minor releases may add new artifact families but must document schema changes.
 
 ### Added
 
+- opt-in boundary policies with equivalent Gradle/Maven parameters, failure evidence and HTML reports;
+- stable boundary trend measurements and an independently versioned, inspectable scoring model;
+- a labelled eleven-scenario corpus with extraction precision/recall, ranking and weight-sensitivity reports;
+
 - a concrete schema-v1 to v2 migration guide and baseline regeneration checklist;
 - independent mixed-language consumers with retained-artifact and binary provider validation;
 - explicit Gradle provider dependencies, caller-owned Core loading, and fact-contract versioning;
@@ -17,6 +21,12 @@ minor releases may add new artifact families but must document schema changes.
 - branch/version validation in CI and release workflows;
 - exact-head verification and automatic merge of generated post-release metadata PRs;
 - documented compatibility, backport and end-of-life rules for supported version lines.
+
+### Fixed
+
+- quoted JavaScript API-call examples no longer create phantom boundary calls; executable nested
+  template expressions remain visible;
+- module-level calls in different files no longer combine into false callable fan-out.
 
 ### Changed
 

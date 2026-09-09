@@ -163,6 +163,7 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
         List<Map<String, Object>> boundaries = boundaries(
                 source,
                 commentsMasked,
+                codeMasked,
                 request.sourcePath(),
                 sourceUnitId,
                 module,
@@ -421,6 +422,7 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
     private static List<Map<String, Object>> boundaries(
             String source,
             String commentsMasked,
+            String codeMasked,
             String sourcePath,
             String sourceUnitId,
             String module,
@@ -431,9 +433,9 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
         List<Map<String, Object>> result = new ArrayList<>();
         int sequence = 0;
 
-        Matcher fetchMatcher = FETCH_CALL.matcher(commentsMasked);
+        Matcher fetchMatcher = FETCH_CALL.matcher(codeMasked);
         while (fetchMatcher.find()) {
-            int open = commentsMasked.indexOf('(', fetchMatcher.start());
+            int open = codeMasked.indexOf('(', fetchMatcher.start());
             Argument argument = firstArgument(source, open + 1);
             String callText = callText(source, open);
             String method = optionMethod(callText, "GET");
@@ -442,18 +444,18 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
                     "fetch", "http", method, argument.expression(), relations));
         }
 
-        Matcher axiosMatcher = AXIOS_METHOD_CALL.matcher(commentsMasked);
+        Matcher axiosMatcher = AXIOS_METHOD_CALL.matcher(codeMasked);
         while (axiosMatcher.find()) {
-            int open = commentsMasked.indexOf('(', axiosMatcher.start());
+            int open = codeMasked.indexOf('(', axiosMatcher.start());
             Argument argument = firstArgument(source, open + 1);
             result.add(clientCall(source, sourcePath, sourceUnitId, module, language,
                     imports, callables, axiosMatcher.start(), ++sequence,
                     "axios", "http", axiosMatcher.group(1), argument.expression(), relations));
         }
 
-        Matcher axiosConfig = AXIOS_CONFIG_CALL.matcher(commentsMasked);
+        Matcher axiosConfig = AXIOS_CONFIG_CALL.matcher(codeMasked);
         while (axiosConfig.find()) {
-            int open = commentsMasked.indexOf('(', axiosConfig.start());
+            int open = codeMasked.indexOf('(', axiosConfig.start());
             String callText = callText(source, open);
             Matcher url = AXIOS_URL_OPTION.matcher(callText);
             if (!url.find()) continue;
@@ -462,9 +464,9 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
                     "axios", "http", optionMethod(callText, "GET"), url.group(1), relations));
         }
 
-        Matcher streams = STREAM_CALL.matcher(commentsMasked);
+        Matcher streams = STREAM_CALL.matcher(codeMasked);
         while (streams.find()) {
-            int open = commentsMasked.indexOf('(', streams.start());
+            int open = codeMasked.indexOf('(', streams.start());
             Argument argument = firstArgument(source, open + 1);
             boolean webSocket = "WebSocket".equals(streams.group(1));
             result.add(clientCall(source, sourcePath, sourceUnitId, module, language,
@@ -760,25 +762,60 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
     }
 
     private static String maskStringsAndComments(String source) {
-        String commentsMasked = maskComments(source);
-        StringBuilder result = new StringBuilder(commentsMasked.length());
-        boolean string = false;
-        char quote = 0;
-        boolean escaped = false;
-        for (int index = 0; index < commentsMasked.length(); index++) {
-            char current = commentsMasked.charAt(index);
-            if (string) {
-                result.append(current == '\n' ? '\n' : ' ');
-                if (escaped) escaped = false;
-                else if (current == '\\') escaped = true;
-                else if (current == quote) string = false;
-            } else if (current == '\'' || current == '"' || current == '`') {
-                string = true;
-                quote = current;
-                result.append(' ');
-            } else result.append(current);
+        char[] masked = source.toCharArray();
+        maskCode(source, masked, 0, false);
+        return new String(masked);
+    }
+
+    private static int maskCode(String source, char[] masked, int index, boolean templateExpression) {
+        int braces = 0;
+        while (index < source.length()) {
+            char current = source.charAt(index);
+            char next = index + 1 < source.length() ? source.charAt(index + 1) : 0;
+            if (current == '/' && (next == '/' || next == '*')) {
+                int end = next == '/' ? source.indexOf('\n', index + 2) : source.indexOf("*/", index + 2);
+                end = end < 0 ? source.length() : next == '/' ? end : end + 2;
+                blank(masked, index, end);
+                index = end;
+            } else if (current == '\'' || current == '"') {
+                int end = index + 1;
+                while (end < source.length()) {
+                    char value = source.charAt(end++);
+                    if (value == '\\' && end < source.length()) end++;
+                    else if (value == current) break;
+                }
+                blank(masked, index, end);
+                index = end;
+            } else if (current == '`') {
+                masked[index++] = ' ';
+                while (index < source.length()) {
+                    char value = source.charAt(index);
+                    if (value == '$' && index + 1 < source.length() && source.charAt(index + 1) == '{') {
+                        blank(masked, index, index + 2);
+                        index = maskCode(source, masked, index + 2, true);
+                    } else if (value == '`') {
+                        masked[index++] = ' ';
+                        break;
+                    } else {
+                        int end = Math.min(source.length(), index + (value == '\\' ? 2 : 1));
+                        blank(masked, index, end);
+                        index = end;
+                    }
+                }
+            } else if (current == '}' && templateExpression && braces == 0) {
+                masked[index] = ' ';
+                return index + 1;
+            } else {
+                if (current == '{') braces++;
+                if (current == '}') braces--;
+                index++;
+            }
         }
-        return result.toString();
+        return index;
+    }
+
+    private static void blank(char[] text, int start, int end) {
+        for (int index = start; index < end; index++) if (text[index] != '\n' && text[index] != '\r') text[index] = ' ';
     }
 
     private static int matchingBrace(String source, int start) {

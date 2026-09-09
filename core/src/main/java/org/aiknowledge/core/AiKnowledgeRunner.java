@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.aiknowledge.core.linker.ClaimVerifier;
+import org.aiknowledge.core.analysis.BoundaryQualityGate;
 
 /** Public facade used by Gradle, Maven and future CLI integrations. */
 public final class AiKnowledgeRunner {
@@ -138,14 +139,19 @@ public final class AiKnowledgeRunner {
         Map knowledgeGates = KnowledgeQualityGate.evaluate(options, snapshot);
         boolean knowledgeGatesPassed = Boolean.TRUE.equals(
             knowledgeGates.get("passed"));
-        List<String> violations = qualityGateViolations(
+        List<String> violations = new ArrayList<>(qualityGateViolations(
             options,
             complexity,
             debt,
             trendViolations,
             claimFailures,
             knowledgeGatesPassed,
-            warnings);
+            warnings));
+        Map<String, Object> boundaryGate = BoundaryQualityGate.evaluate(options.boundaryGates(),
+                (Map<?, ?>) complexity.getOrDefault("boundaryAnalysis", Map.of()), snapshot);
+        for (Object value : (List<?>) boundaryGate.get("violations")) {
+            violations.add(String.valueOf(((Map<?, ?>) value).get("message")));
+        }
         boolean passed = violations.isEmpty();
 
         Map check = new LinkedHashMap();
@@ -162,6 +168,7 @@ public final class AiKnowledgeRunner {
             "codeComplexity", Map.of()));
         check.put("boundaryAnalysis", complexity.getOrDefault(
             "boundaryAnalysis", Map.of()));
+        check.put("boundaryQualityGate", boundaryGate);
         check.put("methodComplexityThresholds", methodComplexityThresholds(options));
         check.put("violations", violations);
         check.put("warningCount", warnings);
@@ -172,6 +179,8 @@ public final class AiKnowledgeRunner {
         check.put("claimFailureCount", claimFailures);
         check.put("knowledgeQualityGates", knowledgeGates);
         StableIo.writeJson(options.outputDirectory().resolve("check.json"), check);
+        StableIo.writeText(options.outputDirectory().resolve("check.html"),
+                ReportAnalyzer.html("AI Knowledge Quality Gate", check));
         return new QualityGateResult(check, violations);
     }
 

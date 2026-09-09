@@ -137,3 +137,5 @@ aiKnowledge {
 ```
 
 Violation messages in `check.json` point to specific capability IDs, claim IDs and context pack IDs, making it straightforward to identify and fix failures in CI.
+
+See [boundary quality gates](boundary-quality-gates.md) for opt-in policy and [corpus validation](boundary-corpus.md) for the scoring model and empirical limits.

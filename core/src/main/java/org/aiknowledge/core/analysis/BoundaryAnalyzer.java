@@ -99,16 +99,7 @@ public final class BoundaryAnalyzer {
                 FrontendDependencySurfaceAnalyzer.analyze(snapshot);
         int dependencyScore = number(dependencySurface.get("score"));
 
-        int total = clamp((int) Math.round(
-                0.20 * structural
-                        + 0.20 * orchestration
-                        + 0.15 * translation
-                        + 0.15 * semantic
-                        + 0.10 * error
-                        + 0.10 * dependencyScore
-                        + 0.10 * contractUncertainty));
-
-        Map<String, Object> dimensions = new LinkedHashMap<>();
+        Map<String, Map<String, Object>> dimensions = new LinkedHashMap<>();
         dimensions.put("structuralCoupling", dimension(structural,
                 "Endpoint fan-out, call-site spread and unresolved structural links."));
         dimensions.put("orchestration", dimension(orchestration,
@@ -141,12 +132,16 @@ public final class BoundaryAnalyzer {
             }
         }
 
+        int total = BoundaryScoringModel.score(dimensions, BoundaryScoringModel.WEIGHTS);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("schemaVersion", 1);
+        result.put("scoringModelVersion", BoundaryScoringModel.VERSION);
+        result.put("scoringWeights", BoundaryScoringModel.WEIGHTS);
         result.put("method", "evidence-weighted-cross-language-boundary-proxy-v1");
         result.put("score", total);
         result.put("rating", rating(total));
         result.put("confidence", confidence(clients.size(), servers.size(), linkedRatio));
+        result.put("extractionConfidence", extractionConfidence(clients, servers));
         result.put("dimensions", dimensions);
         result.put("dependencySurface", dependencySurface);
         result.put("clientCallCount", clients.size());
@@ -156,6 +151,8 @@ public final class BoundaryAnalyzer {
         result.put("unresolvedCallCount", unresolved);
         result.put("maxEndpointFanOutPerCallable", maxFanOut);
         result.put("maxCallsPerCallable", maxCallsPerCallable);
+        result.put("backendStateInterpretationCount", stateInterpretations);
+        result.put("callableProfiles", callableEvidence(clients, profiles));
         result.put("links", links);
         result.put("findings", findings);
         result.put("versionControlHistoryUsed", false);
@@ -216,7 +213,7 @@ public final class BoundaryAnalyzer {
     private static Map<String, CallProfile> profiles(List<Map<String, Object>> clients) {
         Map<String, MutableProfile> mutable = new LinkedHashMap<>();
         for (Map<String, Object> client : clients) {
-            String callable = text(client.get("callable"));
+            String callable = profileKey(client);
             MutableProfile profile = mutable.computeIfAbsent(callable,
                     ignored -> new MutableProfile());
             profile.calls++;
@@ -247,6 +244,31 @@ public final class BoundaryAnalyzer {
                     value.stateInterpretations,
                     value.errorBranches,
                     value.errorHandling));
+        }
+        return result;
+    }
+
+    private static String profileKey(Map<String, Object> client) {
+        return text(client.get("sourceFile")) + "::" + text(client.get("callable"));
+    }
+
+    private static List<Map<String, Object>> callableEvidence(
+            List<Map<String, Object>> clients, Map<String, CallProfile> profiles) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (String key : profiles.keySet().stream().sorted().toList()) {
+            CallProfile profile = profiles.get(key);
+            List<Map<String, Object>> calls = clients.stream().filter(call -> key.equals(profileKey(call))).toList();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("callable", calls.get(0).getOrDefault("callable", "<module>"));
+            row.put("sourceFile", calls.get(0).get("sourceFile"));
+            row.put("clientCallIds", calls.stream().map(call -> call.get("id")).toList());
+            row.put("operations", calls.stream().map(BoundaryAnalyzer::operation).distinct().sorted().toList());
+            row.put("endpointFanOut", profile.distinctOperations());
+            row.put("callCount", profile.calls());
+            row.put("modelTransformationCount", profile.transformations());
+            row.put("backendStateInterpretationCount", profile.stateInterpretations());
+            row.put("errorBranchCount", profile.errorBranches());
+            result.add(row);
         }
         return result;
     }
@@ -330,6 +352,15 @@ public final class BoundaryAnalyzer {
         if (score >= 50) return "high";
         if (score >= 25) return "moderate";
         return "low";
+    }
+
+    private static String extractionConfidence(List<Map<String, Object>> clients, List<Map<String, Object>> servers) {
+        if (clients.isEmpty()) return "insufficient-client-evidence";
+        List<Map<String, Object>> facts = new ArrayList<>(clients);
+        facts.addAll(servers);
+        if (facts.stream().anyMatch(fact -> Set.of("", "low", "none", "partial", "partial-expression", "provider-defined")
+                .contains(text(fact.get("confidence"))))) return "low";
+        return facts.stream().allMatch(fact -> "high".equals(fact.get("confidence"))) ? "high" : "syntactic";
     }
 
     private static String confidence(int clients, int servers, double linkedRatio) {

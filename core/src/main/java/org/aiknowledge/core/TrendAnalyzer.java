@@ -1,7 +1,7 @@
 package org.aiknowledge.core;
 
+import org.aiknowledge.core.analysis.BoundaryQualityGate;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,6 +23,10 @@ final class TrendAnalyzer {
         snapshot.put("compressionRatio", number(complexity, "compressionRatio"));
         snapshot.put("aiCognitiveComplexity", number(complexity, "aiCognitiveComplexity"));
         snapshot.put("aiCognitiveDebt", number(complexity, "aiCognitiveDebt"));
+        if (complexity.get("boundaryAnalysis") instanceof Map<?, ?> boundary) {
+            snapshot.putAll(BoundaryQualityGate.measurements(boundary));
+            snapshot.put("boundaryScoringModelVersion", boundary.get("scoringModelVersion"));
+        }
         return snapshot;
     }
 
@@ -43,6 +47,10 @@ final class TrendAnalyzer {
             report.put("deltas", new LinkedHashMap());
         } else {
             report.put("baseline", baseline);
+            if (current.containsKey("boundaryScoringModelVersion")
+                    && !java.util.Objects.equals(baseline.get("boundaryScoringModelVersion"), current.get("boundaryScoringModelVersion"))) {
+                warnings.add("Boundary trends are unavailable: baseline scoring-model version is missing or different; regenerate the baseline after review.");
+            }
             Map deltas = deltas(baseline, current);
             report.put("deltas", deltas);
             addViolation(violations, deltas, "aiCognitiveDebt", options.maxCognitiveDebtIncrease(), "AI cognitive debt increased beyond the configured threshold.");
@@ -63,37 +71,14 @@ final class TrendAnalyzer {
     private static Map loadBaseline(Path seedDirectory) throws IOException {
         Path baseline = baselinePath(seedDirectory);
         if (!Files.isRegularFile(baseline)) return null;
-        String json = Files.readString(baseline, StandardCharsets.UTF_8);
-        Map map = new LinkedHashMap();
-        putIfPresent(map, json, "estimatedContextTokens");
-        putIfPresent(map, json, "conceptRadius");
-        putIfPresent(map, json, "dependencyRadius");
-        putIfPresent(map, json, "knowledgeDensity");
-        putIfPresent(map, json, "contextLocality");
-        putIfPresent(map, json, "compressionRatio");
-        putIfPresent(map, json, "aiCognitiveComplexity");
-        putIfPresent(map, json, "aiCognitiveDebt");
-        return map;
-    }
-
-    private static void putIfPresent(Map map, String json, String key) {
-        String needle = "\"" + key + "\":";
-        int index = json.indexOf(needle);
-        if (index < 0) return;
-        int start = index + needle.length();
-        while (start < json.length() && Character.isWhitespace(json.charAt(start))) start++;
-        int end = start;
-        while (end < json.length()) {
-            char ch = json.charAt(end);
-            if ((ch >= '0' && ch <= '9') || ch == '-' || ch == '+' || ch == '.' || ch == 'E' || ch == 'e') end++; else break;
-        }
-        if (end == start) return;
-        String value = json.substring(start, end);
+        Object parsed;
         try {
-            if (value.contains(".") || value.contains("E") || value.contains("e")) map.put(key, Double.parseDouble(value)); else map.put(key, Integer.parseInt(value));
-        } catch (NumberFormatException ignored) {
-            // Ignore malformed baseline values. The missing field simply produces a delta from zero.
+            parsed = StrictJsonReader.read(baseline);
+        } catch (IllegalArgumentException exception) {
+            throw new IOException("Invalid complexity baseline: " + exception.getMessage(), exception);
         }
+        if (!(parsed instanceof Map<?, ?> values)) throw new IOException("Complexity baseline must be a JSON object");
+        return new LinkedHashMap(values);
     }
 
     private static Map deltas(Map baseline, Map current) {
@@ -106,6 +91,11 @@ final class TrendAnalyzer {
         delta(deltas, baseline, current, "compressionRatio");
         delta(deltas, baseline, current, "aiCognitiveComplexity");
         delta(deltas, baseline, current, "aiCognitiveDebt");
+        if (java.util.Objects.equals(baseline.get("boundaryScoringModelVersion"), current.get("boundaryScoringModelVersion"))) {
+            for (String key : BoundaryQualityGate.measurements(Map.of()).keySet()) {
+                if (baseline.containsKey(key) && current.containsKey(key)) delta(deltas, baseline, current, key);
+            }
+        }
         return deltas;
     }
 

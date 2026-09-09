@@ -157,4 +157,20 @@ grep -F 'benchmark (phase: verify)' "$MAVEN_LOG" >/dev/null \
 grep -F 'empiricalBenchmarkFixtureFile [java.io.File]' "$MAVEN_LOG" >/dev/null \
   || fail 'Maven help goal did not document benchmark parameters'
 
+echo 'Verifying opt-in boundary policy through published Gradle and Maven plugins'
+if "$GRADLE" --no-daemon -p "$PUBLISHED_CONSUMER" \
+  -PpublishedPlugin=true -PaiKnowledgeVersion="$VERSION" \
+  -PaiKnowledge.maxBoundaryDynamicCalls=0 checkAiKnowledgeIndex \
+  > "$REPORT_DIR/gradle-boundary-failure.log" 2>&1; then
+  fail 'published Gradle consumer ignored the boundary policy'
+fi
+python3 .github/scripts/verify-boundary-gate-failure.py "$PUBLISHED_CONSUMER/build/ai-knowledge"
+if mvn -B -f examples/fixtures/maven-consumer/pom.xml \
+  -DaiKnowledge.version="$VERSION" -DaiKnowledge.maxBoundaryDynamicCalls=0 \
+  org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check \
+  > "$REPORT_DIR/maven-boundary-failure.log" 2>&1; then
+  fail 'published Maven consumer ignored the boundary policy'
+fi
+python3 .github/scripts/verify-boundary-gate-failure.py examples/fixtures/maven-consumer/target/ai-knowledge
+
 echo "Consumer fixture verification completed; logs: $REPORT_DIR"

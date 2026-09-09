@@ -1,5 +1,6 @@
 package org.aiknowledge.core;
 
+import org.aiknowledge.core.analysis.BoundaryGateOptions;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
@@ -28,7 +29,42 @@ public record ExtractionOptions(
         double maxAverageMethodCyclomaticComplexity,
         int maxMethodsAboveCognitiveThreshold,
         int maxMethodsAboveCyclomaticThreshold,
+        List<Path> classpathEntries,
+        BoundaryGateOptions boundaryGates) {
+
+    public ExtractionOptions(
+        Path repositoryRoot,
+        Path outputDirectory,
+        Path seedDirectory,
+        Path modelProfileDirectory,
+        boolean failOnWarnings,
+        double maxCognitiveDebt,
+        double maxCognitiveDebtIncrease,
+        double maxConceptRadiusIncrease,
+        double maxContextTokenIncrease,
+        boolean empiricalBenchmarkEnabled,
+        Path empiricalBenchmarkFixtureFile,
+        boolean requireCapabilityEvidence,
+        boolean requireClaimVerification,
+        int minContextPackCount,
+        int maxContextPackTokens,
+        int maxMethodCognitiveComplexity,
+        int maxMethodCyclomaticComplexity,
+        double maxAverageMethodCognitiveComplexity,
+        double maxAverageMethodCyclomaticComplexity,
+        int maxMethodsAboveCognitiveThreshold,
+        int maxMethodsAboveCyclomaticThreshold,
         List<Path> classpathEntries) {
+        this(
+                repositoryRoot, outputDirectory, seedDirectory,
+                modelProfileDirectory, failOnWarnings, maxCognitiveDebt,
+                maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease,
+                empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile, requireCapabilityEvidence,
+                requireClaimVerification, minContextPackCount, maxContextPackTokens,
+                maxMethodCognitiveComplexity, maxMethodCyclomaticComplexity, maxAverageMethodCognitiveComplexity,
+                maxAverageMethodCyclomaticComplexity, maxMethodsAboveCognitiveThreshold, maxMethodsAboveCyclomaticThreshold,
+                classpathEntries, BoundaryGateOptions.disabled());
+    }
 
     public ExtractionOptions(
             Path repositoryRoot,
@@ -110,6 +146,7 @@ public record ExtractionOptions(
     }
 
     public ExtractionOptions {
+        boundaryGates = boundaryGates == null ? BoundaryGateOptions.disabled() : boundaryGates;
         repositoryRoot = Objects.requireNonNull(repositoryRoot, "repositoryRoot").toAbsolutePath().normalize();
         outputDirectory = Objects.requireNonNull(outputDirectory, "outputDirectory").toAbsolutePath().normalize();
         seedDirectory = seedDirectory == null ? repositoryRoot.resolve("ai-knowledge") : seedDirectory.toAbsolutePath().normalize();
@@ -142,7 +179,19 @@ public record ExtractionOptions(
                 maxMethodCognitiveComplexity, maxMethodCyclomaticComplexity,
                 maxAverageMethodCognitiveComplexity, maxAverageMethodCyclomaticComplexity,
                 maxMethodsAboveCognitiveThreshold, maxMethodsAboveCyclomaticThreshold,
-                newClasspathEntries);
+                newClasspathEntries, boundaryGates);
+    }
+
+    public ExtractionOptions withBoundaryGates(BoundaryGateOptions policy) {
+        return new ExtractionOptions(
+                repositoryRoot, outputDirectory, seedDirectory,
+                modelProfileDirectory, failOnWarnings, maxCognitiveDebt,
+                maxCognitiveDebtIncrease, maxConceptRadiusIncrease, maxContextTokenIncrease,
+                empiricalBenchmarkEnabled, empiricalBenchmarkFixtureFile, requireCapabilityEvidence,
+                requireClaimVerification, minContextPackCount, maxContextPackTokens,
+                maxMethodCognitiveComplexity, maxMethodCyclomaticComplexity, maxAverageMethodCognitiveComplexity,
+                maxAverageMethodCyclomaticComplexity, maxMethodsAboveCognitiveThreshold, maxMethodsAboveCyclomaticThreshold,
+                classpathEntries, policy);
     }
 
     public static ExtractionOptions defaults(Path repositoryRoot, Path outputDirectory) {

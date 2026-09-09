@@ -21,7 +21,7 @@ mkdir -p build/reports/public-distribution
 rm -rf build/public-validation-repository
 "$GRADLE" --no-daemon -PpublicDistribution=true -PreleaseVersion="$VERSION" \
   publishAllPublicationsToPublicValidationRepository \
-  :gradle-plugin:publishPlugins --validate-only \
+  :gradle-plugin:validatePlugins \
   2>&1 | tee build/reports/public-distribution/rehearsal.log
 python3 .github/scripts/verify-publication-metadata.py \
   build/public-validation-repository "$VERSION" \

@@ -62,7 +62,7 @@ Central still enforces ownership. No secret is needed for CI or `validate` / `ve
 `.github/scripts/verify-public-distribution.sh`:
 
 1. selects the candidate's stable version and creates a temporary CI-only signing key;
-2. publishes all publications into a disposable file repository and runs Portal `--validate-only`;
+2. publishes all publications into a disposable file repository and validates the Gradle plugin;
 3. checks the actual marker dependency graph, internal versions, POM completeness, binary/source/
    Javadoc JARs, signatures and checksums;
 4. creates consumer projects outside the checkout with empty Gradle/Maven caches and settings;
@@ -72,6 +72,10 @@ Central still enforces ownership. No secret is needed for CI or `validate` / `ve
 The private test key is deleted. `public-distribution-rehearsal` retains public diagnostics and a
 SHA-256 manifest. Its summary always says `publicAvailabilityVerified: false`. This proves local
 publication correctness, not acceptance by either service.
+
+The Portal's `publishPlugins --validate-only` still requires publishing keys in plugin-publish
+2.1.1. That check runs with real credentials immediately before the protected Portal upload;
+credential-free CI validates the local plugin and its actual publication metadata instead.
 
 ## Publish from GitHub Actions
 

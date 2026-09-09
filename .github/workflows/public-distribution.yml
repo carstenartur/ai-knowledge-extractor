@@ -131,6 +131,7 @@ jobs:
             curl --fail --silent --show-error --output /dev/null \
               "https://repo.maven.apache.org/maven2/org/aiknowledge/$artifact/$VERSION/$artifact-$VERSION.pom"
           done
+          gradle --no-daemon -PpublicDistribution=true -PreleaseVersion="$VERSION" :gradle-plugin:publishPlugins --validate-only
           gradle --no-daemon -PpublicDistribution=true -PreleaseVersion="$VERSION" :gradle-plugin:publishPlugins
 
   verify-public:

@@ -9,6 +9,7 @@ VERSION=$(grep -E '^projectVersion=' gradle.properties | head -n 1 | cut -d'=' -
 REPORT_DIR=${AI_KNOWLEDGE_CONSUMER_REPORT_DIR:-$ROOT/build/reports/consumer-fixtures}
 TRACKED_GRADLE_DOCS=examples/fixtures/gradle-consumer/docs/ai-knowledge
 PUBLISHED_GRADLE_HOME=''
+PUBLISHED_CONSUMER=''
 PUBLISH_LOG="$REPORT_DIR/publish-to-maven-local.log"
 COMPOSITE_LOG="$REPORT_DIR/gradle-composite-consumer.log"
 PUBLISHED_LOG="$REPORT_DIR/gradle-published-marker-consumer.log"
@@ -38,6 +39,7 @@ clean_outputs() {
 cleanup() {
   clean_outputs
   [[ -z "$PUBLISHED_GRADLE_HOME" ]] || rm -rf "$PUBLISHED_GRADLE_HOME"
+  [[ -z "$PUBLISHED_CONSUMER" ]] || rm -rf "$PUBLISHED_CONSUMER"
 }
 trap cleanup EXIT
 
@@ -51,8 +53,18 @@ mkdir -p "$REPORT_DIR"
 echo "Publishing ${VERSION} artifacts to Maven local for consumer fixtures"
 "$GRADLE" --no-daemon publishToMavenLocal --warning-mode all 2>&1 | tee "$PUBLISH_LOG"
 
+CORE_JAR="$HOME/.m2/repository/org/aiknowledge/ai-knowledge-core/$VERSION/ai-knowledge-core-$VERSION.jar"
+PROVIDER_ROOT="$ROOT/examples/fixtures/source-provider"
+mvn -B -f "$PROVIDER_ROOT/pom.xml" -DaiKnowledge.version="$VERSION" install \
+  dependency:build-classpath -Dmdep.outputFile="$PROVIDER_ROOT/target/classpath.txt" \
+  2>&1 | tee "$REPORT_DIR/source-provider.log"
+java -cp "$CORE_JAR:$(cat "$PROVIDER_ROOT/target/classpath.txt")" \
+  .github/fixtures/VerifyProviderContract.java \
+  "$PROVIDER_ROOT/target/text-source-provider-1.0.jar"
+
 assert_artifacts() {
   local directory=$1
+  python3 .github/scripts/verify-consumer-artifacts.py "$directory" "$CORE_JAR"
   for file in \
     index.json \
     source-units.json \
@@ -79,6 +91,7 @@ GRADLE_TASKS=(
   benchmarkAiKnowledge
   checkAiKnowledgeIndex
   publishAiKnowledgeIndex
+  verifyProviderIsolation
 )
 
 clean_outputs
@@ -88,15 +101,20 @@ echo 'Verifying Gradle consumer fixture through source composite'
   --warning-mode all \
   "${GRADLE_TASKS[@]}" 2>&1 | tee "$COMPOSITE_LOG"
 assert_artifacts examples/fixtures/gradle-consumer/build/ai-knowledge
+"$GRADLE" --no-daemon -p examples/fixtures/gradle-consumer \
+  -PpublishedPlugin=true -PaiKnowledgeVersion="$VERSION" verifyAiKnowledgeArtifacts \
+  2>&1 | tee -a "$REPORT_DIR/retained-gradle-artifacts.log"
 test -s "$TRACKED_GRADLE_DOCS/index.json" \
   || fail 'published Gradle documentation artifact is missing'
 
 clean_outputs
 PUBLISHED_GRADLE_HOME=$(mktemp -d)
+PUBLISHED_CONSUMER=$(mktemp -d)
+cp -R examples/fixtures/gradle-consumer/. "$PUBLISHED_CONSUMER/"
 echo 'Verifying the published Gradle plugin marker without a composite build'
 GRADLE_USER_HOME="$PUBLISHED_GRADLE_HOME" \
   "$GRADLE" --no-daemon --refresh-dependencies \
-  -p examples/fixtures/gradle-consumer \
+  -p "$PUBLISHED_CONSUMER" \
   -PpublishedPlugin=true \
   -PaiKnowledgeVersion="$VERSION" \
   --warning-mode all \
@@ -104,8 +122,11 @@ GRADLE_USER_HOME="$PUBLISHED_GRADLE_HOME" \
 if grep -Fq ':ai-knowledge-extractor:' "$PUBLISHED_LOG"; then
   fail 'published-plugin verification unexpectedly used the source composite build'
 fi
-assert_artifacts examples/fixtures/gradle-consumer/build/ai-knowledge
-test -s "$TRACKED_GRADLE_DOCS/index.json" \
+assert_artifacts "$PUBLISHED_CONSUMER/build/ai-knowledge"
+"$GRADLE" --no-daemon -p "$PUBLISHED_CONSUMER" \
+  -PpublishedPlugin=true -PaiKnowledgeVersion="$VERSION" verifyAiKnowledgeArtifacts \
+  2>&1 | tee -a "$REPORT_DIR/retained-gradle-artifacts.log"
+test -s "$PUBLISHED_CONSUMER/docs/ai-knowledge/index.json" \
   || fail 'published Gradle documentation artifact is missing in marker mode'
 
 echo 'Verifying every Maven plugin goal through Maven-local coordinates'

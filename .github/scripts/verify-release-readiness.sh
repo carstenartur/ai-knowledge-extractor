@@ -101,6 +101,7 @@ fi
 
 case "$RELEASE_ARTIFACT_CONTRACT" in
   schema-v2)
+    python3 .github/scripts/verify-documentation-links.py
     for script in .github/scripts/verify-published-release.sh; do
       test -s "$script" || fail "required schema-v2 release script is missing: $script"
       bash -n "$script"

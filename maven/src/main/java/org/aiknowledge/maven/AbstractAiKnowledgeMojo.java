@@ -97,7 +97,7 @@ public abstract class AbstractAiKnowledgeMojo extends org.apache.maven.plugin.Ab
     }
 
     protected final AiKnowledgeRunner runner() {
-        return new AiKnowledgeRunner();
+        return new AiKnowledgeRunner(getClass().getClassLoader());
     }
 
     protected final ScopedSystemProperties configureSystemProperties() {

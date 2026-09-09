@@ -1,5 +1,7 @@
 package org.aiknowledge.core.javahttp;
 
+import static org.aiknowledge.core.sourcespi.SourceFactContract.*;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -156,7 +158,7 @@ public final class JavaHttpBoundaryKnowledgeProvider implements SourceKnowledgeP
                         boundaries.add(fact);
 
                         Map<String, Object> relation = relation(
-                                "CALLABLE_EXPOSES_BOUNDARY",
+                                CALLABLE_EXPOSES_BOUNDARY,
                                 callable,
                                 httpMethod + " " + normalized,
                                 sourcePath);

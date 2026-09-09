@@ -160,3 +160,5 @@ Do not create normal release tags manually. The Release workflow owns the releas
 tag, package publication, GitHub Release, checksums and next-development transition. Its state
 checks support safe reruns after a partial failure and reject inconsistent tag/branch/release
 combinations.
+
+See the [changelog](../CHANGELOG.md) and the [schema-v2 migration guide](schema-v2-migration.md) for upgrade and baseline instructions.

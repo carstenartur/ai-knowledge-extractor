@@ -11,8 +11,19 @@ import org.aiknowledge.core.linker.ClaimVerifier;
 
 /** Public facade used by Gradle, Maven and future CLI integrations. */
 public final class AiKnowledgeRunner {
+    private final ClassLoader providerClassLoader;
+
+    public AiKnowledgeRunner() {
+        this(AiKnowledgeRunner.class.getClassLoader());
+    }
+
+    /** Uses a caller-owned loader; the caller keeps it open for the entire extraction. */
+    public AiKnowledgeRunner(ClassLoader providerClassLoader) {
+        this.providerClassLoader = java.util.Objects.requireNonNull(providerClassLoader, "providerClassLoader");
+    }
+
     public RepositorySnapshot generate(ExtractionOptions options) throws IOException {
-        RepositorySnapshot snapshot = new RepositoryScanner().scan(options);
+        RepositorySnapshot snapshot = new RepositoryScanner(new KnowledgeExtractionPipeline(providerClassLoader)).scan(options);
         writeKnowledgeIndex(options.outputDirectory(), options, snapshot);
         return snapshot;
     }

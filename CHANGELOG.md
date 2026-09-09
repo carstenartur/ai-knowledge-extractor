@@ -7,6 +7,11 @@ minor releases may add new artifact families but must document schema changes.
 
 ### Added
 
+- a concrete schema-v1 to v2 migration guide and baseline regeneration checklist;
+- independent mixed-language consumers with retained-artifact and binary provider validation;
+- explicit Gradle provider dependencies, caller-owned Core loading, and fact-contract versioning;
+- deterministic duplicate-provider and incompatible-contract rejection before writing artifacts;
+
 - machine-readable policy for simultaneously supported active, maintenance and end-of-life release
   lines;
 - branch/version validation in CI and release workflows;

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin>
+  <!-- This descriptor is maintained explicitly and copied by Gradle. Maven does
+       not regenerate it from @Parameter: property expressions in configuration
+       are required for command-line overrides and retain default-value fallbacks. -->
   <name>AI Knowledge Maven Plugin</name>
   <description>Generates deterministic repository knowledge indexes and reports.</description>
   <groupId>org.aiknowledge</groupId>

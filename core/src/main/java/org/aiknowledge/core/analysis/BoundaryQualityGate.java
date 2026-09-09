@@ -22,7 +22,7 @@ public final class BoundaryQualityGate {
         result.put("boundaryEndpointFanOut", number(boundary, "maxEndpointFanOutPerCallable"));
         result.put("boundaryDependencySurfaceScore", number(map(boundary.get("dependencySurface")), "score"));
         result.put("boundaryStateInterpretations", number(boundary, "backendStateInterpretationCount"));
-        result.put("highSeverityBoundaryFindings", list(boundary.get("findings")).stream()
+        result.put("boundaryHighSeverityFindings", list(boundary.get("findings")).stream()
                 .filter(finding -> "high".equals(finding.get("severity"))).count());
         return result;
     }
@@ -41,7 +41,7 @@ public final class BoundaryQualityGate {
             check(violations, values, "boundaryDependencySurfaceScore", options.maxBoundaryDependencySurfaceScore(), "dependencySurface", boundary, snapshot);
             check(violations, values, "boundaryStateInterpretations", options.maxBoundaryStateInterpretations(), "semanticCoupling", boundary, snapshot);
             if (options.failOnHighSeverityBoundaryFindings()) {
-                check(violations, values, "highSeverityBoundaryFindings", 0, "findings", boundary, snapshot);
+                check(violations, values, "boundaryHighSeverityFindings", 0, "findings", boundary, snapshot);
             }
         }
         Map<String, Object> result = new LinkedHashMap<>();

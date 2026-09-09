@@ -1,5 +1,7 @@
 package org.aiknowledge.core.javascript;
 
+import static org.aiknowledge.core.sourcespi.SourceFactContract.*;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -151,7 +153,7 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
                 imports, sourceUnitId, request.sourcePath(), language);
         for (Map<String, Object> symbol : symbols) {
             relations.add(relation(
-                    "SOURCE_UNIT_DECLARES_SYMBOL",
+                    SOURCE_UNIT_DECLARES_SYMBOL,
                     sourceUnitId,
                     String.valueOf(symbol.get("id")),
                     request.sourcePath(),
@@ -231,7 +233,7 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
         List<Map<String, Object>> result = new ArrayList<>();
         for (ImportReference reference : imports) {
             Map<String, Object> relation = relation(
-                    "SOURCE_UNIT_IMPORTS_MODULE",
+                    SOURCE_UNIT_IMPORTS_MODULE,
                     sourceUnitId,
                     reference.specifier(),
                     sourcePath,
@@ -543,7 +545,7 @@ public final class JavaScriptTypeScriptKnowledgeProvider implements SourceKnowle
         fact.put("confidence", path.literal() ? "syntactic-structural" : "low");
 
         relations.add(relation(
-                "CALLABLE_CALLS_BOUNDARY",
+                CALLABLE_CALLS_BOUNDARY,
                 callableId,
                 normalizedMethod + " " + normalized,
                 sourcePath,

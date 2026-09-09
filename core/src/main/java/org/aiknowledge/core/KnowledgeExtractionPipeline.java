@@ -29,6 +29,8 @@ import org.aiknowledge.core.sourcespi.SourceAnalysisConfiguration;
 import org.aiknowledge.core.sourcespi.SourceKnowledgeProvider;
 import org.aiknowledge.core.sourcespi.SourceKnowledgeRequest;
 import org.aiknowledge.core.sourcespi.SourceKnowledgeResult;
+import org.aiknowledge.core.sourcespi.SourceFactContract;
+import org.aiknowledge.core.sourcespi.SourceProviderRegistry;
 
 final class KnowledgeExtractionPipeline {
     private final RepositoryFileInventoryScanner inventoryScanner;
@@ -44,17 +46,26 @@ final class KnowledgeExtractionPipeline {
     private final CodeComplexityAnalyzer codeComplexityAnalyzer;
 
     KnowledgeExtractionPipeline() {
-        this(loadJavaKnowledgeProvider());
+        this(KnowledgeExtractionPipeline.class.getClassLoader());
+    }
+
+    KnowledgeExtractionPipeline(ClassLoader loader) {
+        this(loadJavaKnowledgeProvider(loader), SourceProviderRegistry.load(loader));
     }
 
     KnowledgeExtractionPipeline(JavaKnowledgeProvider javaKnowledgeProvider) {
+        this(javaKnowledgeProvider, SourceProviderRegistry.load(KnowledgeExtractionPipeline.class.getClassLoader()));
+    }
+
+    private KnowledgeExtractionPipeline(JavaKnowledgeProvider javaKnowledgeProvider,
+            List<SourceKnowledgeProvider> sourceProviders) {
         this(
                 new RepositoryFileInventoryScanner(),
                 new BuildModuleScanner(),
                 new MarkdownDocumentScanner(),
                 new RepositoryEvidenceScanner(),
                 javaKnowledgeProvider,
-                loadSourceKnowledgeProviders(),
+                sourceProviders,
                 new CapabilityLinker(),
                 new ClaimVerifier(),
                 new SeedContextGenerator(),
@@ -84,7 +95,7 @@ final class KnowledgeExtractionPipeline {
         this.codeComplexityAnalyzer = codeComplexityAnalyzer;
     }
 
-    private static JavaKnowledgeProvider loadJavaKnowledgeProvider() {
+    private static JavaKnowledgeProvider loadJavaKnowledgeProvider(ClassLoader loader) {
         String configuredProvider = System.getProperty("aiknowledge.javaProvider", "basic").trim();
         String jdtMode = System.getProperty("aiknowledge.jdt.mode", "ast").trim();
         if (configuredProvider.isBlank() || "basic".equalsIgnoreCase(configuredProvider)) {
@@ -96,7 +107,7 @@ final class KnowledgeExtractionPipeline {
             return new org.aiknowledge.core.javajdt.JdtSearchJavaKnowledgeProvider();
         }
         List<ServiceLoader.Provider<JavaKnowledgeProvider>> providers =
-                ServiceLoader.load(JavaKnowledgeProvider.class).stream()
+                ServiceLoader.load(JavaKnowledgeProvider.class, loader).stream()
                         .sorted(Comparator.comparing(provider -> provider.type().getName()))
                         .toList();
         for (ServiceLoader.Provider<JavaKnowledgeProvider> provider : providers) {
@@ -107,22 +118,6 @@ final class KnowledgeExtractionPipeline {
             }
         }
         return new BasicJavaKnowledgeProvider();
-    }
-
-    private static List<SourceKnowledgeProvider> loadSourceKnowledgeProviders() {
-        Map<String, SourceKnowledgeProvider> providers = new LinkedHashMap<>();
-        for (SourceKnowledgeProvider provider : List.of(
-                new JavaScriptTypeScriptKnowledgeProvider(),
-                new JavaHttpBoundaryKnowledgeProvider())) {
-            providers.put(provider.id(), provider);
-        }
-        for (SourceKnowledgeProvider provider : ServiceLoader.load(SourceKnowledgeProvider.class)) {
-            providers.put(provider.id(), provider);
-        }
-        return providers.values().stream()
-                .sorted(Comparator.comparingInt(SourceKnowledgeProvider::priority).reversed()
-                        .thenComparing(SourceKnowledgeProvider::id))
-                .toList();
     }
 
     private static boolean matchesProvider(String configuredProvider, String candidate) {
@@ -198,7 +193,10 @@ final class KnowledgeExtractionPipeline {
                             snapshot.modules,
                             buildMetadata,
                             Map.of()));
-                    recordSourceFacts(snapshot, provider, path, result);
+                    recordSourceFacts(snapshot, provider, path,
+                            SourceFactContract.normalize(result, provider.id(), path));
+                } catch (SourceFactContract.ContractException exception) {
+                    throw exception;
                 } catch (Exception exception) {
                     handleSourceProviderFailure(snapshot, provider, path, exception);
                 }

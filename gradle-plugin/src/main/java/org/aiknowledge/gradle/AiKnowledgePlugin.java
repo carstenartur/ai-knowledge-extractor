@@ -1,5 +1,7 @@
 package org.aiknowledge.gradle;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -19,6 +21,13 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
     public void apply(Project project) {
         AiKnowledgeExtension extension = project.getExtensions().create(
             "aiKnowledge", AiKnowledgeExtension.class, project);
+
+        project.getConfigurations().create("aiKnowledgeProviders", configuration -> {
+            configuration.setDescription("Trusted source providers used only by AI knowledge extraction.");
+            configuration.setCanBeResolved(true);
+            configuration.setCanBeConsumed(false);
+            configuration.setTransitive(true);
+        });
 
         TaskProvider<Task> generate = runnerTask(
             project,
@@ -92,6 +101,15 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
         });
     }
 
+    private static URLClassLoader providerLoader(Project project) throws java.io.IOException {
+        List<URL> urls = new ArrayList<>();
+        for (java.io.File file : project.getConfigurations().getByName("aiKnowledgeProviders")
+                .resolve().stream().sorted(java.util.Comparator.comparing(java.io.File::getAbsolutePath)).toList()) {
+            urls.add(file.toURI().toURL());
+        }
+        return new URLClassLoader(urls.toArray(URL[]::new), AiKnowledgeRunner.class.getClassLoader());
+    }
+
     private static TaskProvider<Task> runnerTask(
         Project project,
         AiKnowledgeExtension extension,
@@ -124,7 +142,7 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
             "aiknowledge.jdt.workspace.directory");
         String previousKeepJdtWorkspace = System.getProperty(
             "aiknowledge.jdt.workspace.keep");
-        try {
+        try (URLClassLoader providerLoader = providerLoader(project)) {
             String javaProvider = extension.getJavaProvider().get();
             String jdtMode = extension.getJdtMode().get();
             String jdtWorkspaceMode = extension.getJdtWorkspaceMode().get();
@@ -161,7 +179,7 @@ public final class AiKnowledgePlugin implements Plugin<Project> {
                 "aiknowledge.jdt.workspace.keep",
                 String.valueOf(keepJdtWorkspace));
 
-            AiKnowledgeRunner runner = new AiKnowledgeRunner();
+            AiKnowledgeRunner runner = new AiKnowledgeRunner(providerLoader);
             ExtractionOptions options = new ExtractionOptions(
                 project.getRootDir().toPath(),
                 extension.getOutputDirectory().get().getAsFile().toPath(),

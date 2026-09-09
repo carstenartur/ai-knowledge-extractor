@@ -6,6 +6,21 @@ plugins {
 group = 'example.consumer'
 version = '1.0.0'
 
+dependencies {
+    aiKnowledgeProviders 'example.aiknowledge:text-source-provider:1.0'
+}
+
+tasks.register('verifyProviderIsolation') {
+    doLast {
+        def leaked = configurations.compileClasspath.allDependencies.any {
+            it.group == 'example.aiknowledge'
+        } || configurations.runtimeClasspath.allDependencies.any {
+            it.group == 'example.aiknowledge'
+        }
+        if (leaked) throw new GradleException('Provider leaked into application dependencies')
+    }
+}
+
 aiKnowledge {
     failOnWarnings = false
     maxCognitiveDebt = 1000.0d

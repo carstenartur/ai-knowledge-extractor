@@ -1,0 +1,1 @@
+{"name":"consumer-web","private":true,"dependencies":{"axios":"1.18.0"},"devDependencies":{"typescript":"5.9.2"}}

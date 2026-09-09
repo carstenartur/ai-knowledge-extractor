@@ -25,6 +25,11 @@ public interface SourceKnowledgeProvider {
     /** Stable provider identifier used in configuration, evidence and diagnostics. */
     String id();
 
+    /** Fact-contract version, separate from the extractor's JSON artifact schema version. */
+    default String contractVersion() {
+        return SourceFactContract.VERSION;
+    }
+
     /** Cheap path-level capability check; this method must not read the file. */
     boolean supports(String sourcePath);
 

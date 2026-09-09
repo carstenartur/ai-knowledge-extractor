@@ -264,3 +264,5 @@ excluded.
 
 Publication availability is stated on each release. Do not assume Maven Central availability from
 an example version alone; see the [0.2.0 release checklist](docs/release-checklist.md).
+
+See the [changelog](CHANGELOG.md) and the [schema-v2 migration guide](docs/schema-v2-migration.md) for upgrade and baseline instructions.

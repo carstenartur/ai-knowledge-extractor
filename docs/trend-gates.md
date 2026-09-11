@@ -27,11 +27,11 @@ gradle analyzeAiComplexity
 cp build/ai-knowledge/metrics-snapshot.json ai-knowledge/complexity-baseline.json
 ```
 
-Commit `ai-knowledge/complexity-baseline.json` when the current metrics are accepted as the project baseline.
+Commit `ai-knowledge/complexity-baseline.json` only after reviewing and accepting the current metrics.
 
 ## Metrics compared
 
-The trend report compares:
+The trend report retains these established diagnostics:
 
 - `estimatedContextTokens`
 - `conceptRadius`
@@ -40,13 +40,18 @@ The trend report compares:
 - `contextLocality`
 - `compressionRatio`
 - `aiCognitiveComplexity`
-- `aiCognitiveDebt`
+- legacy `aiCognitiveDebt`
 
-The quality gate currently supports hard thresholds for increases in:
+When the current extraction exposes the measured context-footprint model, the snapshot additionally contains:
 
-- AI cognitive debt
-- concept radius
-- estimated context tokens
+- `aiContextDebt`: the normalized context-footprint debt used by the current absolute quality gate;
+- `contextDebtModelVersion`: the model identity derived from the context-footprint schema (for example `context-footprint-v3`).
+
+`maxCognitiveDebtIncrease` applies to `aiContextDebt` when the baseline contains the same `contextDebtModelVersion`. The legacy `aiCognitiveDebt` delta remains visible for historical diagnostics but does not override the current normalized gate.
+
+A baseline that predates the normalized model, omits `aiContextDebt`, or names a different model version is not numerically comparable. In that case the extractor emits a warning and skips only the context-debt trend gate. It does **not** silently compare unlike scoring models. Regenerate and review the baseline to restore that gate. Concept-radius and estimated-context-token trend gates remain active independently.
+
+This is the same compatibility principle used for versioned boundary scores: a model change requires a reviewed new baseline, not reinterpretation of old numbers.
 
 ## Gradle configuration
 
@@ -64,8 +69,10 @@ aiKnowledge {
 
 `checkAiKnowledgeIndex` fails when:
 
-- current `aiCognitiveDebt` exceeds `maxCognitiveDebt`,
-- a trend increase exceeds one of the configured trend thresholds,
+- current normalized `aiContextDebt` exceeds `maxCognitiveDebt`;
+- a comparable normalized context-debt trend exceeds `maxCognitiveDebtIncrease`;
+- concept radius or estimated context size exceeds its configured trend threshold;
+- configured claim/knowledge/boundary gates fail;
 - or `failOnWarnings = true` and warnings are present.
 
 ## Maven configuration
@@ -73,14 +80,14 @@ aiKnowledge {
 The Maven check goal supports the same thresholds through system properties:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:0.1.0-SNAPSHOT:check \
+mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check \
   -DaiKnowledge.maxCognitiveDebt=100.0 \
   -DaiKnowledge.maxCognitiveDebtIncrease=0.5 \
   -DaiKnowledge.maxConceptRadiusIncrease=2.0 \
   -DaiKnowledge.maxContextTokenIncrease=1000.0
 ```
 
-The thresholds are disabled by default. Use finite values to enforce trend gates in CI.
+The trend thresholds are disabled by default. Use finite values to enforce them in CI.
 
 ## Knowledge quality gates
 

@@ -107,11 +107,7 @@ jobs:
             fi
           else
             release="$repository_release"
-            exact=$(python3 - <<'PY'
-            import os
-            print(os.environ.get('EXACT_NEXT_VERSION', '').strip())
-            PY
-            )
+            exact=$(python3 -c 'import os; print(os.environ.get("EXACT_NEXT_VERSION", "").strip())')
             if [[ -n "$exact" ]]; then
               next="$exact"
               source=exact

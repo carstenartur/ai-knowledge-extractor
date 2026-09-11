@@ -3,7 +3,7 @@
   "releaseVersion": "0.1.10",
   "nextDevelopmentVersion": "0.1.11-SNAPSHOT",
   "skipTests": false,
-  "dryRun": true,
-  "requestId": "maintenance-0.1.10-dry-run-2",
-  "qualifiedCommit": "7079d8309c24018ded9935017f1ff56de568d7ee"
+  "dryRun": false,
+  "requestId": "maintenance-0.1.10-release",
+  "qualifiedCommit": "543b6180a608136c4e7662c5051f3ce1328fb443"
 }

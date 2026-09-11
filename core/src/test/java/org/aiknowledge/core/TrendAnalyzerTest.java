@@ -1,11 +1,14 @@
 package org.aiknowledge.core;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,14 +33,16 @@ class TrendAnalyzerTest {
     }
 
     @Test
-    void checkFailsWhenTrendThresholdIsExceeded() throws Exception {
+    void checkFailsWhenComparableNormalizedDebtTrendThresholdIsExceeded() throws Exception {
         Path project = project("trend-gate-fixture");
         Files.writeString(project.resolve("ai-knowledge/complexity-baseline.json"), """
                 {
                   "schemaVersion": 1,
                   "estimatedContextTokens": 0,
                   "conceptRadius": 1,
-                  "aiCognitiveDebt": 0.0
+                  "aiCognitiveDebt": 0.0,
+                  "aiContextDebt": 0.0,
+                  "contextDebtModelVersion": "context-footprint-v3"
                 }
                 """);
         Path output = project.resolve("build/ai-knowledge");
@@ -59,10 +64,70 @@ class TrendAnalyzerTest {
         assertTrue(check.contains("\"passed\":false"));
         String trend = Files.readString(output.resolve("trend.json"));
         assertTrue(trend.contains("\"baselinePresent\":true"));
-        assertTrue(trend.contains("\"baseline\":{\"estimatedContextTokens\":0"));
         assertTrue(trend.contains("\"conceptRadius\":1"));
-        assertTrue(trend.contains("\"aiCognitiveDebt\":0.0"));
-        assertTrue(trend.contains("AI cognitive debt increased"));
+        assertTrue(trend.contains("\"contextDebtModelVersion\":\"context-footprint-v3\""));
+        assertTrue(trend.contains("AI context debt increased"));
+    }
+
+    @Test
+    void normalizedContextDebtTrendIgnoresLegacyDebtGrowth() throws Exception {
+        Path project = project("normalized-context-debt-trend");
+        Files.writeString(project.resolve("ai-knowledge/complexity-baseline.json"), """
+                {
+                  "schemaVersion": 1,
+                  "aiCognitiveDebt": 600.0,
+                  "aiContextDebt": 17.11,
+                  "contextDebtModelVersion": "context-footprint-v3"
+                }
+                """);
+        var trend = TrendAnalyzer.trend(
+                trendOptions(project, 0.0d),
+                Map.of(
+                        "aiCognitiveDebt", 700.0d,
+                        "aiContextDebt", 17.10d,
+                        "contextFootprint", Map.of("schemaVersion", 3)));
+
+        var deltas = (Map<?, ?>) trend.get("deltas");
+        assertEquals(-0.01d,
+                ((Number) ((Map<?, ?>) deltas.get("aiContextDebt")).get("absolute")).doubleValue(),
+                0.000001d);
+        assertEquals(100.0d,
+                ((Number) ((Map<?, ?>) deltas.get("aiCognitiveDebt")).get("absolute")).doubleValue());
+        assertEquals(0, trend.get("violationCount"));
+    }
+
+    @Test
+    void legacyDebtBaselineRequiresReviewedNormalizedBaselineBeforeDebtTrendGating() throws Exception {
+        Path project = project("legacy-context-debt-baseline");
+        Files.writeString(project.resolve("ai-knowledge/complexity-baseline.json"), """
+                {
+                  "schemaVersion": 1,
+                  "aiCognitiveDebt": 600.0
+                }
+                """);
+        var trend = TrendAnalyzer.trend(
+                trendOptions(project, 0.0d),
+                Map.of(
+                        "aiCognitiveDebt", 700.0d,
+                        "aiContextDebt", 17.10d,
+                        "contextFootprint", Map.of("schemaVersion", 3)));
+
+        assertEquals(0, trend.get("violationCount"));
+        assertTrue(trend.get("warnings").toString().contains("context-debt model"));
+        assertFalse(((Map<?, ?>) trend.get("deltas")).containsKey("aiContextDebt"));
+    }
+
+    private ExtractionOptions trendOptions(Path project, double maxDebtIncrease) {
+        return new ExtractionOptions(
+                project,
+                project.resolve("build/ai-knowledge"),
+                project.resolve("ai-knowledge"),
+                project.resolve("ai-knowledge"),
+                false,
+                100.0d,
+                maxDebtIncrease,
+                Double.MAX_VALUE,
+                Double.MAX_VALUE);
     }
 
     private Path project(String name) throws Exception {

@@ -33,14 +33,16 @@ class TrendAnalyzerTest {
     }
 
     @Test
-    void checkFailsWhenTrendThresholdIsExceeded() throws Exception {
+    void checkFailsWhenComparableNormalizedDebtTrendThresholdIsExceeded() throws Exception {
         Path project = project("trend-gate-fixture");
         Files.writeString(project.resolve("ai-knowledge/complexity-baseline.json"), """
                 {
                   "schemaVersion": 1,
                   "estimatedContextTokens": 0,
                   "conceptRadius": 1,
-                  "aiCognitiveDebt": 0.0
+                  "aiCognitiveDebt": 0.0,
+                  "aiContextDebt": 0.0,
+                  "contextDebtModelVersion": "context-footprint-v3"
                 }
                 """);
         Path output = project.resolve("build/ai-knowledge");
@@ -66,8 +68,8 @@ class TrendAnalyzerTest {
         var baselineValue = (java.util.Map<?, ?>) trendValue.get("baseline");
         assertEquals(0, ((Number) baselineValue.get("estimatedContextTokens")).intValue());
         assertTrue(trend.contains("\"conceptRadius\":1"));
-        assertTrue(trend.contains("\"aiCognitiveDebt\":0.0"));
-        assertTrue(trend.contains("AI cognitive debt increased"));
+        assertTrue(trend.contains("\"contextDebtModelVersion\":\"context-footprint-v3\""));
+        assertTrue(trend.contains("AI context debt increased"));
     }
 
     @Test

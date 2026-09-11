@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -70,6 +71,55 @@ class TrendAnalyzerTest {
     }
 
     @Test
+    void normalizedContextDebtTrendIgnoresLegacyDebtGrowth() throws Exception {
+        Path project = project("normalized-context-debt-trend");
+        Files.writeString(project.resolve("ai-knowledge/complexity-baseline.json"), """
+                {
+                  "schemaVersion": 1,
+                  "aiCognitiveDebt": 600.0,
+                  "aiContextDebt": 17.11,
+                  "contextDebtModelVersion": "context-footprint-v3"
+                }
+                """);
+        var trend = TrendAnalyzer.trend(
+                trendOptions(project, 0.0d),
+                Map.of(
+                        "aiCognitiveDebt", 700.0d,
+                        "aiContextDebt", 17.10d,
+                        "contextFootprint", Map.of("schemaVersion", 3)));
+
+        var deltas = (Map<?, ?>) trend.get("deltas");
+        assertEquals(-0.01d,
+                ((Number) ((Map<?, ?>) deltas.get("aiContextDebt")).get("absolute")).doubleValue(),
+                0.000001d);
+        assertEquals(100.0d,
+                ((Number) ((Map<?, ?>) deltas.get("aiCognitiveDebt")).get("absolute")).doubleValue());
+        assertEquals(0, trend.get("violationCount"),
+                "the trend gate must use the normalized debt model, not its legacy diagnostic alias");
+    }
+
+    @Test
+    void legacyDebtBaselineRequiresReviewedNormalizedBaselineBeforeDebtTrendGating() throws Exception {
+        Path project = project("legacy-context-debt-baseline");
+        Files.writeString(project.resolve("ai-knowledge/complexity-baseline.json"), """
+                {
+                  "schemaVersion": 1,
+                  "aiCognitiveDebt": 600.0
+                }
+                """);
+        var trend = TrendAnalyzer.trend(
+                trendOptions(project, 0.0d),
+                Map.of(
+                        "aiCognitiveDebt", 700.0d,
+                        "aiContextDebt", 17.10d,
+                        "contextFootprint", Map.of("schemaVersion", 3)));
+
+        assertEquals(0, trend.get("violationCount"));
+        assertTrue(trend.get("warnings").toString().contains("context-debt model"));
+        assertFalse(((Map<?, ?>) trend.get("deltas")).containsKey("aiContextDebt"));
+    }
+
+    @Test
     void boundaryDeltasRequirePresentMetricsAndTheSameModelVersion() throws Exception {
         Path project = project("boundary-trend");
         var options = ExtractionOptions.defaults(project, project.resolve("build/ai-knowledge"));
@@ -87,6 +137,19 @@ class TrendAnalyzerTest {
         assertTrue(incompatible.get("warnings").toString().contains("scoring-model version"));
         Files.writeString(baseline, "{\"schemaVersion\":1}");
         assertFalse(((java.util.Map<?, ?>) TrendAnalyzer.trend(options, current).get("deltas")).containsKey("boundaryScore"));
+    }
+
+    private ExtractionOptions trendOptions(Path project, double maxDebtIncrease) {
+        return new ExtractionOptions(
+                project,
+                project.resolve("build/ai-knowledge"),
+                project.resolve("ai-knowledge"),
+                project.resolve("ai-knowledge"),
+                false,
+                100.0d,
+                maxDebtIncrease,
+                Double.MAX_VALUE,
+                Double.MAX_VALUE);
     }
 
     private Path project(String name) throws Exception {

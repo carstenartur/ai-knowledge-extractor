@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "0.1.10",
+  "nextDevelopmentVersion": "0.1.11-SNAPSHOT",
+  "skipTests": false,
+  "dryRun": true,
+  "requestId": "maintenance-0.1.10-dry-run",
+  "qualifiedCommit": "d52d742a4028c507ff86e5c708707599a61851b9"
+}

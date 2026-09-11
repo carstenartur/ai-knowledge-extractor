@@ -8,8 +8,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 final class TrendAnalyzer {
+    private static final String CONTEXT_DEBT_MODEL_PREFIX = "context-footprint-v";
+
     private TrendAnalyzer() {}
 
     static Map snapshot(Map complexity) {
@@ -23,6 +26,11 @@ final class TrendAnalyzer {
         snapshot.put("compressionRatio", number(complexity, "compressionRatio"));
         snapshot.put("aiCognitiveComplexity", number(complexity, "aiCognitiveComplexity"));
         snapshot.put("aiCognitiveDebt", number(complexity, "aiCognitiveDebt"));
+        String contextDebtModelVersion = contextDebtModelVersion(complexity);
+        if (contextDebtModelVersion != null) {
+            snapshot.put("aiContextDebt", number(complexity, "aiContextDebt"));
+            snapshot.put("contextDebtModelVersion", contextDebtModelVersion);
+        }
         if (complexity.get("boundaryAnalysis") instanceof Map<?, ?> boundary) {
             snapshot.putAll(BoundaryQualityGate.measurements(boundary));
             snapshot.put("boundaryScoringModelVersion", boundary.get("scoringModelVersion"));
@@ -47,13 +55,22 @@ final class TrendAnalyzer {
             report.put("deltas", new LinkedHashMap());
         } else {
             report.put("baseline", baseline);
+            boolean comparableContextDebt = comparableContextDebt(baseline, current, warnings);
             if (current.containsKey("boundaryScoringModelVersion")
-                    && !java.util.Objects.equals(baseline.get("boundaryScoringModelVersion"), current.get("boundaryScoringModelVersion"))) {
+                    && !Objects.equals(baseline.get("boundaryScoringModelVersion"), current.get("boundaryScoringModelVersion"))) {
                 warnings.add("Boundary trends are unavailable: baseline scoring-model version is missing or different; regenerate the baseline after review.");
             }
-            Map deltas = deltas(baseline, current);
+            Map deltas = deltas(baseline, current, comparableContextDebt);
             report.put("deltas", deltas);
-            addViolation(violations, deltas, "aiCognitiveDebt", options.maxCognitiveDebtIncrease(), "AI cognitive debt increased beyond the configured threshold.");
+            if (current.containsKey("contextDebtModelVersion")) {
+                if (comparableContextDebt) {
+                    addViolation(violations, deltas, "aiContextDebt", options.maxCognitiveDebtIncrease(),
+                            "AI context debt increased beyond the configured threshold.");
+                }
+            } else {
+                addViolation(violations, deltas, "aiCognitiveDebt", options.maxCognitiveDebtIncrease(),
+                        "AI cognitive debt increased beyond the configured threshold.");
+            }
             addViolation(violations, deltas, "conceptRadius", options.maxConceptRadiusIncrease(), "Concept radius increased beyond the configured threshold.");
             addViolation(violations, deltas, "estimatedContextTokens", options.maxContextTokenIncrease(), "Estimated context size increased beyond the configured threshold.");
         }
@@ -81,7 +98,19 @@ final class TrendAnalyzer {
         return new LinkedHashMap(values);
     }
 
-    private static Map deltas(Map baseline, Map current) {
+    private static boolean comparableContextDebt(Map baseline, Map current, List warnings) {
+        Object currentVersion = current.get("contextDebtModelVersion");
+        if (currentVersion == null) return false;
+        boolean comparable = Objects.equals(baseline.get("contextDebtModelVersion"), currentVersion)
+                && baseline.get("aiContextDebt") instanceof Number
+                && current.get("aiContextDebt") instanceof Number;
+        if (!comparable) {
+            warnings.add("AI context-debt trend is unavailable: baseline context-debt model is missing or different; regenerate the baseline after review.");
+        }
+        return comparable;
+    }
+
+    private static Map deltas(Map baseline, Map current, boolean comparableContextDebt) {
         Map deltas = new LinkedHashMap();
         delta(deltas, baseline, current, "estimatedContextTokens");
         delta(deltas, baseline, current, "conceptRadius");
@@ -91,12 +120,21 @@ final class TrendAnalyzer {
         delta(deltas, baseline, current, "compressionRatio");
         delta(deltas, baseline, current, "aiCognitiveComplexity");
         delta(deltas, baseline, current, "aiCognitiveDebt");
-        if (java.util.Objects.equals(baseline.get("boundaryScoringModelVersion"), current.get("boundaryScoringModelVersion"))) {
+        if (comparableContextDebt) delta(deltas, baseline, current, "aiContextDebt");
+        if (Objects.equals(baseline.get("boundaryScoringModelVersion"), current.get("boundaryScoringModelVersion"))) {
             for (String key : BoundaryQualityGate.measurements(Map.of()).keySet()) {
                 if (baseline.containsKey(key) && current.containsKey(key)) delta(deltas, baseline, current, key);
             }
         }
         return deltas;
+    }
+
+    private static String contextDebtModelVersion(Map complexity) {
+        if (!(complexity.get("aiContextDebt") instanceof Number)) return null;
+        if (!(complexity.get("contextFootprint") instanceof Map<?, ?> footprint)) return null;
+        Object schemaVersion = footprint.get("schemaVersion");
+        if (!(schemaVersion instanceof Number number)) return null;
+        return CONTEXT_DEBT_MODEL_PREFIX + number.intValue();
     }
 
     private static void delta(Map deltas, Map baseline, Map current, String key) {

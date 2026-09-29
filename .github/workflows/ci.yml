@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
 
       - name: Verify supported release-line policy
         env:
@@ -71,7 +71,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6.3.0
         with:
-          gradle-version: '9.5.1'
+          gradle-version: '9.7.1'
 
       - name: Build
         run: |

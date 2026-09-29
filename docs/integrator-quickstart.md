@@ -1,7 +1,8 @@
 # Integrator quickstart: mixed Java and JavaScript/TypeScript repositories
 
 This guide uses [`examples/mixed-java-web`](../examples/mixed-java-web) to show the complete
-frontend/backend path. The extractor itself runs on Java 17 or newer. **Node.js is not required**
+frontend/backend path. JDK 25 is used for the extractor build, tests and consumer verification.
+Published artifacts retain their Java 17 bytecode target for compatibility. **Node.js is not required**
 for the built-in structural JavaScript/TypeScript provider.
 
 ## Supported source files

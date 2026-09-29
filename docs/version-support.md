@@ -17,6 +17,13 @@ that maintenance line**. It is not an update or downgrade of `main`, which devel
 `0.2.x` line. Pull requests and version numbers must always be interpreted together with their base
 branch and artifact contract.
 
+## Java build and artifact compatibility
+
+The build, tests, Javadocs and CI workflows use JDK 25. Published artifacts keep
+their Java 17 API and bytecode target within these release lines. Updating the
+build JDK does not change the artifact schema or metric semantics. Any future
+increase in the minimum consumer JVM follows the compatibility policy below.
+
 ## Support levels
 
 ### Active

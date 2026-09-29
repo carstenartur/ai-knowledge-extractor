@@ -168,16 +168,16 @@ jobs:
             echo "- GitHub latest flag: \`$RELEASE_LATEST_ARGUMENT\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Set up JDK 17
+      - name: Set up JDK 25
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
         with:
-          gradle-version: '9.5.1'
+          gradle-version: '9.7.1'
 
       - name: Verify the exact release candidate
         shell: bash

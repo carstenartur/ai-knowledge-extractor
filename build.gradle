@@ -10,7 +10,7 @@ subprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(25)
         }
         withSourcesJar()
         withJavadocJar()
@@ -33,6 +33,7 @@ subprojects {
 
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
+        // Keep the published Java API/bytecode contract while building and testing on JDK 25.
         options.release = 17
     }
 

@@ -3,7 +3,7 @@
 [![CI](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/endpoint?url=https://carstenartur.github.io/ai-knowledge-extractor/site/badges/tests.json)](https://carstenartur.github.io/ai-knowledge-extractor/site/tests/)
 [![License](https://img.shields.io/github/license/carstenartur/ai-knowledge-extractor)](LICENSE)
-![Java 17](https://img.shields.io/badge/Java-17-blue)
+![Build JDK 25](https://img.shields.io/badge/Build_JDK-25-blue)
 [![Latest release](https://img.shields.io/github/v/release/carstenartur/ai-knowledge-extractor?sort=semver)](https://github.com/carstenartur/ai-knowledge-extractor/releases)
 [![GitHub Packages](https://img.shields.io/badge/packages-GitHub%20Packages-blue)](docs/publishing.md)
 [![Citation](https://img.shields.io/badge/citation-CFF-informational)](CITATION.cff)
@@ -52,6 +52,17 @@ Cognitive load rarely grows in one obvious step. It can increase incrementally a
 To make that drift visible, the project supports committed metric baselines, trend reports and configurable quality gates. CI can be configured to reject increases beyond selected thresholds—for example in estimated context tokens, concept radius or AI cognitive debt—and to limit individual context-pack size. This is intended to preserve an accepted cognitive-load budget as the repository evolves, instead of treating reduction as a one-time optimization.
 
 These thresholds are disabled by default and must be calibrated for the repository, task set and target model profiles. They are experimental guardrails rather than proof that a model will succeed or fail. Their practical value must be validated against empirical task outcomes. Configuration details are documented in [`docs/trend-gates.md`](docs/trend-gates.md).
+
+## Build requirements
+
+Use JDK 25 and the checked-in Gradle wrapper to build, test and generate Javadocs.
+CI, release verification and the Gradle/Maven consumer fixtures also run on JDK 25.
+A separate JDK 17 installation is not needed.
+
+Published classes retain the Java 17 API and bytecode target (`--release 17`) to
+preserve compatibility within the supported release lines. This target is separate
+from the JDK used to compile and execute the extractor; it does not change the
+source languages the extractor can analyse or its report schema.
 
 ## Quick start
 

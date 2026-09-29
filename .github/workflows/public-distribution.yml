@@ -57,10 +57,10 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
       - uses: gradle/actions/setup-gradle@v6.3.0
         with:
-          gradle-version: '9.5.1'
+          gradle-version: '9.7.1'
           cache-disabled: true
       - name: Build and validate signed publications without uploading
         if: inputs.mode != 'verify-public'
@@ -92,10 +92,10 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
       - uses: gradle/actions/setup-gradle@v6.3.0
         with:
-          gradle-version: '9.5.1'
+          gradle-version: '9.7.1'
           cache-disabled: true
       - name: Publish signed artifacts to Maven Central and wait for PUBLISHED
         if: inputs.mode == 'publish-central'
@@ -146,10 +146,10 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
       - uses: gradle/actions/setup-gradle@v6.3.0
         with:
-          gradle-version: '9.5.1'
+          gradle-version: '9.7.1'
           cache-disabled: true
       - name: Verify anonymous consumers on both public channels
         env:

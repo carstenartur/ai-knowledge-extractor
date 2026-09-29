@@ -3,7 +3,7 @@
 [![CI](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/endpoint?url=https://carstenartur.github.io/ai-knowledge-extractor/site/badges/tests.json)](https://carstenartur.github.io/ai-knowledge-extractor/site/tests/)
 [![License](https://img.shields.io/github/license/carstenartur/ai-knowledge-extractor)](LICENSE)
-![Java 17](https://img.shields.io/badge/Java-17-blue)
+![Build JDK 25](https://img.shields.io/badge/Build_JDK-25-blue)
 [![Latest release](https://img.shields.io/github/v/release/carstenartur/ai-knowledge-extractor?sort=semver)](https://github.com/carstenartur/ai-knowledge-extractor/releases)
 [![GitHub Packages](https://img.shields.io/badge/packages-GitHub%20Packages-blue)](docs/publishing.md)
 [![Citation](https://img.shields.io/badge/citation-CFF-informational)](CITATION.cff)
@@ -13,6 +13,17 @@
 Deterministic build-integrated knowledge extraction for AI-assisted code understanding.
 
 This repository provides a Java core plus Gradle and Maven entry points. It generates stable files under `build/ai-knowledge/` for modules, classes, tests, docs, dependencies, capabilities, claims, complexity metrics, optimization hints and context-profile benchmark estimates.
+
+## Build requirements
+
+Use JDK 25 and the checked-in Gradle wrapper to build, test and generate Javadocs.
+CI, release verification and the Gradle/Maven consumer fixtures also run on JDK 25.
+A separate JDK 17 installation is not needed.
+
+Published classes retain the Java 17 API and bytecode target (`--release 17`) to
+preserve compatibility within this maintenance line. The schema-v1 report contract
+and analysis semantics are unchanged. Regelsuche can use its normal explicit
+composite-build mode to qualify the upgraded toolchain before a release.
 
 ## Quick start
 

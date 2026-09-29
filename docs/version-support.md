@@ -17,6 +17,13 @@ that maintenance line**. It is not an update or downgrade of `main`, which devel
 `0.2.x` line. Pull requests and version numbers must always be interpreted together with their base
 branch and artifact contract.
 
+## Java build and artifact compatibility
+
+This maintenance branch uses JDK 25 for its build, tests, Javadocs and CI workflows.
+Published artifacts keep their Java 17 API and bytecode target. This build
+compatibility backport preserves schema-v1 and its existing metric semantics;
+it does not import the active line's schema-v2 implementation.
+
 ## Support levels
 
 ### Active

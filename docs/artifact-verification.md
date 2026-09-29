@@ -70,7 +70,7 @@ The verifier rejects:
 - disagreement between `check.json` and `complexity.json`;
 - a passing `check.json` with violations or a failing `check.json` without violations.
 
-The parser and verifier are dependency-free Java 17 code in the core artifact, so Gradle and Maven use the same implementation.
+The parser and verifier are dependency-free code in the core artifact, built and tested with JDK 25 while retaining Java 17-compatible bytecode. Gradle and Maven use the same implementation.
 
 ## What verification does not claim
 

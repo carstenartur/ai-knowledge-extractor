@@ -3,7 +3,7 @@
   "releaseVersion": "0.2.1",
   "nextDevelopmentVersion": "0.2.2-SNAPSHOT",
   "skipTests": false,
-  "dryRun": true,
-  "requestId": "main-0.2.1-dry-run-20261101",
-  "qualifiedCommit": "f960127cad52d53d7db0ca33c3a195ab1c50d393"
+  "dryRun": false,
+  "requestId": "main-0.2.1-release-20261101",
+  "qualifiedCommit": "006fc3b0391be8d020d3a0c27a4af8ae3a335e7a"
 }

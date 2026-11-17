@@ -7,7 +7,7 @@
   <description>Generates deterministic repository knowledge indexes and reports.</description>
   <groupId>io.github.carstenartur</groupId>
   <artifactId>ai-knowledge-maven-plugin</artifactId>
-  <version>0.2.2-SNAPSHOT</version>
+  <version>0.2.2</version>
   <goalPrefix>ai-knowledge</goalPrefix>
   <mojos>
     <mojo>

@@ -1,6 +1,6 @@
 # Consuming AI Knowledge Extractor
 
-Release [0.2.2](https://github.com/carstenartur/ai-knowledge-extractor/releases/tag/v0.2.2) provides downloadable JARs and checksums. Its first Maven Central upload is pending. Follow [issue #100](https://github.com/carstenartur/ai-knowledge-extractor/issues/100) for Central and Plugin Portal availability. Use a version listed in the registry for the examples below. [Central versions](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin) · [Gradle Plugin Portal versions](https://plugins.gradle.org/plugin/io.github.carstenartur.ai-knowledge-extractor)
+Release [0.2.2](https://github.com/carstenartur/ai-knowledge-extractor/releases/tag/v0.2.2) provides downloadable JARs and checksums. Core, the Maven plugin and the Gradle plugin (including its marker) are available from [Maven Central](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin/0.2.2). Follow [issue #100](https://github.com/carstenartur/ai-knowledge-extractor/issues/100) for Plugin Portal availability.
 
 | Consumer | Coordinate |
 | --- | --- |
@@ -11,10 +11,10 @@ Release [0.2.2](https://github.com/carstenartur/ai-knowledge-extractor/releases/
 
 ## Maven
 
-Maven includes Central in its default repository and plugin repository settings. Pin the same published version wherever a build uses Core and the Maven plugin. Replace `VERSION` in this example and run it from the root of the project to analyse.
+Maven includes Central in its default repository and plugin repository settings. Pin the same published version wherever a build uses Core and the Maven plugin. Run the following command from the root of the project to analyse.
 
 ```bash
-mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.2.2:check
 ```
 
 To call the extractor from Java, declare Core as a normal dependency.
@@ -23,13 +23,13 @@ To call the extractor from Java, declare Core as a normal dependency.
 <dependency>
   <groupId>io.github.carstenartur</groupId>
   <artifactId>ai-knowledge-core</artifactId>
-  <version>VERSION</version>
+  <version>0.2.2</version>
 </dependency>
 ```
 
 ## Gradle
 
-For a version published to Central, place `mavenCentral()` in the **plugin-management** repositories in `settings.gradle`. This resolves the plugin marker and its implementation from Central, including while initial Plugin Portal approval is pending. Keep the Portal in the repository list for other plugins.
+Place `mavenCentral()` in the plugin-management repositories in `settings.gradle`. This lets Gradle resolve the marker, implementation and Core dependency for `0.2.2` from Maven Central. Keep the Portal in the repository list for other plugins.
 
 ```groovy
 // settings.gradle
@@ -44,11 +44,11 @@ pluginManagement {
 ```groovy
 // build.gradle
 plugins {
-    id 'io.github.carstenartur.ai-knowledge-extractor' version 'VERSION'
+    id 'io.github.carstenartur.ai-knowledge-extractor' version '0.2.2'
 }
 ```
 
-Once the version appears on the Gradle Plugin Portal, builds using the default plugin repository can use the same `plugins` block. Run `./gradlew aiKnowledgeCheck` to generate and verify the reports. See the [Gradle task guide](gradle-plugin.md) and the [Maven goal guide](maven-plugin.md).
+Run `./gradlew aiKnowledgeCheck` to generate and verify the reports. See the [Gradle task guide](gradle-plugin.md) and the [Maven goal guide](maven-plugin.md).
 
 ## Upgrading from GitHub Packages
 

@@ -1,6 +1,6 @@
 # Publishing to Maven Central and the Gradle Plugin Portal
 
-A release from the active schema-v2 line publishes the Core library, Maven plugin and Gradle artifacts under `io.github.carstenartur`. The first candidate for these coordinates is 0.2.2. The [consumer guide](publishing.md) covers installation and migration from the 0.2.1 GitHub Packages release.
+A release from the active schema-v2 line publishes the Core library, Maven plugin and Gradle artifacts under `io.github.carstenartur`. Version 0.2.2 was the first release published to Maven Central under these coordinates. The [consumer guide](publishing.md) covers installation and migration from the 0.2.1 GitHub Packages release.
 
 ## Published artifacts
 

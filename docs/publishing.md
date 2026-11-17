@@ -1,6 +1,6 @@
 # Consuming AI Knowledge Extractor
 
-Release [0.2.2](https://github.com/carstenartur/ai-knowledge-extractor/releases/tag/v0.2.2) provides downloadable JARs and checksums. Core, the Maven plugin and the Gradle plugin (including its marker) are available from [Maven Central](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin/0.2.2). Follow [issue #100](https://github.com/carstenartur/ai-knowledge-extractor/issues/100) for Plugin Portal availability.
+Release [0.2.2](https://github.com/carstenartur/ai-knowledge-extractor/releases/tag/v0.2.2) provides downloadable JARs and checksums. Core, the Maven plugin and the Gradle plugin (including its marker) are available from [Maven Central](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin/0.2.2). A separate Gradle Plugin Portal entry is not required to use this plugin with Gradle; configure `mavenCentral()` in `pluginManagement.repositories` as shown below.
 
 | Consumer | Coordinate |
 | --- | --- |

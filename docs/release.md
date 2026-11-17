@@ -5,7 +5,7 @@ between an X.Y series, its branch and its support status is
 [`.github/release-lines.json`](../.github/release-lines.json). Read
 [`version-support.md`](version-support.md) before preparing or publishing a release.
 
-On the active line, the Release workflow creates the stable tag and the GitHub release. Public distribution then checks the tag against its qualified source, runs the Maven Release Plugin’s `release:perform` goal for Central, publishes the Gradle plugin to the Portal and verifies both channels with anonymous consumers. See [publishing credentials, approval and recovery](public-distribution.md).
+On the active line, the Release workflow creates the stable tag and the GitHub release. Public distribution then checks the tag against its qualified source, runs the Maven Release Plugin’s `release:perform` goal for Central and verifies anonymous Core, Maven and Gradle consumers **from Central**. Publishing separately to the Gradle Plugin Portal is optional and is not a prerequisite for a successful release. See [publishing credentials, optional Portal approval and recovery](public-distribution.md).
 
 ## Release-line invariants
 
@@ -115,7 +115,7 @@ The `Verify release follow-up PR` workflow then:
 5. records a `release/follow-up-ci` status;
 6. marks the PR ready and squash-merges it only after CI succeeds.
 
-For active-line releases, check the public distribution jobs and the anonymous consumer report as well as the GitHub release. The [release checklist](release-checklist.md) identifies the evidence for each channel.
+For active-line releases, check the Central publication job and its `anonymous-central-consumers` report alongside the GitHub release. Only when the Plugin Portal was separately requested is the `anonymous-public-consumers` report for both registries required. The [release checklist](release-checklist.md) identifies the evidence for each mode.
 
 A failed exact-head CI leaves the PR as draft and unmerged. The automation does not create a second
 owner-authored duplicate merely to obtain a CI run.

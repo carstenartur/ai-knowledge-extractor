@@ -1,4 +1,4 @@
-# Gradle plugin usage (`org.aiknowledge.extractor`)
+# Gradle plugin usage (`io.github.carstenartur.ai-knowledge-extractor`)
 
 This is the canonical user guide for applying and configuring the Gradle plugin.
 
@@ -7,38 +7,33 @@ This is the canonical user guide for applying and configuring the Gradle plugin.
 Plugin id:
 
 ```text
-org.aiknowledge.extractor
+io.github.carstenartur.ai-knowledge-extractor
 ```
 
 Consumer build:
 
 ```groovy
 plugins {
-    id 'org.aiknowledge.extractor' version '<version>'
+    id 'io.github.carstenartur.ai-knowledge-extractor' version '<version>'
 }
 ```
 
 ## Plugin resolution and repositories
 
-### GitHub Packages (released artifacts)
+### Maven Central and the Gradle Plugin Portal
 
-`settings.gradle`:
+Choose a stable public version and use its plugin ID in the `plugins` block above. For Central, add the following to the consumer's `settings.gradle` so Gradle resolves the plugin marker as well as the implementation. Once the same version appears on the Plugin Portal, Gradle's default plugin repository also supports it.
 
 ```groovy
 pluginManagement {
     repositories {
-        gradlePluginPortal()
         mavenCentral()
-        maven {
-            url = uri('https://maven.pkg.github.com/carstenartur/ai-knowledge-extractor')
-            credentials {
-                username = findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
-                password = findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')
-            }
-        }
+        gradlePluginPortal()
     }
 }
 ```
+
+See [published coordinates and upgrades from GitHub Packages](publishing.md).
 
 ### Local composite build (development only)
 
@@ -53,10 +48,6 @@ pluginManagement {
     }
 }
 ```
-
-### Future Gradle Plugin Portal distribution
-
-Plugin Portal publication is not part of the current release flow. Until that is added, use GitHub Packages for released versions or composite builds for local development.
 
 ## Automatic JavaScript/TypeScript and boundary analysis
 
@@ -152,7 +143,7 @@ aiKnowledge {
 
 ```groovy
 plugins {
-    id 'org.aiknowledge.extractor' version '<version>'
+    id 'io.github.carstenartur.ai-knowledge-extractor' version '<version>'
 }
 
 tasks.named('check') {
@@ -191,7 +182,7 @@ To use the JDT Java provider for stronger type/reference extraction, run Gradle 
 
 ```groovy
 plugins {
-    id 'org.aiknowledge.extractor'
+    id 'io.github.carstenartur.ai-knowledge-extractor'
 }
 
 aiKnowledge {

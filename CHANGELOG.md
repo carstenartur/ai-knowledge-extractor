@@ -5,6 +5,11 @@ minor releases may add new artifact families but must document schema changes.
 
 ## Unreleased
 
+- The upcoming 0.2.2 release targets Maven Central under `io.github.carstenartur`. Gradle consumers use the plugin ID `io.github.carstenartur.ai-knowledge-extractor`. The [migration instructions](docs/publishing.md) include repository settings for consumers of both current and historical releases.
+- Public distribution uses Maven's Release Plugin to build the qualified tag for Central, followed by Gradle Plugin Portal publication and anonymous consumer verification.
+
+## 0.2.1 – 2026-11-01
+
 ### Added
 
 - opt-in signed Maven Central / Gradle Plugin Portal publishing, a protected release workflow,

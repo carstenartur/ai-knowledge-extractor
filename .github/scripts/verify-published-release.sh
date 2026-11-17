@@ -135,6 +135,18 @@ GH_TOKEN="$GITHUB_TOKEN" gh release download "v${VERSION}" \
   sha256sum -c SHA256SUMS | tee "$REPORT_DIR/release-assets-checksums.log"
 )
 
+# Public-channel releases qualify and verify their consumers in public-distribution.yml.
+if [[ -f release/pom.xml ]]; then
+  python3 - "$REPORT_DIR/summary.json" "$VERSION" <<'PYTHON'
+import json, sys
+from pathlib import Path
+Path(sys.argv[1]).write_text(json.dumps({
+    "version": sys.argv[2], "gitHubReleaseChecksumsVerified": True
+}, indent=2) + "\n")
+PYTHON
+  exit 0
+fi
+
 echo 'Verifying Gradle plugin marker from an empty Gradle user home'
 GRADLE_PROJECT="$WORK/gradle-consumer"
 mkdir -p "$GRADLE_PROJECT"

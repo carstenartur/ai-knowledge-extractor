@@ -1,6 +1,6 @@
 # ai-knowledge:check
 
-**Full name:** `org.aiknowledge:ai-knowledge-maven-plugin:check`
+**Full name:** `io.github.carstenartur:ai-knowledge-maven-plugin:check`
 
 **Phase:** `verify`
 
@@ -37,7 +37,7 @@ Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowle
 **Command-line:**
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:check
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check
 ```
 
 **`pom.xml` binding:**
@@ -53,4 +53,4 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:check
 
 ---
 
-Back to [Plugin Goals](plugin-info.html)
+Back to the [goal overview](index.html)

@@ -1,6 +1,6 @@
 # ai-knowledge:generate
 
-**Full name:** `org.aiknowledge:ai-knowledge-maven-plugin:generate`
+**Full name:** `io.github.carstenartur:ai-knowledge-maven-plugin:generate`
 
 **Phase:** `generate-resources`
 
@@ -56,7 +56,7 @@ Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowle
 **Command-line:**
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:generate
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:generate
 ```
 
 **`pom.xml` binding:**
@@ -72,4 +72,4 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:generate
 
 ---
 
-Back to [Plugin Goals](plugin-info.html)
+Back to the [goal overview](index.html)

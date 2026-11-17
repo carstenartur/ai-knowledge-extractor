@@ -5,9 +5,7 @@ between an X.Y series, its branch and its support status is
 [`.github/release-lines.json`](../.github/release-lines.json). Read
 [`version-support.md`](version-support.md) before preparing or publishing a release.
 
-Public Maven Central and Gradle Plugin Portal distribution is a separate opt-in step after a
-qualified GitHub release. Follow the [public distribution runbook](public-distribution.md) for
-account setup, the signed CI rehearsal, publication and anonymous consumer verification.
+On the active line, the Release workflow creates the stable tag and the GitHub release. Public distribution then checks the tag against its qualified source, runs the Maven Release Plugin’s `release:perform` goal for Central, publishes the Gradle plugin to the Portal and verifies both channels with anonymous consumers. See [publishing credentials, approval and recovery](public-distribution.md).
 
 ## Release-line invariants
 
@@ -102,7 +100,7 @@ For the selected supported branch, the workflow:
 5. adds release-only date metadata;
 6. builds and verifies the release artifacts;
 7. creates `release/vX.Y.Z` and annotated tag `vX.Y.Z`;
-8. publishes project artifacts and creates the GitHub release;
+8. creates the GitHub release with the built JARs and checksums;
 9. marks only the active-line release as latest;
 10. prepares the next patch snapshot on a line-specific branch such as
     `release/0.1.x/prepare-next-X.Y.Z-SNAPSHOT`;
@@ -116,6 +114,8 @@ The `Verify release follow-up PR` workflow then:
 4. dispatches normal CI for the exact head SHA;
 5. records a `release/follow-up-ci` status;
 6. marks the PR ready and squash-merges it only after CI succeeds.
+
+For active-line releases, check the public distribution jobs and the anonymous consumer report as well as the GitHub release. The [release checklist](release-checklist.md) identifies the evidence for each channel.
 
 A failed exact-head CI leaves the PR as draft and unmerged. The automation does not create a second
 owner-authored duplicate merely to obtain a CI run.

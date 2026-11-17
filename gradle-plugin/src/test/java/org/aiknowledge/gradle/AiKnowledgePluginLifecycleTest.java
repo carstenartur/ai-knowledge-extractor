@@ -28,7 +28,7 @@ class AiKnowledgePluginLifecycleTest {
         Files.writeString(project.resolve("build.gradle"), """
             plugins {
                 id 'java'
-                id 'org.aiknowledge.extractor'
+                id 'io.github.carstenartur.ai-knowledge-extractor'
             }
             """);
         Files.writeString(project.resolve("src/main/java/example/SearchService.java"),

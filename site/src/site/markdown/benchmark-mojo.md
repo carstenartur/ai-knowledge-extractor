@@ -1,6 +1,6 @@
 # ai-knowledge:benchmark
 
-**Full name:** `org.aiknowledge:ai-knowledge-maven-plugin:benchmark`
+**Full name:** `io.github.carstenartur:ai-knowledge-maven-plugin:benchmark`
 
 **Phase:** `verify`
 
@@ -34,7 +34,7 @@ Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowle
 **Command-line:**
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:benchmark
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:benchmark
 ```
 
 **`pom.xml` binding:**
@@ -50,4 +50,4 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:benchmark
 
 ---
 
-Back to [Plugin Goals](plugin-info.html)
+Back to the [goal overview](index.html)

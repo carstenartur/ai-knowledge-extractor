@@ -1,6 +1,6 @@
 # ai-knowledge:optimize
 
-**Full name:** `org.aiknowledge:ai-knowledge-maven-plugin:optimize`
+**Full name:** `io.github.carstenartur:ai-knowledge-maven-plugin:optimize`
 
 **Phase:** `verify`
 
@@ -34,7 +34,7 @@ Generated under `outputDirectory` (default: `<project.build.directory>/ai-knowle
 **Command-line:**
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:optimize
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:optimize
 ```
 
 **`pom.xml` binding:**
@@ -50,4 +50,4 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:optimize
 
 ---
 
-Back to [Plugin Goals](plugin-info.html)
+Back to the [goal overview](index.html)

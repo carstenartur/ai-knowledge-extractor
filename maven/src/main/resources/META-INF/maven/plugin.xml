@@ -5,7 +5,7 @@
        are required for command-line overrides and retain default-value fallbacks. -->
   <name>AI Knowledge Maven Plugin</name>
   <description>Generates deterministic repository knowledge indexes and reports.</description>
-  <groupId>org.aiknowledge</groupId>
+  <groupId>io.github.carstenartur</groupId>
   <artifactId>ai-knowledge-maven-plugin</artifactId>
   <version>0.2.2-SNAPSHOT</version>
   <goalPrefix>ai-knowledge</goalPrefix>

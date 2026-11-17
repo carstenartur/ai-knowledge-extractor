@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/carstenartur/ai-knowledge-extractor)](LICENSE)
 ![Build JDK 25](https://img.shields.io/badge/Build_JDK-25-blue)
 [![Latest release](https://img.shields.io/github/v/release/carstenartur/ai-knowledge-extractor?sort=semver)](https://github.com/carstenartur/ai-knowledge-extractor/releases)
-[![GitHub Packages](https://img.shields.io/badge/packages-GitHub%20Packages-blue)](docs/publishing.md)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.carstenartur/ai-knowledge-core)](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-core)
 [![Citation](https://img.shields.io/badge/citation-CFF-informational)](CITATION.cff)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://carstenartur.github.io/ai-knowledge-extractor/site/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21180224.svg)](https://doi.org/10.5281/zenodo.21180224)
@@ -66,12 +66,14 @@ source languages the extractor can analyse or its report schema.
 
 ## Quick start
 
-- Gradle: apply plugin `org.aiknowledge.extractor` and run `./gradlew aiKnowledgeCheck` for the complete verified lifecycle.
-- Maven: invoke `mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check` for the complete verified lifecycle.
+Select a version listed for the [Maven Central plugin artifact](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin). When upgrading from GitHub Packages, change the Maven group to `io.github.carstenartur` or use the new Gradle plugin ID below. [Consumer setup](docs/publishing.md) includes the Gradle repository configuration and the coordinates for historical releases.
+
+- Gradle: apply plugin `io.github.carstenartur.ai-knowledge-extractor` and run `./gradlew aiKnowledgeCheck` for the complete verified lifecycle.
+- Maven: invoke `mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check` for the complete verified lifecycle.
 - `generateAiKnowledgeIndex` / Maven `generate` remain available when only the raw knowledge index is needed.
 - JavaScript and TypeScript files plus npm-compatible `package.json` modules are discovered automatically; no Node.js installation is required by the built-in structural provider.
 - Consumer setup, tasks, extension parameters, goals and repository configuration are documented in [`docs/gradle-plugin.md`](docs/gradle-plugin.md), [`docs/maven-plugin.md`](docs/maven-plugin.md) and [`docs/publishing.md`](docs/publishing.md).
-- Releases are published through the GitHub Actions [`Release` workflow](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml); use the documented `dry_run` mode before the first real release.
+- Maintainers can start a release through [GitHub Actions](https://github.com/carstenartur/ai-knowledge-extractor/actions/workflows/publish.yml) or a [reviewed release request](docs/release.md).
 
 The complete lifecycle generates index, context, complexity, trend, optimization, benchmark and quality-gate outputs, then verifies their structural and cross-document integrity. It rejects missing or empty files, malformed or duplicate-field JSON, count drift, broken context-pack references and internally inconsistent v3 context metrics. Repository-specific thresholds remain controlled by the normal quality-gate configuration.
 
@@ -99,7 +101,7 @@ The complete support, backport and end-of-life policy is in
 
 ## Gradle
 
-Plugin id: `org.aiknowledge.extractor`
+Plugin id: `io.github.carstenartur.ai-knowledge-extractor`
 
 Tasks:
 
@@ -129,20 +131,22 @@ Canonical Gradle plugin usage (plugin id, tasks, extension defaults, CI/local ex
 
 ## Maven
 
-Maven plugin coordinates: `org.aiknowledge:ai-knowledge-maven-plugin:<version>`.
+Replace `VERSION` with a stable version from Maven Central in the commands below.
+
+Maven plugin coordinates: `io.github.carstenartur:ai-knowledge-maven-plugin:<version>`.
 
 Goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`, `help`.
 
 `check` generates the complete report set, executes configured quality gates and verifies the emitted artifacts:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check
 ```
 
 Maven help goal:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Ddetail=true
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:help -Ddetail=true
 ```
 
 Optional empirical benchmark layer parameters:
@@ -250,7 +254,7 @@ Trend baselines, `metrics-snapshot.json`, `trend.json` and CI threshold configur
 
 ## Publishing and consumption
 
-Artifact IDs, local development consumption, GitHub Packages repository configuration and release-version handling are documented in [`docs/publishing.md`](docs/publishing.md). Plugin-specific canonical usage docs: [`docs/gradle-plugin.md`](docs/gradle-plugin.md) and [`docs/maven-plugin.md`](docs/maven-plugin.md).
+Use the [distribution guide](docs/publishing.md) for Core coordinates, Maven Central and Gradle Plugin Portal setup, and local development.
 
 ## Release process
 
@@ -273,10 +277,7 @@ include/exclude globs, source budgets, generated-source policy and error handlin
 uses the current checkout only; Git history and commit-based change coupling are deliberately
 excluded.
 
-Publication availability is stated on each release. Do not assume Maven Central availability from
-an example version alone; see the [0.2.0 release checklist](docs/release-checklist.md).
-The [public distribution runbook](docs/public-distribution.md) describes the opt-in Central/Plugin
-Portal workflow, account prerequisites and anonymous verification required for future releases.
+The [public distribution runbook](docs/public-distribution.md) covers the Maven Release Plugin, Central publishing, Plugin Portal approval and anonymous verification of a released version.
 
 See the [changelog](CHANGELOG.md) and the [schema-v2 migration guide](docs/schema-v2-migration.md) for upgrade and baseline instructions.
 

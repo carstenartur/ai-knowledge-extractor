@@ -45,7 +45,7 @@ The analysis is deterministic and operates only on the current checkout. Git his
 
 ## Gradle plugin
 
-The `gradle-plugin` module exposes the plugin id `org.aiknowledge.extractor` and registers root-project tasks for the core operations.
+The `gradle-plugin` module exposes the plugin id `io.github.carstenartur.ai-knowledge-extractor` and registers root-project tasks for the core operations.
 
 ## Maven plugin
 

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "releaseVersion": "0.2.1",
-  "nextDevelopmentVersion": "0.2.2-SNAPSHOT",
+  "releaseVersion": "0.2.2",
+  "nextDevelopmentVersion": "0.2.3-SNAPSHOT",
   "skipTests": false,
   "dryRun": false,
-  "requestId": "main-0.2.1-release-20261101",
-  "qualifiedCommit": "006fc3b0391be8d020d3a0c27a4af8ae3a335e7a"
+  "requestId": "main-0.2.2-central-20261117",
+  "qualifiedCommit": "1602d5b4c5aa13a294f9a07b34b9a22aabb0d176"
 }

@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       mode:
-        description: Validate the tag, publish both channels or resume an individual channel
+        description: Validate the tag, publish to Central, or optionally publish to the Plugin Portal
         type: choice
         default: validate
         options:

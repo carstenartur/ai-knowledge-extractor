@@ -1,6 +1,6 @@
 # Consuming AI Knowledge Extractor
 
-Use the version listed for the artifact in Maven Central. The first release targeting the new coordinates is 0.2.2. [Central versions](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin) · [Gradle Plugin Portal versions](https://plugins.gradle.org/plugin/io.github.carstenartur.ai-knowledge-extractor)
+Release [0.2.2](https://github.com/carstenartur/ai-knowledge-extractor/releases/tag/v0.2.2) provides downloadable JARs and checksums. Its first Maven Central upload is pending. Follow [issue #100](https://github.com/carstenartur/ai-knowledge-extractor/issues/100) for Central and Plugin Portal availability. Use a version listed in the registry for the examples below. [Central versions](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin) · [Gradle Plugin Portal versions](https://plugins.gradle.org/plugin/io.github.carstenartur.ai-knowledge-extractor)
 
 | Consumer | Coordinate |
 | --- | --- |

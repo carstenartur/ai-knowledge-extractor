@@ -3,10 +3,11 @@
 All notable changes are documented here. The project follows semantic versioning while below 1.0;
 minor releases may add new artifact families but must document schema changes.
 
-## Unreleased
+## 0.2.2 – 2026-11-17
 
-- The upcoming 0.2.2 release targets Maven Central under `io.github.carstenartur`. Gradle consumers use the plugin ID `io.github.carstenartur.ai-knowledge-extractor`. The [migration instructions](docs/publishing.md) include repository settings for consumers of both current and historical releases.
-- Public distribution uses Maven's Release Plugin to build the qualified tag for Central, followed by Gradle Plugin Portal publication and anonymous consumer verification.
+- The [GitHub release](https://github.com/carstenartur/ai-knowledge-extractor/releases/tag/v0.2.2) contains the Core, Maven plugin and Gradle plugin JARs, with sources, Javadocs and a `SHA256SUMS` manifest.
+- This release introduces the Maven group `io.github.carstenartur` and the Gradle plugin ID `io.github.carstenartur.ai-knowledge-extractor`. See the [consumer migration guide](docs/publishing.md).
+- The Maven Release Plugin builds the qualified tag for Central. The [public distribution run](https://github.com/carstenartur/ai-knowledge-extractor/actions/runs/44088959510) shows the status of Central publication, Plugin Portal publication and anonymous consumer checks for this version.
 
 ## 0.2.1 – 2026-11-01
 

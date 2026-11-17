@@ -66,10 +66,10 @@ source languages the extractor can analyse or its report schema.
 
 ## Quick start
 
-Select a version listed for the [Maven Central plugin artifact](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin). When upgrading from GitHub Packages, change the Maven group to `io.github.carstenartur` or use the new Gradle plugin ID below. [Consumer setup](docs/publishing.md) includes the Gradle repository configuration and the coordinates for historical releases.
+Version `0.2.2` is available from [Maven Central](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin/0.2.2). When upgrading from GitHub Packages, change the Maven group to `io.github.carstenartur` or use the new Gradle plugin ID below. See the [consumer setup](docs/publishing.md) for Gradle repository configuration and historical coordinates.
 
-- Gradle: apply plugin `io.github.carstenartur.ai-knowledge-extractor` and run `./gradlew aiKnowledgeCheck` for the complete verified lifecycle.
-- Maven: invoke `mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check` for the complete verified lifecycle.
+- Gradle: configure the [plugin repositories](docs/publishing.md#gradle), apply plugin `io.github.carstenartur.ai-knowledge-extractor` version `0.2.2` and run `./gradlew aiKnowledgeCheck` for the complete verified lifecycle.
+- Maven: invoke `mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.2.2:check` for the complete verified lifecycle.
 - `generateAiKnowledgeIndex` / Maven `generate` remain available when only the raw knowledge index is needed.
 - JavaScript and TypeScript files plus npm-compatible `package.json` modules are discovered automatically; no Node.js installation is required by the built-in structural provider.
 - Consumer setup, tasks, extension parameters, goals and repository configuration are documented in [`docs/gradle-plugin.md`](docs/gradle-plugin.md), [`docs/maven-plugin.md`](docs/maven-plugin.md) and [`docs/publishing.md`](docs/publishing.md).
@@ -131,7 +131,7 @@ Canonical Gradle plugin usage (plugin id, tasks, extension defaults, CI/local ex
 
 ## Maven
 
-Replace `VERSION` with a stable version from Maven Central in the commands below.
+The commands below use version `0.2.2` from Maven Central.
 
 Maven plugin coordinates: `io.github.carstenartur:ai-knowledge-maven-plugin:<version>`.
 
@@ -140,13 +140,13 @@ Goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`, `help`.
 `check` generates the complete report set, executes configured quality gates and verifies the emitted artifacts:
 
 ```bash
-mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.2.2:check
 ```
 
 Maven help goal:
 
 ```bash
-mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:help -Ddetail=true
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:0.2.2:help -Ddetail=true
 ```
 
 Optional empirical benchmark layer parameters:

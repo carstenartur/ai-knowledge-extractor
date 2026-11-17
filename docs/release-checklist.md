@@ -1,6 +1,6 @@
 # Release checklist
 
-The [release process](release.md) describes the workflow inputs and the reviewed release request. Public distribution applies to the active schema-v2 line. Release 0.2.2 is the first candidate for `io.github.carstenartur`.
+The [release process](release.md) describes the workflow inputs and the reviewed release request. Public distribution applies to the active schema-v2 line. Version 0.2.2 was the first release published to Maven Central under `io.github.carstenartur`.
 
 ## Before tagging
 

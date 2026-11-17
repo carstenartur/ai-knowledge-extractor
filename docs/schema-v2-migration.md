@@ -55,8 +55,8 @@ version are separate concepts. See the [fact contract](schema-v2-contract.md) an
    entire output directory** from the same checkout using v2; do not add empty files to an old output
    or mix outputs produced by different versions. The v2 verifier rejects incomplete v1 directories.
 2. Update both the selected plugin version and repository/credentials configuration. For Gradle,
-   apply `org.aiknowledge.extractor` through the [published marker](gradle-plugin.md). For Maven,
-   update `org.aiknowledge:ai-knowledge-maven-plugin` in [plugin configuration](maven-plugin.md).
+   apply `io.github.carstenartur.ai-knowledge-extractor` through the [published marker](gradle-plugin.md). For Maven,
+   update `io.github.carstenartur:ai-knowledge-maven-plugin` in [plugin configuration](maven-plugin.md).
 3. Run Gradle `aiKnowledgeCheck`; with Maven run `generate`, `analyze`, `optimize`, `benchmark`,
    and `check`. Keep existing thresholds disabled or permissive while inspecting the first v2 run.
 4. Extend artifact allowlists, uploads and retained-output storage to include every file above.

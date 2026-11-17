@@ -14,13 +14,15 @@ def verify(repository, version):
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("public publication requires X.Y.Z")
     ns = {"m": "http://maven.apache.org/POM/4.0.0"}
-    marker = "org.aiknowledge.extractor.gradle.plugin"
+    group_id = "io.github.carstenartur"
+    plugin_id = "io.github.carstenartur.ai-knowledge-extractor"
+    marker = f"{plugin_id}.gradle.plugin"
     artifacts = {
-        "ai-knowledge-core": "org.aiknowledge",
-        "ai-knowledge-maven-plugin": "org.aiknowledge",
-        "ai-knowledge-gradle-plugin": "org.aiknowledge",
-        "gradle-plugin": "org.aiknowledge",
-        marker: "org.aiknowledge.extractor",
+        "ai-knowledge-core": group_id,
+        "ai-knowledge-maven-plugin": group_id,
+        "ai-knowledge-gradle-plugin": group_id,
+        "gradle-plugin": group_id,
+        marker: plugin_id,
     }
     manifest = []
     for artifact, group in artifacts.items():
@@ -40,11 +42,11 @@ def verify(repository, version):
             values = tuple(dep.findtext(f"m:{field}", namespaces=ns)
                            for field in ["groupId", "artifactId", "version"])
             dependencies.append(values)
-            if values[0].startswith("org.aiknowledge"):
+            if values[1] in artifacts:
                 if artifacts.get(values[1]) != values[0] or values[2] != version:
                     raise ValueError(f"invalid internal dependency in {pom}: {values}")
         if artifact == marker:
-            if ("org.aiknowledge", "gradle-plugin", version) not in dependencies:
+            if (group_id, "gradle-plugin", version) not in dependencies:
                 raise ValueError("marker must resolve the published Gradle implementation")
         else:
             for classifier in ["", "-sources", "-javadoc"]:
@@ -54,10 +56,16 @@ def verify(repository, version):
                         raise ValueError(f"empty or corrupt JAR: {jar}")
                     if artifact == "ai-knowledge-maven-plugin" and not classifier:
                         descriptor = ET.fromstring(archive.read("META-INF/maven/plugin.xml"))
-                        if descriptor.findtext("version") != version:
-                            raise ValueError(f"stale Maven plugin descriptor version in {jar}")
+                        for field, expected in [("groupId", group_id), ("artifactId", artifact), ("version", version)]:
+                            if descriptor.findtext(field) != expected:
+                                raise ValueError(f"wrong {field} in Maven plugin descriptor in {jar}")
+                    if artifact in {"ai-knowledge-gradle-plugin", "gradle-plugin"} and not classifier:
+                        for entry in [plugin_id, "org.aiknowledge.extractor"]:
+                            content = archive.read(f"META-INF/gradle-plugins/{entry}.properties")
+                            if b"implementation-class=org.aiknowledge.gradle.AiKnowledgePlugin" not in content.splitlines():
+                                raise ValueError(f"wrong implementation for Gradle plugin {entry} in {jar}")
             if artifact != "ai-knowledge-core" and (
-                "org.aiknowledge", "ai-knowledge-core", version
+                group_id, "ai-knowledge-core", version
             ) not in dependencies:
                 raise ValueError(f"missing released Core dependency in {pom}")
         for path in sorted(directory.iterdir()):

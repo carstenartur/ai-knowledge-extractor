@@ -80,7 +80,7 @@ aiKnowledge {
 The Maven check goal supports the same thresholds through system properties:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check \
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check \
   -DaiKnowledge.maxCognitiveDebt=100.0 \
   -DaiKnowledge.maxCognitiveDebtIncrease=0.5 \
   -DaiKnowledge.maxConceptRadiusIncrease=2.0 \

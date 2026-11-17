@@ -6,14 +6,13 @@ Deterministic build-integrated knowledge extraction for AI-assisted code underst
 
 ```xml
 <plugin>
-  <groupId>org.aiknowledge</groupId>
+  <groupId>io.github.carstenartur</groupId>
   <artifactId>ai-knowledge-maven-plugin</artifactId>
   <version>VERSION</version>
 </plugin>
 ```
 
-Replace `VERSION` with the current release from
-[GitHub Releases](https://github.com/carstenartur/ai-knowledge-extractor/releases).
+Replace `VERSION` with a version listed for the [plugin on Maven Central](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin).
 
 ## Available Goals
 
@@ -26,20 +25,14 @@ Replace `VERSION` with the current release from
 | `check` | `verify` | Enforce AI quality-gate thresholds and fail on violations |
 | `help` | — | Display goal and parameter help |
 
-See the [Plugin Goals](plugin-info.html) page for full goal and parameter documentation.
+See the individual goal pages in the site navigation for the parameters of each goal.
 
 ## Quick Start
 
-Publish the plugin to your local Maven repository (development builds):
+Invoke a published version from the consumer project. Maven resolves the plugin from Central.
 
 ```bash
-gradle publishToMavenLocal
-```
-
-Then invoke a goal directly:
-
-```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:generate
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:generate
 ```
 
 Or bind goals in your `pom.xml`:
@@ -48,7 +41,7 @@ Or bind goals in your `pom.xml`:
 <build>
   <plugins>
     <plugin>
-      <groupId>org.aiknowledge</groupId>
+      <groupId>io.github.carstenartur</groupId>
       <artifactId>ai-knowledge-maven-plugin</artifactId>
       <version>VERSION</version>
       <executions>

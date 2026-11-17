@@ -53,7 +53,7 @@ mkdir -p "$REPORT_DIR"
 echo "Publishing ${VERSION} artifacts to Maven local for consumer fixtures"
 "$GRADLE" --no-daemon publishToMavenLocal --warning-mode all 2>&1 | tee "$PUBLISH_LOG"
 
-CORE_JAR="$HOME/.m2/repository/org/aiknowledge/ai-knowledge-core/$VERSION/ai-knowledge-core-$VERSION.jar"
+CORE_JAR="$HOME/.m2/repository/io/github/carstenartur/ai-knowledge-core/$VERSION/ai-knowledge-core-$VERSION.jar"
 PROVIDER_ROOT="$ROOT/examples/fixtures/source-provider"
 mvn -B -f "$PROVIDER_ROOT/pom.xml" -DaiKnowledge.version="$VERSION" install \
   dependency:build-classpath -Dmdep.outputFile="$PROVIDER_ROOT/target/classpath.txt" \
@@ -134,20 +134,20 @@ clean_outputs
 {
   mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
     -DaiKnowledge.version="$VERSION" \
-    org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":generate \
-    org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":analyze \
-    org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":optimize \
-    org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":benchmark \
-    org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check
+    io.github.carstenartur:ai-knowledge-maven-plugin:"$VERSION":generate \
+    io.github.carstenartur:ai-knowledge-maven-plugin:"$VERSION":analyze \
+    io.github.carstenartur:ai-knowledge-maven-plugin:"$VERSION":optimize \
+    io.github.carstenartur:ai-knowledge-maven-plugin:"$VERSION":benchmark \
+    io.github.carstenartur:ai-knowledge-maven-plugin:"$VERSION":check
   mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
     -DaiKnowledge.version="$VERSION" \
     -Ddetail=true \
-    org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":help
+    io.github.carstenartur:ai-knowledge-maven-plugin:"$VERSION":help
   mvn -B -e -f examples/fixtures/maven-consumer/pom.xml \
     -DaiKnowledge.version="$VERSION" \
     -Dgoal=benchmark \
     -Ddetail=true \
-    org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":help
+    io.github.carstenartur:ai-knowledge-maven-plugin:"$VERSION":help
 } 2>&1 | tee "$MAVEN_LOG"
 assert_artifacts examples/fixtures/maven-consumer/target/ai-knowledge
 grep -F 'AI Knowledge Maven Plugin goals:' "$MAVEN_LOG" >/dev/null \
@@ -167,7 +167,7 @@ fi
 python3 .github/scripts/verify-boundary-gate-failure.py "$PUBLISHED_CONSUMER/build/ai-knowledge"
 if mvn -B -f examples/fixtures/maven-consumer/pom.xml \
   -DaiKnowledge.version="$VERSION" -DaiKnowledge.maxBoundaryDynamicCalls=0 \
-  org.aiknowledge:ai-knowledge-maven-plugin:"$VERSION":check \
+  io.github.carstenartur:ai-knowledge-maven-plugin:"$VERSION":check \
   > "$REPORT_DIR/maven-boundary-failure.log" 2>&1; then
   fail 'published Maven consumer ignored the boundary policy'
 fi

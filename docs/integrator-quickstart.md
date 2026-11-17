@@ -14,9 +14,11 @@ support in 0.2.x is experimental: facts include `provider`, `confidence`, `compl
 
 ## Gradle
 
+Select a published version and configure `pluginManagement.repositories` for the chosen channel as shown in the [distribution guide](publishing.md). Substitute that version for `VERSION` in both examples.
+
 ```groovy
 plugins {
-    id 'org.aiknowledge.extractor' version '0.2.0'
+    id 'io.github.carstenartur.ai-knowledge-extractor' version 'VERSION'
 }
 ```
 
@@ -26,22 +28,19 @@ Generate and analyse:
 ./gradlew generateAiKnowledgeIndex analyzeAiComplexity
 ```
 
-For a snapshot build, replace `0.2.0` with the version published by the selected repository. Do not
-copy the example version into production until the release page confirms its publication channel.
-
 ## Maven
 
 ```xml
 <plugin>
-  <groupId>org.aiknowledge</groupId>
+  <groupId>io.github.carstenartur</groupId>
   <artifactId>ai-knowledge-maven-plugin</artifactId>
-  <version>0.2.0</version>
+  <version>VERSION</version>
 </plugin>
 ```
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:0.2.0:generate \
-    org.aiknowledge:ai-knowledge-maven-plugin:0.2.0:analyze
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:generate \
+    io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:analyze
 ```
 
 ## Shared scan configuration

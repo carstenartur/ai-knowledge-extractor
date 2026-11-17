@@ -98,7 +98,7 @@ Classloader separation is dependency isolation, not a security sandbox.
 Gradle plugin-DSL consumers use the resolvable, non-consumable `aiKnowledgeProviders` configuration:
 
 ```groovy
-plugins { id 'org.aiknowledge.extractor' version '<version>' }
+plugins { id 'io.github.carstenartur.ai-knowledge-extractor' version '<version>' }
 repositories { mavenCentral() /* plus your provider artifact repository */ }
 dependencies { aiKnowledgeProviders 'example.aiknowledge:text-source-provider:1.0' }
 ```
@@ -113,7 +113,7 @@ Maven uses its plugin realm, owned and closed by Maven:
 
 ```xml
 <plugin>
-  <groupId>org.aiknowledge</groupId>
+  <groupId>io.github.carstenartur</groupId>
   <artifactId>ai-knowledge-maven-plugin</artifactId>
   <version>${aiKnowledge.version}</version>
   <dependencies>

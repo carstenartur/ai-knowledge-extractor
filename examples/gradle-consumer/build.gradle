@@ -1,5 +1,5 @@
 plugins {
-    id 'org.aiknowledge.extractor'
+    id 'io.github.carstenartur.ai-knowledge-extractor'
 }
 
 aiKnowledge {

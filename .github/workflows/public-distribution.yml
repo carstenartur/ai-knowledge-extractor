@@ -8,11 +8,12 @@ on:
         required: true
         type: string
       mode:
-        description: Validate first; publish each missing channel separately; verify-public never uploads
+        description: Validate the tag, publish both channels or resume an individual channel
         type: choice
         default: validate
         options:
           - validate
+          - publish-all
           - publish-central
           - publish-portal
           - verify-public
@@ -81,12 +82,15 @@ jobs:
 
   publish:
     needs: qualify
-    if: inputs.mode == 'publish-central' || inputs.mode == 'publish-portal'
+    if: startsWith(inputs.mode, 'publish-')
+    env:
+      VERSION: ${{ inputs.version }}
     environment: public-distribution
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           ref: ${{ needs.qualify.outputs.sha }}
           persist-credentials: false
       - uses: actions/setup-java@v6
@@ -97,46 +101,54 @@ jobs:
         with:
           gradle-version: '9.7.1'
           cache-disabled: true
-      - name: Publish signed artifacts to Maven Central and wait for PUBLISHED
-        if: inputs.mode == 'publish-central'
-        env:
-          VERIFIED_NAMESPACE: ${{ vars.CENTRAL_NAMESPACE_VERIFIED }}
-          VERSION: ${{ inputs.version }}
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
+      - name: Check whether this version already exists on Central
+        id: central
         run: |
-          set -euo pipefail
-          [[ "$VERIFIED_NAMESPACE" == org.aiknowledge ]] || { echo 'Verify ownership of org.aiknowledge first'; exit 1; }
-          : "${ORG_GRADLE_PROJECT_mavenCentralUsername:?Central token username is missing}"
-          : "${ORG_GRADLE_PROJECT_mavenCentralPassword:?Central token password is missing}"
-          : "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Signing key is missing}"
-          gradle --no-daemon -PpublicDistribution=true -PreleaseVersion="$VERSION" publishAndReleaseToMavenCentral
-      - name: Publish Gradle plugin to the Plugin Portal
-        if: inputs.mode == 'publish-portal'
+          artifact=ai-knowledge-core
+          url="https://repo.maven.apache.org/maven2/io/github/carstenartur/$artifact/$VERSION/$artifact-$VERSION.pom"
+          status=$(curl --retry 3 --silent --show-error --output /dev/null --write-out '%{http_code}' "$url")
+          case "$status" in
+            200) echo 'available=true' >> "$GITHUB_OUTPUT" ;;
+            404) echo 'available=false' >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::Central returned HTTP $status for $artifact"; exit 1 ;;
+          esac
+      - name: Publish the qualified tag to Maven Central
+        if: inputs.mode != 'publish-portal' && steps.central.outputs.available == 'false'
         env:
-          VERSION: ${{ inputs.version }}
+          RELEASE_SHA: ${{ needs.qualify.outputs.sha }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_USERNAME || secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PASSWORD || secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_GPG_KEY || secrets.MAVEN_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_GPG_PASSPHRASE || secrets.MAVEN_SIGNING_PASSWORD }}
+        run: |
+          : "${ORG_GRADLE_PROJECT_mavenCentralUsername:?Set CENTRAL_USERNAME in public-distribution}"
+          : "${ORG_GRADLE_PROJECT_mavenCentralPassword:?Set CENTRAL_PASSWORD in public-distribution}"
+          : "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Set MAVEN_GPG_KEY in public-distribution}"
+          bash .github/scripts/perform-central-release.sh
+      - name: Verify anonymous Central consumers before publishing to the Portal
+        run: bash .github/scripts/verify-public-consumers.sh --central-only
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: anonymous-central-consumers
+          path: build/reports/central-consumers/**
+          if-no-files-found: ignore
+      - name: Publish Gradle plugin to the Plugin Portal
+        if: inputs.mode != 'publish-central'
+        env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_GPG_KEY || secrets.MAVEN_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_GPG_PASSPHRASE || secrets.MAVEN_SIGNING_PASSWORD }}
         run: |
-          set -euo pipefail
-          : "${GRADLE_PUBLISH_KEY:?Portal key is missing}"
-          : "${GRADLE_PUBLISH_SECRET:?Portal secret is missing}"
-          : "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Signing key is missing}"
-          # The plugin implementation and Core must already resolve on Central.
-          for artifact in ai-knowledge-core gradle-plugin; do
-            curl --fail --silent --show-error --output /dev/null \
-              "https://repo.maven.apache.org/maven2/org/aiknowledge/$artifact/$VERSION/$artifact-$VERSION.pom"
-          done
-          gradle --no-daemon -PpublicDistribution=true -PreleaseVersion="$VERSION" :gradle-plugin:publishPlugins --validate-only
-          gradle --no-daemon -PpublicDistribution=true -PreleaseVersion="$VERSION" :gradle-plugin:publishPlugins
+          : "${GRADLE_PUBLISH_KEY:?Set GRADLE_PUBLISH_KEY in public-distribution}"
+          : "${GRADLE_PUBLISH_SECRET:?Set GRADLE_PUBLISH_SECRET in public-distribution}"
+          gradle --no-daemon -PpublicDistribution=true :gradle-plugin:publishPlugins --validate-only
+          gradle --no-daemon -PpublicDistribution=true :gradle-plugin:publishPlugins
 
   verify-public:
     needs: [qualify, publish]
-    if: always() && needs.qualify.result == 'success' && (inputs.mode == 'verify-public' || (inputs.mode == 'publish-portal' && needs.publish.result == 'success'))
+    if: always() && needs.qualify.result == 'success' && (inputs.mode == 'verify-public' || (inputs.mode != 'publish-central' && needs.publish.result == 'success'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

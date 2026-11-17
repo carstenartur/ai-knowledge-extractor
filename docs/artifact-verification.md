@@ -13,7 +13,7 @@ Gradle:
 Maven:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check
 ```
 
 Both commands scan the repository once, generate the complete artifact set from that frozen snapshot, execute the configured quality gate and then validate the generated files. Focused Gradle tasks remain available for individual report families, but the canonical lifecycle does not chain them together and therefore does not rescan the checkout repeatedly.

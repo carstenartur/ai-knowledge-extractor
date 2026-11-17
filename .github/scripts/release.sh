@@ -302,10 +302,6 @@ if [[ "$DRY_RUN" != "true" && "$STATE" == "new" ]]; then
   STATE=tagged
 fi
 
-if [[ "$DRY_RUN" != "true" && "$STATE" != "published" ]]; then
-  gradle publish "-PreleaseVersion=${RELEASE_VERSION}"
-fi
-
 if [[ "$DRY_RUN" != "true" && "$STATE" == "tagged" ]]; then
   gh release create "$TAG_NAME" \
     --verify-tag \

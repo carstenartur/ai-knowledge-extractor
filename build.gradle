@@ -3,7 +3,7 @@ plugins {
     id 'com.gradle.plugin-publish' version '2.2.1' apply false
 }
 
-group = 'org.aiknowledge'
+group = 'io.github.carstenartur'
 version = findProperty('releaseVersion') ?: findProperty('projectVersion') ?: '0.1.5-SNAPSHOT'
 
 subprojects {
@@ -100,20 +100,9 @@ subprojects {
                 }
             }
         }
-        repositories {
-            maven {
-                name = 'GitHubPackages'
-                url = uri('https://maven.pkg.github.com/carstenartur/ai-knowledge-extractor')
-                credentials {
-                    username = findProperty('gpr.user') ?: System.getenv('USERNAME') ?: System.getenv('GITHUB_ACTOR') ?: ''
-                    password = findProperty('gpr.key') ?: System.getenv('TOKEN') ?: System.getenv('GITHUB_TOKEN') ?: ''
-                }
-            }
-        }
     }
 
-    // Public publishing is deliberately opt-in; normal builds and GitHub
-    // Packages releases do not require public-channel credentials or signing.
+    // Build and mavenLocal publication require no public-channel credentials.
     if (providers.gradleProperty('publicDistribution').orNull == 'true') {
         if (!(version.toString() ==~ /\d+\.\d+\.\d+/)) {
             throw new GradleException('Public distribution requires a stable X.Y.Z releaseVersion')

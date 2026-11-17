@@ -28,7 +28,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  packages: write
+  actions: write
 
 env:
   GH_TOKEN: ${{ github.token }}
@@ -45,7 +45,7 @@ jobs:
       - name: Checkout selected supported release line
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Resolve release plan from repository state
@@ -257,3 +257,9 @@ jobs:
           path: build/release-artifacts
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Start public distribution of the stable main release
+        if: success() && github.ref == 'refs/heads/main' && steps.versions.outputs.dry_run == 'false'
+        env:
+          VERSION: ${{ steps.versions.outputs.release_version }}
+        run: gh workflow run public-distribution.yml --ref main -f version="$VERSION" -f mode=publish-all

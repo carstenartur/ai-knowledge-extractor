@@ -114,7 +114,7 @@ case "$RELEASE_ARTIFACT_CONTRACT" in
 
     grep -Fq 'aiknowledge.source.enabledProviders' docs/integrator-quickstart.md \
       || fail 'shared source configuration is not documented'
-    grep -Fq "id 'org.aiknowledge.extractor'" docs/integrator-quickstart.md \
+    grep -Fq "id 'io.github.carstenartur.ai-knowledge-extractor'" docs/integrator-quickstart.md \
       || fail 'the integrator quickstart does not use the published Gradle plugin id'
     ! grep -Fq "id 'org.aiknowledge' version" docs/integrator-quickstart.md \
       || fail 'the integrator quickstart still contains the obsolete Gradle plugin id'
@@ -133,8 +133,6 @@ case "$RELEASE_ARTIFACT_CONTRACT" in
       || fail 'the 0.2.0 changelog entry is not finalized'
     ! grep -Fq 'Unreleased – target 0.2.0' CHANGELOG.md \
       || fail 'the changelog still presents 0.2.0 as unreleased'
-    ! grep -Fq 'Maven Central staging closes' docs/release-checklist.md \
-      || fail 'the release checklist still requires an unused Maven Central channel'
     ! grep -Fq 'plugin-info.html' site/src/site/site.xml \
       || fail 'site navigation still points to the removed plugin report'
     grep -Fq 'maintenance/0.1.x' README.md \

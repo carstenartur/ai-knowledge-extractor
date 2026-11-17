@@ -9,7 +9,7 @@
   </properties>
   <dependencies>
     <dependency>
-      <groupId>org.aiknowledge</groupId>
+      <groupId>io.github.carstenartur</groupId>
       <artifactId>ai-knowledge-core</artifactId>
       <version>${aiKnowledge.version}</version>
       <scope>provided</scope>

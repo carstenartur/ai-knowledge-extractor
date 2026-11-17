@@ -69,7 +69,7 @@ No provider-specific AST object may cross the SPI. Downstream analyzers consume 
 
 ### Registering an external provider
 
-Package the provider in a normal Java library that depends on `org.aiknowledge:ai-knowledge-core:<version>`. Add the implementation class name to:
+Package the provider in a normal Java library that depends on `io.github.carstenartur:ai-knowledge-core:<version>`. Add the implementation class name to:
 
 ```text
 META-INF/services/org.aiknowledge.core.sourcespi.SourceKnowledgeProvider
@@ -319,7 +319,7 @@ Gradle:
 Maven:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check
 ```
 
 No Node.js installation is required for the built-in structural provider. Java projects can continue selecting `basic`, `jdt` or `jdt-search` for the Java-specific extraction while the HTTP endpoint and JavaScript/TypeScript providers run compositionally.

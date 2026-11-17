@@ -1,6 +1,6 @@
 # ai-knowledge:help
 
-**Full name:** `org.aiknowledge:ai-knowledge-maven-plugin:help`
+**Full name:** `io.github.carstenartur:ai-knowledge-maven-plugin:help`
 
 **Phase:** `(none)`
 
@@ -18,7 +18,7 @@
 **Command-line:**
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:help
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:help
 ```
 
 **`pom.xml` binding:**
@@ -34,4 +34,4 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:VERSION:help
 
 ---
 
-Back to [Plugin Goals](plugin-info.html)
+Back to the [goal overview](index.html)

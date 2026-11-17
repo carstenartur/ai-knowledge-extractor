@@ -1,10 +1,10 @@
 # Maven plugin usage (`ai-knowledge-maven-plugin`)
 
-Canonical Maven plugin coordinates:
+Set `ai-knowledge.version` in your POM to a stable version listed for the [plugin on Maven Central](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin). Use that number wherever the commands below show `VERSION`.
 
 ```xml
 <plugin>
-  <groupId>org.aiknowledge</groupId>
+  <groupId>io.github.carstenartur</groupId>
   <artifactId>ai-knowledge-maven-plugin</artifactId>
   <version>${ai-knowledge.version}</version>
 </plugin>
@@ -13,7 +13,7 @@ Canonical Maven plugin coordinates:
 The plugin exposes goals: `generate`, `analyze`, `optimize`, `benchmark`, `check`, and `help`.
 
 For the generated Maven plugin reference with full goal and parameter documentation, see the
-[GitHub Pages documentation site](https://carstenartur.github.io/ai-knowledge-extractor/).
+[GitHub Pages documentation site](https://carstenartur.github.io/ai-knowledge-extractor/site/).
 
 ## Automatic JavaScript/TypeScript and boundary analysis
 
@@ -28,13 +28,13 @@ See [`language-providers-and-boundary-analysis.md`](language-providers-and-bound
 Show all goals:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:help
 ```
 
 Show one goal with full parameter detail:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:help -Dgoal=check -Ddetail=true
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:help -Dgoal=check -Ddetail=true
 ```
 
 ## Shared parameters (all operational goals)
@@ -94,7 +94,7 @@ Threshold overrides can also be passed as JVM properties:
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:generate
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:generate
 ```
 
 `pom.xml` execution:
@@ -117,7 +117,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:generate
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:analyze
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:analyze
 ```
 
 ### `optimize`
@@ -131,7 +131,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:analyze
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:optimize
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:optimize
 ```
 
 ### `benchmark`
@@ -145,7 +145,7 @@ mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:optimize
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:benchmark
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:benchmark
 ```
 
 ### `check`
@@ -171,7 +171,7 @@ Project-specific thresholds and evidence requirements remain controlled by the s
 CLI:
 
 ```bash
-mvn org.aiknowledge:ai-knowledge-maven-plugin:<version>:check
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check
 ```
 
 `pom.xml` execution:

@@ -17,7 +17,7 @@ gradlePlugin {
     vcsUrl = 'https://github.com/carstenartur/ai-knowledge-extractor.git'
     plugins {
         aiKnowledge {
-            id = 'org.aiknowledge.extractor'
+            id = 'io.github.carstenartur.ai-knowledge-extractor'
             displayName = 'AI Knowledge Extractor'
             description = 'Generates deterministic machine-readable repository knowledge indexes and AI-oriented complexity reports.'
             implementationClass = 'org.aiknowledge.gradle.AiKnowledgePlugin'

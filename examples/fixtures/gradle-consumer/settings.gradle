@@ -11,7 +11,7 @@ pluginManagement {
                 'Published plugin mode requires -PaiKnowledgeVersion=<version>.')
         }
         plugins {
-            id 'org.aiknowledge.extractor' version aiKnowledgeVersion
+            id 'io.github.carstenartur.ai-knowledge-extractor' version aiKnowledgeVersion
         }
     } else {
         includeBuild('../../..')
@@ -21,14 +21,14 @@ pluginManagement {
         if (publishedPlugin) {
             mavenLocal {
                 content {
-                    includeGroup('org.aiknowledge')
-                    includeGroup('org.aiknowledge.extractor')
+                    includeGroup('io.github.carstenartur')
+                    includeGroup('io.github.carstenartur.ai-knowledge-extractor')
                 }
             }
             mavenCentral {
                 content {
-                    excludeGroup('org.aiknowledge')
-                    excludeGroup('org.aiknowledge.extractor')
+                    excludeGroup('io.github.carstenartur')
+                    excludeGroup('io.github.carstenartur.ai-knowledge-extractor')
                 }
             }
         } else {

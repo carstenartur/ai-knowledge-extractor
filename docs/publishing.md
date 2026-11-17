@@ -1,187 +1,63 @@
-# Publishing and consuming artifacts
+# Consuming AI Knowledge Extractor
 
-AI Knowledge Extractor publishes three project-oriented artifacts:
+Use the version listed for the artifact in Maven Central. The first release targeting the new coordinates is 0.2.2. [Central versions](https://central.sonatype.com/artifact/io.github.carstenartur/ai-knowledge-maven-plugin) · [Gradle Plugin Portal versions](https://plugins.gradle.org/plugin/io.github.carstenartur.ai-knowledge-extractor)
 
-| Module | Artifact ID | Purpose |
-| --- | --- | --- |
-| `core` | `org.aiknowledge:ai-knowledge-core` | Shared deterministic scanner and JSON artifact generation. |
-| `gradle-plugin` | `org.aiknowledge:ai-knowledge-gradle-plugin` | Gradle task entry points for build-integrated extraction. |
-| `maven` | `org.aiknowledge:ai-knowledge-maven-plugin` | Maven goal entry points for build-integrated extraction. |
+| Consumer | Coordinate |
+| --- | --- |
+| Core library | `io.github.carstenartur:ai-knowledge-core` |
+| Maven plugin | `io.github.carstenartur:ai-knowledge-maven-plugin` |
+| Gradle plugins DSL | `io.github.carstenartur.ai-knowledge-extractor` |
+| Explicit Gradle implementation | `io.github.carstenartur:ai-knowledge-gradle-plugin` |
 
-The Gradle publication also contains the marker artifact for plugin id
-`org.aiknowledge.extractor`. That marker is what makes normal versioned plugin
-DSL consumption possible:
+## Maven
 
-```groovy
-plugins {
-    id 'org.aiknowledge.extractor' version '<release-version>'
-}
+Maven includes Central in its default repository and plugin repository settings. Pin the same published version wherever a build uses Core and the Maven plugin. Replace `VERSION` in this example and run it from the root of the project to analyse.
+
+```bash
+mvn io.github.carstenartur:ai-knowledge-maven-plugin:VERSION:check
 ```
 
-The normal release flow is documented in [`release.md`](release.md). It
-publishes all Gradle publications to GitHub Packages and creates a GitHub
-Release with the built jar artifacts.
+To call the extractor from Java, declare Core as a normal dependency.
 
-The generated Maven plugin reference documentation (goal overview, parameter
-tables, project coordinates) is published to
-[GitHub Pages](https://carstenartur.github.io/ai-knowledge-extractor/) on every
-push to `main` and on release tags via the `Pages` workflow.
+```xml
+<dependency>
+  <groupId>io.github.carstenartur</groupId>
+  <artifactId>ai-knowledge-core</artifactId>
+  <version>VERSION</version>
+</dependency>
+```
 
-Canonical plugin usage references:
+## Gradle
 
-- Gradle plugin: [`gradle-plugin.md`](gradle-plugin.md)
-- Maven plugin: [`maven-plugin.md`](maven-plugin.md)
-
-## Local development consumption
-
-For local development, prefer using the repository directly instead of a
-published package.
-
-### Gradle composite build
-
-A Gradle consumer can include a local checkout as a composite build:
+For a version published to Central, place `mavenCentral()` in the **plugin-management** repositories in `settings.gradle`. This resolves the plugin marker and its implementation from Central, including while initial Plugin Portal approval is pending. Keep the Portal in the repository list for other plugins.
 
 ```groovy
 // settings.gradle
 pluginManagement {
-    includeBuild('../ai-knowledge-extractor')
     repositories {
-        gradlePluginPortal()
         mavenCentral()
+        gradlePluginPortal()
     }
 }
 ```
 
-Then apply the plugin in the consuming build:
-
 ```groovy
+// build.gradle
 plugins {
-    id 'org.aiknowledge.extractor'
+    id 'io.github.carstenartur.ai-knowledge-extractor' version 'VERSION'
 }
 ```
 
-The task family is:
+Once the version appears on the Gradle Plugin Portal, builds using the default plugin repository can use the same `plugins` block. Run `./gradlew aiKnowledgeCheck` to generate and verify the reports. See the [Gradle task guide](gradle-plugin.md) and the [Maven goal guide](maven-plugin.md).
 
-- `generateAiKnowledgeIndex`
-- `analyzeAiComplexity`
-- `optimizeAiKnowledge`
-- `benchmarkAiKnowledge`
-- `checkAiKnowledgeIndex`
-- `publishAiKnowledgeIndex`
+## Upgrading from GitHub Packages
 
-Composite builds are a local development workflow, not a released-artifact
-distribution channel.
+Releases up to and including 0.2.1 on the active line use the Maven group `org.aiknowledge` and Gradle plugin ID `org.aiknowledge.extractor`. For a Central release, change the group or plugin ID to the one in the table and update the version together. The Java package names, imports and `aiknowledge.*` configuration properties remain compatible. Consumers can remove the GitHub Packages repository and its credentials once all other dependencies are available elsewhere.
 
-### Maven local repository and marker smoke test
+To reproduce an earlier release, use the [versioned GitHub Packages setup for 0.2.1](https://github.com/carstenartur/ai-knowledge-extractor/blob/v0.2.1/docs/publishing.md). It includes authenticated repository settings for both Maven and Gradle.
 
-Publish every artifact, including the Gradle plugin marker, to the local Maven
-repository:
+## Testing a development checkout
 
-```bash
-gradle publishToMavenLocal
-```
+Gradle users can add `includeBuild('../ai-knowledge-extractor')` under `pluginManagement` in `settings.gradle`, then apply the plugin without a version. To test snapshots using Maven, run `./gradlew publishToMavenLocal` in the extractor checkout and set the consumer version to its `projectVersion` in `gradle.properties`.
 
-The CI fixture then executes the same consumer twice:
-
-1. through `pluginManagement.includeBuild(...)` for source-development mode;
-2. through `mavenLocal()` and an explicit plugin version, with no included
-   build, to prove that the published marker and implementation dependencies are
-   complete.
-
-The second run is the release-consumer contract. A build that only works through
-`includeBuild` but lacks a usable marker artifact fails CI before release.
-
-## GitHub Packages consumption
-
-Released artifacts are published to GitHub Packages under:
-
-```text
-https://maven.pkg.github.com/carstenartur/ai-knowledge-extractor
-```
-
-GitHub Packages requires authentication even for many public package
-consumption scenarios. Use a token with package read access and keep credentials
-outside source control.
-
-### Gradle plugin repository configuration
-
-Plugin resolution belongs under `pluginManagement.repositories` in
-`settings.gradle`:
-
-```groovy
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-        maven {
-            url = uri('https://maven.pkg.github.com/carstenartur/ai-knowledge-extractor')
-            credentials {
-                username = findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
-                password = findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')
-            }
-        }
-    }
-}
-```
-
-The consuming project can then use the normal plugin DSL:
-
-```groovy
-plugins {
-    id 'org.aiknowledge.extractor' version '<release-version>'
-}
-```
-
-GitHub Packages is the canonical released-artifact consumption path for both
-Gradle and Maven. A local composite build should be an explicit development
-override rather than an automatic replacement for a released version.
-
-### Maven repository configuration
-
-A Maven consumer can add the GitHub Packages repository either in `pom.xml` or
-in user-level Maven settings. Prefer user-level settings for credentials.
-
-```xml
-<pluginRepositories>
-  <pluginRepository>
-    <id>github-ai-knowledge-extractor</id>
-    <url>https://maven.pkg.github.com/carstenartur/ai-knowledge-extractor</url>
-  </pluginRepository>
-</pluginRepositories>
-
-<repositories>
-  <repository>
-    <id>github-ai-knowledge-extractor</id>
-    <url>https://maven.pkg.github.com/carstenartur/ai-knowledge-extractor</url>
-  </repository>
-</repositories>
-```
-
-The matching credentials belong in `~/.m2/settings.xml`:
-
-```xml
-<settings>
-  <servers>
-    <server>
-      <id>github-ai-knowledge-extractor</id>
-      <username>${env.GITHUB_ACTOR}</username>
-      <password>${env.GITHUB_TOKEN}</password>
-    </server>
-  </servers>
-</settings>
-```
-
-## Versioning
-
-Development versions use `X.Y.Z-SNAPSHOT` in `gradle.properties`,
-`CITATION.cff` and `.zenodo.json`.
-
-Release versions use `X.Y.Z` and are produced by the `Release` workflow.
-Consumers should depend on released versions rather than snapshot versions
-unless they are explicitly testing an unreleased checkout.
-
-## Distribution channels at a glance
-
-- Local composite build: development-only, source checkout required, fastest feedback for plugin contributors.
-- GitHub Packages: released binary artifacts and Gradle plugin markers for normal consumers.
-- Gradle Plugin Portal: not yet part of the release flow; track separately when unauthenticated public plugin distribution is added.
+Maintainers can find the release and channel verification steps in the [release process](release.md) and the [public distribution runbook](public-distribution.md).

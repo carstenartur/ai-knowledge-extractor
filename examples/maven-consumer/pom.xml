@@ -10,7 +10,7 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.aiknowledge</groupId>
+        <groupId>io.github.carstenartur</groupId>
         <artifactId>ai-knowledge-maven-plugin</artifactId>
         <version>${aiKnowledge.version}</version>
       </plugin>

@@ -1,37 +1,18 @@
-# 0.2.1 release checklist
+# Release checklist
 
-Prepared 2026-10-31 from `160e19cbb405df49782b8c2738d99b74b66bdd4c`; unchecked items are pending evidence.
-Historical [0.2.0 release notes](releases/0.2.0.md) remain unchanged.
+The [release process](release.md) describes the workflow inputs and the reviewed release request. Public distribution applies to the active schema-v2 line. Release 0.2.2 is the first candidate for `io.github.carstenartur`.
 
-## Candidate qualification
+## Before tagging
 
-- [ ] Normal CI passes on the exact preparation/merge commit, including line/version/readiness checks.
-- [ ] `AI_KNOWLEDGE_TARGET_BRANCH=main bash .github/scripts/verify-release-readiness.sh` passes with the supported toolchain.
-- [ ] Gradle and Maven consumer fixtures validate locally built artifacts and provider contracts.
-- [ ] Signed-distribution rehearsal and clean-consumer checks pass; retain diagnostics.
-- [ ] Review [0.2.1 notes](releases/0.2.1.md), schema migration and experimental JavaScript/TypeScript limitations.
-- [ ] Development metadata consistently uses `0.2.1-SNAPSHOT`, with `next.release.version=0.2.1`.
+- [ ] Confirm the selected branch, release version and next snapshot against [the support policy](version-support.md).
+- [ ] Check CI on the source commit, including the build, consumer fixtures and signed publication rehearsal.
+- [ ] Review the [changelog](../CHANGELOG.md) and [consumer migration instructions](publishing.md). Check the signing key, Central credentials and Plugin Portal account in the [public distribution setup](public-distribution.md).
+- [ ] Run the Release workflow or submit a release request with `dry_run=true` or `dryRun: true`, respectively. Check the release-version build and artifact checksums.
 
-## Dry run and publication
+## After publication
 
-- [ ] Existing **Release** runs from `main` with `dry_run=true`, `skip_tests=false`, and `next_development_version=0.2.2-SNAPSHOT`.
-- [ ] Inspect exact-source readiness, release-version artifacts and `SHA256SUMS` before a separate publication decision.
-- [ ] Let the existing workflow own stable metadata, release dates, tags and package coordinates.
-- [ ] Core, Sources, Javadocs, Gradle marker and Maven plugin resolve from authenticated GitHub Packages.
-- [ ] GitHub Release contains built JARs and `SHA256SUMS`; tag and release identify the verified commit.
-- [ ] Verify the workflow-owned next-development transition to `0.2.2-SNAPSHOT`.
-
-## Remote consumers
-
-- [ ] Gradle fixture passes from an empty Gradle user home without composite builds or local artifacts.
-- [ ] Maven fixture passes from an empty Maven local repository against the remote release.
-- [ ] Claim public channels only after optional real Maven Central / Gradle Plugin Portal publication and anonymous consumer checks.
-
-This preparation assigns no publication date and does not invoke a publishing request.
-
-## Preparation evidence
-
-- Recorded source CI [41198475713](https://github.com/carstenartur/ai-knowledge-extractor/actions/runs/41198475713) passed on `160e19cbb405df49782b8c2738d99b74b66bdd4c`; this is source evidence, not a result for the new preparation PR.
-- The source metadata already targets `0.2.1-SNAPSHOT` / release `0.2.1`; no version bump is needed in this documentation PR.
-- Existing relative documentation links, Markdown structure and whitespace were checked against the source tree.
-- No local full Java/Gradle/Maven build or release dry run was performed during this preparation. The new PR checks and later release-version rehearsal remain separate gates.
+- [ ] Run the real release for the qualified candidate. Check the stable tag, GitHub release assets and `SHA256SUMS`.
+- [ ] Verify that the signed Central deployment reached `PUBLISHED` and that the Core, Maven plugin, Gradle implementation and marker are available at the selected version.
+- [ ] Confirm Plugin Portal publication or initial approval for the same version. Preserve the successful **anonymous-public-consumers** report showing `publicAvailabilityVerified=true`.
+- [ ] Record the exact version and run/report link with the release. For the first public release, attach the evidence to [issue #100](https://github.com/carstenartur/ai-knowledge-extractor/issues/100).
+- [ ] Verify the next-snapshot PR on the original branch.

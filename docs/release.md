@@ -5,7 +5,7 @@ between an X.Y series, its branch and its support status is
 [`.github/release-lines.json`](../.github/release-lines.json). Read
 [`version-support.md`](version-support.md) before preparing or publishing a release.
 
-On the active line, the Release workflow creates the stable tag and the GitHub release. Public distribution then checks the tag against its qualified source, runs the Maven Release Plugin’s `release:perform` goal for Central and verifies anonymous Core, Maven and Gradle consumers **from Central**. Publishing separately to the Gradle Plugin Portal is optional and is not a prerequisite for a successful release. See [publishing credentials, optional Portal approval and recovery](public-distribution.md). See [publishing credentials, optional Portal approval and recovery](public-distribution.md).
+On the active line, the Release workflow creates the stable tag and the GitHub release. Public distribution then checks the tag against its qualified source, runs the Maven Release Plugin’s `release:perform` goal for Central and verifies anonymous Core, Maven and Gradle consumers **from Central**. Publishing separately to the Gradle Plugin Portal is optional and is not a prerequisite for a successful release. See [publishing credentials, optional Portal approval and recovery](public-distribution.md).
 
 ## Release-line invariants
 

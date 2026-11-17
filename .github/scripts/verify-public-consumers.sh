@@ -27,6 +27,9 @@ fi
 REPORT_DIR=${AI_KNOWLEDGE_PUBLIC_REPORT_DIR:-$ROOT/build/reports/$report_name}
 mkdir -p "$REPORT_DIR" "$WORK/gradle" "$WORK/maven" "$WORK/core"
 rm -f "$REPORT_DIR/summary.json"
+if [[ "$MODE" == public ]]; then
+  bash "$ROOT/.github/scripts/verify-portal-listing.sh" "$VERSION" | tee "$REPORT_DIR/portal-listing.log"
+fi
 
 python3 - "$WORK" "$VERSION" "$REPOSITORY" "$MODE" <<'PYTHON'
 import sys
@@ -137,7 +140,7 @@ import json, sys
 from pathlib import Path
 mode = sys.argv[3]
 data = {'version': sys.argv[2], 'centralAvailabilityVerified': mode in {'central', 'public'},
-        'publicAvailabilityVerified': mode == 'public',
+        'publicAvailabilityVerified': mode == 'public', 'portalListingVerified': mode == 'public',
         'gradleMarkerSource': {'public': 'Gradle Plugin Portal', 'central': 'Maven Central',
                                'rehearsal': 'rehearsal repository'}[mode],
         'credentialsUsed': False, 'sourceCompositeUsed': False, 'mavenLocalUsed': False,

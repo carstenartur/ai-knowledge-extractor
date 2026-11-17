@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'io.github.carstenartur'
-version = findProperty('releaseVersion') ?: findProperty('projectVersion') ?: '0.1.5-SNAPSHOT'
+version = providers.gradleProperty('releaseVersion').orElse(providers.gradleProperty('projectVersion')).get()
 
 subprojects {
     group = rootProject.group

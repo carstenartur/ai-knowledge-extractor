@@ -125,6 +125,12 @@ jobs:
           : "${ORG_GRADLE_PROJECT_mavenCentralPassword:?Set CENTRAL_PASSWORD in public-distribution}"
           : "${ORG_GRADLE_PROJECT_signingInMemoryKey:?Set MAVEN_GPG_KEY in public-distribution}"
           bash .github/scripts/perform-central-release.sh
+      - name: Wait for Central repository propagation
+        if: inputs.mode != 'publish-portal' && steps.central.outputs.available == 'false'
+        run: |
+          artifact=ai-knowledge-maven-plugin
+          url="https://repo.maven.apache.org/maven2/io/github/carstenartur/$artifact/$VERSION/$artifact-$VERSION.pom"
+          curl --fail --silent --show-error --output /dev/null --retry 30 --retry-delay 30 --retry-all-errors --connect-timeout 10 --max-time 30 "$url"
       - name: Verify anonymous Central consumers before publishing to the Portal
         run: bash .github/scripts/verify-public-consumers.sh --central-only
       - uses: actions/upload-artifact@v7
@@ -133,8 +139,14 @@ jobs:
           name: anonymous-central-consumers
           path: build/reports/central-consumers/**
           if-no-files-found: ignore
-      - name: Publish Gradle plugin to the Plugin Portal
+      - name: Check the exact version in the Plugin Portal catalog
+        id: portal
         if: inputs.mode != 'publish-central'
+        run: |
+          listed=$(bash .github/scripts/verify-portal-listing.sh "$VERSION" --probe)
+          echo "listed=$listed" >> "$GITHUB_OUTPUT"
+      - name: Publish Gradle plugin to the Plugin Portal
+        if: inputs.mode != 'publish-central' && steps.portal.outputs.listed == 'false'
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
